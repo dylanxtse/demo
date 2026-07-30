@@ -32,6 +32,23 @@
 }
 .filter-select:focus { border-color: var(--primary); }
 
+/* ===== 全局区块标题标记 =====
+   用法：<span class="section-title-mark">区块标题</span> */
+.section-title-mark {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 20px;
+  min-height: 20px;
+  padding-left: 8px;
+  border-left: 3px solid var(--primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
 .btn {
   height: 32px;
   padding: 0 16px;
@@ -212,3 +229,58 @@
 .number-stepper-button:hover {
   background: #dfe4ec;
 }
+
+/* Shared calendar used by list filters across business modules. */
+.calendar-panel {
+  position: fixed;
+  z-index: 1001;
+  display: none;
+  width: 280px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  user-select: none;
+}
+.calendar-panel.is-visible { display: block; }
+.calendar-panel.cal-dual { width: 600px; padding: 16px; }
+.cal-dual-body { display: flex; align-items: flex-start; }
+.cal-panel { flex: 1; min-width: 0; }
+.cal-divider { width: 1px; align-self: stretch; margin: 0 12px; background: var(--border-light); }
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-nav {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+}
+.cal-nav:hover { background: var(--primary-light); color: var(--primary); }
+.cal-title { color: var(--text-primary); font-size: 14px; font-weight: 500; }
+.cal-table { width: 100%; border-collapse: collapse; }
+.cal-table th { height: 30px; color: var(--text-tertiary); font-size: 12px; font-weight: 400; text-align: center; }
+.cal-table td { height: 32px; border-radius: 4px; color: var(--text-primary); font-size: 13px; text-align: center; cursor: pointer; }
+.cal-empty { cursor: default; }
+.cal-day:hover { background: var(--primary-light); color: var(--primary); }
+.cal-today { font-weight: 600; }
+.cal-start, .cal-end { background: var(--primary); color: #fff; }
+.cal-start:hover, .cal-end:hover { background: var(--primary); color: #fff; }
+.cal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+.cal-hint { color: var(--text-tertiary); font-size: 12px; }
+.cal-btns { display: flex; gap: 6px; }

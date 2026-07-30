@@ -90,7 +90,7 @@
 
       <div class="action-bar">
         <div class="action-main">
-          <button class="btn btn-primary btn-sm btn-action" type="button" data-action="add-outbound">${addIcon}添加出库</button>
+          <button class="btn btn-primary btn-sm btn-action" type="button" data-action="add-outbound">添加出库</button>
           <button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchAuditBtn" type="button" disabled>批量审核</button>
         </div>
         <div class="action-controls">
@@ -701,7 +701,7 @@
           <div class="info-item"><span class="info-label">出库类型：</span><span class="info-value">${escapeHtml(order.outboundType)}</span></div>
           <div class="info-item"><span class="info-label">出库金额：</span><span class="info-value">${escapeHtml(order.outboundAmt)}</span></div>
           <div class="info-item"><span class="info-label">仓库：</span><span class="info-value">${escapeHtml(order.warehouseName)}</span></div>
-          <div class="info-item"><span class="info-label">供应商/采购员/客户：</span><span class="info-value">${escapeHtml(order.supplierPurchaserCustomerName)}</span></div>
+          <div class="info-item info-item-wide"><span class="info-label">供应商/采购员/客户：</span><span class="info-value">${escapeHtml(order.supplierPurchaserCustomerName)}</span></div>
           <div class="info-item"><span class="info-label">关联单号：</span><span class="info-value">${escapeHtml(order.relNo)}</span></div>
           <div class="info-item"><span class="info-label">单据状态：</span><span class="info-value"><span class="status-tag ${statusClass}">${escapeHtml(order.status)}</span></span></div>
           <div class="info-item"><span class="info-label">添加人：</span><span class="info-value">${escapeHtml(order.creator)}</span></div>

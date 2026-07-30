@@ -181,7 +181,7 @@
       <div class="operation-form-status" id="operationFormStatus" role="status"></div>
       <div class="operation-form-body" id="operationFormBody">
         <div class="form-section">
-          <div class="form-section-header"><span>基本信息</span></div>
+          <div class="form-section-header"><span class="section-title-mark">基本信息</span></div>
           <div class="form-section-body">
             <div class="basic-info-grid">
               <div class="basic-info-field">
@@ -227,7 +227,7 @@
         </div>
 
         <div class="form-section">
-          <div class="form-section-header"><span>加工原料</span></div>
+          <div class="form-section-header"><span class="section-title-mark">加工原料</span></div>
           <div class="form-section-body" style="padding:0">
             <table class="processing-sub-table">
               <thead>
@@ -246,7 +246,7 @@
 
         <div class="operation-cost-section">
           <div class="operation-cost-header">
-            <span class="cost-price-label">成品入库单价</span>
+            <span class="cost-price-label section-title-mark">成品入库单价</span>
             <div class="cost-mode-row">
               <label class="radio-option"><input type="radio" name="opCostMode" value="auto" ${state.costMode === 'auto' ? 'checked' : ''}>按原料成本及实际获得量计算</label>
               <label class="radio-option"><input type="radio" name="opCostMode" value="manual" ${state.costMode === 'manual' ? 'checked' : ''}>手动输入成品入库单价</label>
@@ -256,7 +256,7 @@
 
         <div class="form-section">
           <div class="form-section-header">
-            <span>加工成品</span>
+            <span class="section-title-mark">加工成品</span>
             <button class="btn btn-sm btn-blue reference-fill-btn" type="button" data-action="fill-reference-qty" disabled>按参考值填充实际获得量</button>
           </div>
           <div class="form-section-body" style="padding:0">
@@ -268,7 +268,7 @@
                   <th style="width:80px">参考系数</th>
                   <th style="width:90px">参考获得量</th>
                   <th style="width:90px">实际获得量</th>
-                  ${state.operationMode === 'order' ? '<th style="width:90px">分拣量</th><th style="width:90px">剩余量</th>' : ''}
+                  ${state.operationMode === 'order' ? '<th style="width:90px">订单分拣量</th><th style="width:90px">剩余量</th>' : ''}
                   <th style="width:130px">成品入库单价</th>
                 </tr>
               </thead>
@@ -278,7 +278,7 @@
         </div>
 
         <div class="form-section operation-remark-section">
-          <div class="form-section-header"><span>加工备注</span></div>
+          <div class="form-section-header"><span class="section-title-mark">加工备注</span></div>
           <div class="form-section-body">
             <div class="operation-remark-field">
               <div class="remark-input-wrap">
@@ -357,7 +357,10 @@
           <td><span class="sub-table-readonly" data-op-output-remaining>${calculateRemainingQty(item)}</span></td>
         ` : '';
       const costPriceContent = state.costMode === 'auto'
-        ? `<span class="sub-table-readonly unit-price-display" data-auto-cost-index="${index}">${unitPrice ? `${unitPrice}/${escapeHtml(unit)}` : '--'}</span>`
+        ? `<div class="unit-price-control unit-price-readonly">
+            <span class="unit-price-value" data-auto-cost-index="${index}">${unitPrice || '--'}</span>
+            <span class="unit-price-suffix">/${escapeHtml(unit)}</span>
+          </div>`
         : `<div class="unit-price-control">
             <input class="sub-table-input cost-price-input" type="number" min="0" step="0.01" placeholder="请输入" data-op-output-field="costPrice" value="${unitPrice}">
             <span class="unit-price-suffix">/${escapeHtml(unit)}</span>
@@ -462,7 +465,7 @@
       allocatedTotal = roundCurrency(allocatedTotal + allocatedCost);
       return {
         allocatedCost: allocatedCost.toFixed(2),
-        costPrice: roundCurrency(allocatedCost / output.actualQty).toFixed(2)
+        costPrice: Math.max(roundCurrency(allocatedCost / output.actualQty), 0.01).toFixed(2)
       };
     });
   }
@@ -472,10 +475,8 @@
     const allocations = calculateAutoCostAllocations();
     document.querySelectorAll('#opOutputBody [data-auto-cost-index]').forEach((display) => {
       const index = Number(display.dataset.autoCostIndex);
-      const output = state.outputs[index];
-      const unit = findProduct(output.productCode)?.unit || output.unit || '--';
       const unitPrice = allocations[index]?.costPrice || '';
-      display.textContent = unitPrice ? `${unitPrice}/${unit}` : '--';
+      display.textContent = unitPrice || '--';
     });
   }
 
@@ -675,12 +676,12 @@
       showOpFormStatus('保存失败，请重试。', 'error');
       return;
     }
-    if (targetStatus === '已加工' && state.selectedTemplateId) {
+    if (targetStatus === '待提交' && state.selectedTemplateId) {
       window.ProcessingTemplateService.markProcessed(state.selectedTemplateId);
       state.templates = window.ProcessingTemplateService.getList();
       renderTemplateList();
     }
-    showOpFormStatus(targetStatus === '已加工' ? '加工单已确认提交！' : '草稿保存成功！', 'success');
+    showOpFormStatus(targetStatus === '待提交' ? '加工单已创建，请到加工记录中提交。' : '草稿保存成功！', 'success');
     setTimeout(() => {
       resetOperationForm();
     }, 1000);
@@ -703,7 +704,7 @@
         fillActualQtyByReference();
         return;
       }
-      if (action === 'save-process') { submitOperation('已加工'); return; }
+      if (action === 'save-process') { submitOperation('待提交'); return; }
       if (action === 'reset-form') { resetOperationForm(); return; }
       if (action === 'goto-records') {
         window.location.href = './processing-record.html';
@@ -981,7 +982,7 @@
 
         <div class="template-editor-section">
           <div class="form-section-header">
-            <span>原料商品</span>
+            <span class="section-title-mark">原料商品</span>
           </div>
           <table class="processing-sub-table">
             <thead>
@@ -997,7 +998,7 @@
 
         <div class="template-editor-section">
           <div class="form-section-header">
-            <span>成品商品</span>
+            <span class="section-title-mark">成品商品</span>
             <button class="btn btn-sm btn-blue" type="button" data-action="tpl-add-output" style="${data.outputs.length >= 100 ? 'display:none' : ''}">${addIcon}添加成品</button>
           </div>
           <table class="processing-sub-table">

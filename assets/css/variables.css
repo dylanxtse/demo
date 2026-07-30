@@ -21,6 +21,10 @@
   --query-control-width: 250px;
   --query-label-width: 64px;
   --query-action-width: 72px;
+  --detail-grid-columns: 4;
+  --detail-field-label-width: 88px;
+  --detail-grid-row-gap: 12px;
+  --detail-grid-column-gap: 24px;
 }
 
 body {

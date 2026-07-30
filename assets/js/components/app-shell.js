@@ -16,6 +16,7 @@
         </div>
       `;
       window.AppSidebar.bind(root);
+      window.AppPageTabs.bind(root);
       return root;
     }
   };

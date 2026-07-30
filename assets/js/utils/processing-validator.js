@@ -4,11 +4,6 @@
     return Number.isFinite(num) && num > 0;
   }
 
-  function isNonNegativeNumber(value) {
-    const num = Number(value);
-    return Number.isFinite(num) && num >= 0;
-  }
-
   window.ProcessingValidator = {
     validate(data) {
       const errors = {};
@@ -52,13 +47,11 @@
           if (!item.productCode) {
             errors[`output_${index}_product`] = '请选择成品商品';
           }
-          if (item.actualQty !== '' && item.actualQty !== null && item.actualQty !== undefined) {
-            if (!isNonNegativeNumber(item.actualQty)) {
-              errors[`output_${index}_actualQty`] = '实际获得量必须≥0';
-            }
+          if (!isPositiveNumber(item.actualQty)) {
+            errors[`output_${index}_actualQty`] = '实际获得量必须大于0';
           }
-          if (data.costMode === 'manual' && !isNonNegativeNumber(item.costPrice)) {
-            errors[`output_${index}_costPrice`] = '成品入库单价必须≥0';
+          if (!isPositiveNumber(item.costPrice)) {
+            errors[`output_${index}_costPrice`] = '成品入库单价必须填写';
           }
         });
       }

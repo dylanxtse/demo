@@ -18,27 +18,45 @@
     { name: '首页', icon: 'home' },
     { name: '商品档案', icon: 'box', active: true, expanded: true, children: [
       { name: '商品管理', selected: true, href: './index.html' },
-      { name: '商品审核' },
-      { name: '计量单位' }
+      { name: '商品审核', href: './goods-review.html' },
+      { name: '计量单位', href: './unit-measurement.html' }
     ]},
     { name: '价格管理', icon: 'tag', children: [
       { name: '采购价', children: ['询价报价', '采购协议价'] },
       '价格执行清单',
       { name: '销售价', children: ['市场询价', '销售协议价', '结算改价'] }
     ] },
-    { name: '订单管理', icon: 'cart', children: ['订单管理', '订单退货', '订单标签', '实收变更'] },
+    { name: '订单管理', icon: 'cart', children: [
+      { name: '订单管理', href: './order-management.html' },
+      { name: '订单退货', href: './order-return.html' },
+      { name: '订单标签', href: './order-tag.html' },
+      { name: '实收变更', href: './receipt-change.html' }
+    ] },
     { name: '采购管理', icon: 'truck', children: ['采购任务', '采购单', '采购退货', '供应商档案', '采购员'] },
-    { name: '分拣管理', icon: 'layers', children: ['分拣管理', '分拣进度', '缺货商品', '分拣员'] },
+    { name: '分拣管理', icon: 'layers', children: [
+      { name: '分拣管理', href: './sorting-management.html' },
+      { name: '分拣进度', href: './sorting-progress.html' },
+      { name: '缺货商品', href: './shortage-goods.html' },
+      { name: '分拣员', href: './sorter-management.html' }
+    ] },
     { name: '仓库管理', icon: 'warehouse', children: [
       { name: '入库管理', href: './inbound.html' },
-      { name: '发货出库', children: ['发货管理', { name: '出库管理', href: './outbound.html' }, '上传质检报告'] },
-      '库存盘点',
-      { name: '库存报表', children: ['库存余额', '库存明细'] },
+      { name: '发货出库', children: [
+        { name: '发货管理', href: './shipping-management.html' },
+        { name: '出库管理', href: './outbound.html' },
+        { name: '上传质检报告', href: './quality-report.html' }
+      ] },
+      { name: '库存盘点', href: './inventory-counting.html' },
+      { name: '库存报表', children: [
+        { name: '库存余额', href: './inventory-balance.html' },
+        { name: '库存明细', href: './inventory-details.html' }
+      ] },
       { name: '净菜加工', children: [
         { name: '净菜加工', href: './processing.html' },
         { name: '加工记录', href: './processing-record.html' }
       ] },
-      '仓库档案', '期初库存'
+      { name: '仓库档案', href: './warehouse-archive.html' },
+      { name: '期初库存', href: './opening-inventory.html' }
     ] },
     { name: '物流配送', icon: 'route', children: ['数据监测', '线路管理', '物流排线', '司机管理', '车辆管理', '配送地址'] },
     { name: '客户信息', icon: 'users', children: ['客户档案', '客户类型'] },

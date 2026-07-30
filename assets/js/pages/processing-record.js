@@ -17,9 +17,10 @@
               </div>
             </div>
             <div class="filter-group">
-              <label class="filter-label" for="recStatusFilter">状态</label>
-              <select class="filter-select" id="recStatusFilter">
+                <label class="filter-label" for="recStatusFilter">状态</label>
+                <select class="filter-select" id="recStatusFilter">
                 <option>全部</option>
+                <option>待提交</option>
                 <option>待审核</option>
                 <option>已驳回</option>
                 <option>已完成</option>
@@ -61,18 +62,21 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th class="center">序号</th>
-                <th>加工单号</th>
-                <th>加工日期</th>
-                <th>仓库</th>
-                <th>原料商品</th>
-                <th>消耗量</th>
-                <th>原料成本</th>
-                <th>成品商品</th>
-                <th>获得量</th>
-                <th>成品入库价</th>
-                <th>操作人</th>
-                <th>操作</th>
+                <th class="checkbox-cell" rowspan="2"><span class="custom-checkbox" role="checkbox" aria-checked="false" data-action="toggle-all"></span></th>
+                <th rowspan="2">加工单号</th>
+                <th rowspan="2" class="processing-record-material-col">加工原料</th>
+                <th rowspan="2">原料用量</th>
+                <th colspan="2">加工成品</th>
+                <th rowspan="2">原料出库单</th>
+                <th rowspan="2">成品入库单</th>
+                <th rowspan="2">加工日期</th>
+                <th rowspan="2">状态</th>
+                <th rowspan="2">操作人</th>
+                <th rowspan="2">操作</th>
+              </tr>
+              <tr>
+                <th class="processing-record-product-col">成品商品</th>
+                <th>实际获得量</th>
               </tr>
             </thead>
             <tbody id="recTableBody"></tbody>
@@ -100,12 +104,14 @@
           <h1>加工单详情</h1>
         </div>
         <div class="processing-detail-page-body" id="recDetailBody"></div>
+        <div class="processing-form-footer processing-detail-footer" id="recDetailFooter"></div>
     </div>
   `;
 
   const state = {
     orders: [],
     visibleOrders: [],
+    selectedIds: new Set(),
     dateStart: '',
     dateEnd: ''
   };
@@ -117,6 +123,7 @@
 
   function getStatusClass(status) {
     if (status === '已完成') return 'online';
+    if (status === '待提交') return 'pending';
     if (status === '待审核') return 'draft';
     if (status === '已驳回') return 'cancelled';
     return 'offline';
@@ -124,7 +131,7 @@
 
   function getDisplayStatus(order) {
     const status = order.status;
-    return { 已加工: '已完成', 草稿: '待审核', 已作废: '已驳回' }[status] || status;
+    return { 已加工: '已完成', 草稿: '待提交', 已作废: '已驳回' }[status] || status;
   }
 
   function getRelatedOrderId(order, type) {
@@ -132,6 +139,13 @@
       ? ['outboundOrderId', 'outboundId', 'materialOutboundOrderId', 'materialOutboundId']
       : ['inboundOrderId', 'inboundId', 'outputInboundOrderId', 'outputInboundId'];
     return keys.map((key) => order[key]).find(Boolean) || '';
+  }
+
+  function renderRelatedOrderLink(order, type) {
+    const id = getRelatedOrderId(order, type);
+    if (!id) return '--';
+    const detailPage = type === 'outbound' ? 'outbound-detail.html' : 'inbound-detail.html';
+    return `<a class="code-link related-order-link" href="./${detailPage}?id=${encodeURIComponent(id)}&returnTo=${encodeURIComponent('processing-record.html')}">${escapeHtml(id)}</a>`;
   }
 
   function loadOrders() {
@@ -151,10 +165,17 @@
     return `${escapeHtml(materials[0].productName)} 等${materials.length}种`;
   }
 
-  function summarizeOutputs(outputs) {
-    if (!outputs || outputs.length === 0) return '--';
-    if (outputs.length === 1) return escapeHtml(outputs[0].productName);
-    return `${escapeHtml(outputs[0].productName)} 等${outputs.length}种`;
+  function renderRowActions(order) {
+    const id = escapeHtml(order.id);
+    const status = getDisplayStatus(order);
+    const detailButton = `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">详情</button>`;
+    if (status === '待提交') {
+      return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">提交</button>${detailButton}`;
+    }
+    if (status === '待审核') {
+      return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">审核</button>${detailButton}`;
+    }
+    return detailButton;
   }
 
   function summarizeConsumeQty(materials) {
@@ -162,41 +183,53 @@
     return materials.map((m) => `${m.consumeQty}${escapeHtml(m.unit)}`).join('，');
   }
 
-  function summarizeActualQty(outputs) {
-    if (!outputs || outputs.length === 0) return '--';
-    return outputs.map((o) => `${o.actualQty || '--'}${escapeHtml(o.unit)}`).join('，');
-  }
+  function renderOrderRows(order) {
+    const outputs = (order.outputs || []).slice(0, 2);
+    const outputCount = (order.outputs || []).length;
+    const visibleOutputs = outputs.length > 0 ? outputs : [{ productName: '--', actualQty: '--', unit: '' }];
+    const rowSpan = visibleOutputs.length;
+    const sharedCells = (index) => index === 0 ? `
+      <td class="checkbox-cell" rowspan="${rowSpan}"><span class="custom-checkbox ${state.selectedIds.has(order.id) ? 'checked' : ''}" role="checkbox" aria-checked="${state.selectedIds.has(order.id)}" data-action="toggle-row" data-id="${escapeHtml(order.id)}"></span></td>
+      <td rowspan="${rowSpan}"><button class="btn-text code-link" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">${escapeHtml(order.id)}</button></td>
+      <td rowspan="${rowSpan}" class="processing-record-material-col">${summarizeMaterials(order.materials)}</td>
+      <td rowspan="${rowSpan}">${summarizeConsumeQty(order.materials)}</td>
+    ` : '';
+    const tailCells = (index) => index === 0 ? `
+      <td rowspan="${rowSpan}">${renderRelatedOrderLink(order, 'outbound')}</td>
+      <td rowspan="${rowSpan}">${renderRelatedOrderLink(order, 'inbound')}</td>
+      <td rowspan="${rowSpan}">${escapeHtml(order.processingDate)}</td>
+      <td rowspan="${rowSpan}"><span class="status-tag ${getStatusClass(getDisplayStatus(order))}">${escapeHtml(getDisplayStatus(order))}</span></td>
+      <td rowspan="${rowSpan}">${escapeHtml(order.operator)}</td>
+      <td class="action-cell" rowspan="${rowSpan}">${renderRowActions(order)}</td>
+    ` : '';
 
-  function summarizeCostPrice(outputs, costMode) {
-    if (!outputs || outputs.length === 0) return '--';
-    if (costMode === 'manual') {
-      return outputs.map((o) => o.costPrice ? `${o.costPrice}/${o.unit || '--'}` : '--').join('，');
-    }
-    return '自动分摊';
+    const rowClass = visibleOutputs.length > 1 ? 'is-multi-output' : 'is-single-output';
+    return visibleOutputs.map((output, index) => `
+      <tr class="processing-record-sub-row ${rowClass}" data-order-id="${escapeHtml(order.id)}">
+        ${sharedCells(index)}
+        <td class="record-output-product-cell processing-record-product-col">
+          <span class="record-output-product">${escapeHtml(output.productName || '--')}${outputCount > 2 && index === 1 ? `<button class="btn-text record-output-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : ''}</span>
+        </td>
+        <td class="record-output-qty-cell">${escapeHtml(output.actualQty !== '' && output.actualQty != null ? `${output.actualQty}${output.unit || ''}` : '--')}</td>
+        ${tailCells(index)}
+      </tr>
+    `).join('');
   }
 
   function renderTable(orders = state.visibleOrders) {
     state.visibleOrders = orders;
     const tbody = document.getElementById('recTableBody');
-    tbody.innerHTML = orders.map((order, index) => `
-      <tr>
-        <td class="seq-cell">${index + 1}</td>
-        <td><button class="btn-text code-link" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">${escapeHtml(order.id)}</button></td>
-        <td>${escapeHtml(order.processingDate)}</td>
-        <td>${escapeHtml(order.warehouse)}</td>
-        <td>${summarizeMaterials(order.materials)}</td>
-        <td>${summarizeConsumeQty(order.materials)}</td>
-        <td>${calcMaterialCost(order.materials)}</td>
-        <td>${summarizeOutputs(order.outputs)}</td>
-        <td>${summarizeActualQty(order.outputs)}</td>
-        <td>${summarizeCostPrice(order.outputs, order.costMode)}</td>
-        <td>${escapeHtml(order.operator)}</td>
-        <td class="action-cell">
-          <button class="btn-text" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">查看</button>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = orders.map(renderOrderRows).join('');
     document.querySelector('.processing-record-page .page-total').textContent = `共 ${orders.length} 条数据`;
+    updateToggleAllCheckbox();
+  }
+
+  function updateToggleAllCheckbox() {
+    const checkbox = document.querySelector('.processing-record-page [data-action="toggle-all"]');
+    if (!checkbox) return;
+    const allChecked = state.visibleOrders.length > 0 && state.visibleOrders.every((order) => state.selectedIds.has(order.id));
+    checkbox.classList.toggle('checked', allChecked);
+    checkbox.setAttribute('aria-checked', String(allChecked));
   }
 
   function filterOrders() {
@@ -231,6 +264,37 @@
     filterOrders();
   }
 
+  function showOperationToast(message) {
+    let toast = document.getElementById('processingRecordToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'processingRecordToast';
+      toast.className = 'processing-record-toast';
+      toast.setAttribute('role', 'status');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(showOperationToast.timer);
+    showOperationToast.timer = setTimeout(() => toast.classList.remove('visible'), 2000);
+  }
+
+  function renderDetailFooter(order, displayStatus) {
+    const id = escapeHtml(order.id);
+    const returnButton = '<button class="btn" type="button" data-action="back-to-list">返回</button>';
+    if (displayStatus === '待提交') {
+      return `<button class="btn btn-primary" type="button" data-action="detail-submit" data-id="${id}">提交</button>${returnButton}`;
+    }
+    if (displayStatus === '待审核') {
+      return `
+        <button class="btn btn-primary" type="button" data-action="detail-audit" data-approved="true" data-id="${id}">审核通过</button>
+        <button class="btn btn-danger" type="button" data-action="detail-audit" data-approved="false" data-id="${id}">审核驳回</button>
+        ${returnButton}
+      `;
+    }
+    return returnButton;
+  }
+
   function showDetail(id) {
     const order = state.orders.find((o) => o.id === id);
     if (!order) return;
@@ -255,7 +319,7 @@
         <td>${o.refQty ?? '--'}</td>
         <td>${o.actualQty ?? '--'}</td>
         <td>${o.allocatedCost || '--'}</td>
-        <td>${o.costPrice ? `${o.costPrice}/${escapeHtml(o.unit || '--')}` : (order.costMode === 'manual' ? '--' : '自动分摊')}</td>
+        <td>${o.costPrice ? `${o.costPrice}/${escapeHtml(o.unit || '--')}` : '--'}</td>
       </tr>
     `).join('');
 
@@ -293,6 +357,7 @@
         </table>
       </div>
     `;
+    document.getElementById('recDetailFooter').innerHTML = renderDetailFooter(order, displayStatus);
     document.querySelector('.processing-record-page').style.display = 'none';
     const detailPage = document.getElementById('recDetailPage');
     detailPage.style.display = 'flex';
@@ -301,6 +366,22 @@
   function closeDetail() {
     document.querySelector('.processing-record-page').style.display = '';
     document.getElementById('recDetailPage').style.display = 'none';
+    document.getElementById('recDetailFooter').innerHTML = '';
+    if (new URLSearchParams(window.location.search).has('id')) {
+      window.history.replaceState(null, '', './processing-record.html');
+    }
+  }
+
+  function finishDetailOperation(updatedOrder) {
+    if (!updatedOrder) {
+      showOperationToast('操作失败，请刷新后重试');
+      return false;
+    }
+    closeDetail();
+    loadOrders();
+    filterOrders();
+    showOperationToast('操作成功');
+    return true;
   }
 
   function bindEvents() {
@@ -310,16 +391,64 @@
       if (action === 'query') { filterOrders(); return; }
       if (action === 'reset') { resetFilters(); return; }
       if (action === 'back-to-list') { closeDetail(); return; }
+      if (action === 'toggle-all') {
+        const checkbox = event.target.closest('.custom-checkbox');
+        const checked = !checkbox.classList.contains('checked');
+        state.visibleOrders.forEach((order) => {
+          if (checked) state.selectedIds.add(order.id);
+          else state.selectedIds.delete(order.id);
+        });
+        renderTable(state.visibleOrders);
+        return;
+      }
+      if (action === 'toggle-row') {
+        const checkbox = event.target.closest('.custom-checkbox');
+        const id = checkbox.dataset.id;
+        if (state.selectedIds.has(id)) state.selectedIds.delete(id);
+        else state.selectedIds.add(id);
+        renderTable(state.visibleOrders);
+        return;
+      }
 
       const rowAction = event.target.closest('[data-row-action]');
-      if (rowAction && rowAction.dataset.rowAction === 'detail') {
-        showDetail(rowAction.dataset.id);
+      if (rowAction) {
+        const id = rowAction.dataset.id;
+        if (rowAction.dataset.rowAction === 'detail') {
+          showDetail(id);
+          return;
+        }
       }
+    });
+
+    root.addEventListener('mouseover', (event) => {
+      const row = event.target.closest('tr[data-order-id]');
+      if (!row || row.contains(event.relatedTarget)) return;
+      const orderId = row.dataset.orderId;
+      root.querySelectorAll(`tr[data-order-id="${orderId}"]`).forEach((item) => item.classList.add('is-order-hover'));
+    });
+
+    root.addEventListener('mouseout', (event) => {
+      const row = event.target.closest('tr[data-order-id]');
+      if (!row || row.contains(event.relatedTarget)) return;
+      const orderId = row.dataset.orderId;
+      root.querySelectorAll(`tr[data-order-id="${orderId}"]`).forEach((item) => item.classList.remove('is-order-hover'));
     });
 
     document.getElementById('recDetailPage').addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
-      if (action === 'back-to-list') closeDetail();
+      if (action === 'back-to-list') {
+        closeDetail();
+        return;
+      }
+      const actionButton = event.target.closest('[data-action]');
+      if (action === 'detail-submit') {
+        finishDetailOperation(window.ProcessingService.submit(actionButton.dataset.id));
+        return;
+      }
+      if (action === 'detail-audit') {
+        const approved = actionButton.dataset.approved === 'true';
+        finishDetailOperation(window.ProcessingService.audit(actionButton.dataset.id, approved));
+      }
     });
 
     ['recOrderFilter', 'recMaterialFilter', 'recOutboundFilter', 'recInboundFilter'].forEach((id) => {

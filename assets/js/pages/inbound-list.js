@@ -692,10 +692,10 @@
           <div class="info-item"><span class="info-label">入库时间：</span><span class="info-value">${escapeHtml(order.entryTime)}</span></div>
           <div class="info-item"><span class="info-label">仓库：</span><span class="info-value">${escapeHtml(order.warehouseName)}</span></div>
           <div class="info-item"><span class="info-label">入库类型：</span><span class="info-value">${escapeHtml(order.entryType)}</span></div>
-          <div class="info-item"><span class="info-label">供应商/采购员/客户：</span><span class="info-value">${escapeHtml(order.supplierPurchaserCustomerName)}</span></div>
+          <div class="info-item info-item-wide"><span class="info-label">供应商/采购员/客户：</span><span class="info-value">${escapeHtml(order.supplierPurchaserCustomerName)}</span></div>
           <div class="info-item"><span class="info-label">入库金额：</span><span class="info-value">${escapeHtml(order.entryAmt)}</span></div>
           <div class="info-item"><span class="info-label">关联单号：</span><span class="info-value">${escapeHtml(order.relNo)}</span></div>
-          <div class="info-item"><span class="info-label">期望送货日期：</span><span class="info-value">${escapeHtml(order.expectedDeliveryDate)}</span></div>
+          <div class="info-item info-item-wide"><span class="info-label">期望送货日期：</span><span class="info-value">${escapeHtml(order.expectedDeliveryDate)}</span></div>
           <div class="info-item"><span class="info-label">单据状态：</span><span class="info-value"><span class="status-tag ${statusClass}">${escapeHtml(order.status)}</span></span></div>
           <div class="info-item"><span class="info-label">采购负责人：</span><span class="info-value">${escapeHtml(order.purchaserLeaderName)}</span></div>
           <div class="info-item"><span class="info-label">添加人：</span><span class="info-value">${escapeHtml(order.creator)}</span></div>

@@ -1,6 +1,10 @@
 (function () {
   function autoSelectByHref(menu, currentPath) {
-    const cleanPath = currentPath.replace(/\.html$/, '');
+    const routeAliases = {
+      'outbound-detail.html': 'outbound.html',
+      'inbound-detail.html': 'inbound.html'
+    };
+    const cleanPath = (routeAliases[currentPath] || currentPath).replace(/\.html$/, '');
     function hrefMatches(href) {
       if (!href) return false;
       const cleanHref = href.replace(/^\.?\//, '').replace(/\.html$/, '');
