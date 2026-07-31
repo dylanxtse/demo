@@ -100,7 +100,7 @@
       disable: 'DISABLE',
       sort: 'SORTED',
       resetSort: 'PENDING',
-      markShortage: 'SHORTAGE',
+      markShortage: 'PENDING',
       cancelShortage: 'PENDING',
       ship: 'SHIPPED',
       upload: 'UPLOADED',
@@ -121,10 +121,10 @@
     );
     if (!progress || !sortingItems.length) return;
     const sortedCount = sortingItems.filter((item) => item.status === 'SORTED').length;
-    const completedCount = sortingItems.filter((item) => item.status === 'SORTED' || item.status === 'SHORTAGE').length;
+    const completedCount = sortingItems.filter((item) => item.status === 'SORTED' || item.shortage === '是').length;
     progress.sortedCount = sortedCount;
     progress.orderCount = sortingItems.length;
-    progress.progress = `${Math.round((completedCount / sortingItems.length) * 100)}%`;
+    progress.progress = `${sortedCount}/${sortingItems.length}`;
     progress.status = completedCount === 0 ? 'PENDING' : completedCount === sortingItems.length ? 'SORTED' : 'PARTIAL';
     save('sortingProgress', progressItems);
   }
@@ -290,14 +290,14 @@
       item.status = nextStatus;
       if (action === 'sort') {
         item.actualQty = Number(payload.actualQty ?? item.orderQty ?? item.actualQty ?? 0);
-        item.progress = '100%';
+        item.progress = `${item.actualQty}/${item.orderQty}`;
         item.sorter ||= '当前用户';
         item.sortingAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
         item.shortage = '否';
       }
       if (action === 'resetSort') {
         item.actualQty = 0;
-        item.progress = '0%';
+        item.progress = `0/${item.orderQty}`;
         item.sorter = '';
         item.sortingAt = '';
       }
@@ -326,12 +326,13 @@
         const relatedItems = load('sortingItems');
         relatedItems.forEach((sortingItem) => {
           if (sortingItem.customerName !== item.customerName || sortingItem.canteen !== item.canteen) return;
+          if (action === 'sort' && sortingItem.shortage === '是') return;
           sortingItem.status = action === 'sort' ? 'SORTED' : 'PENDING';
           sortingItem.actualQty = action === 'sort' ? Number(sortingItem.orderQty || 0) : 0;
-          sortingItem.progress = action === 'sort' ? '100%' : '0%';
+          sortingItem.progress = action === 'sort' ? `${sortingItem.actualQty}/${sortingItem.orderQty}` : `0/${sortingItem.orderQty}`;
           sortingItem.sorter = action === 'sort' ? (sortingItem.sorter || '当前用户') : '';
           sortingItem.sortingAt = action === 'sort' ? new Date().toISOString().slice(0, 16).replace('T', ' ') : '';
-          sortingItem.shortage = '否';
+          if (action === 'resetSort') sortingItem.shortage = '否';
         });
         save('sortingItems', relatedItems);
       }
@@ -352,7 +353,13 @@
     async batch(resource, ids, action, payload = {}) {
       if (!Array.isArray(ids) || ids.length === 0) throw error('NO_SELECTION', '请选择要操作的数据');
       const result = [];
-      for (const id of ids) result.push(await this.transition(resource, id, action, payload));
+      for (const id of ids) {
+        if (action === 'sort') {
+          const item = load(resource).find((entry) => entry.id === id);
+          if (item && item.shortage === '是') continue;
+        }
+        result.push(await this.transition(resource, id, action, payload));
+      }
       return result;
     },
 

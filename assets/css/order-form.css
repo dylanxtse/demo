@@ -455,13 +455,13 @@
   color: var(--text-primary);
 }
 
+/* 基本信息字段：flex 布局 + 垂直居中对齐，参考订单列表查询项样式 */
 .order-form-field {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   min-width: 0;
-  grid-template-columns: 150px minmax(220px, 1fr);
   align-items: center;
-  column-gap: 12px;
-  row-gap: 6px;
+  gap: 4px 8px;
 }
 
 .order-form-field-wide {
@@ -469,9 +469,12 @@
 }
 
 .order-form-field > .field-label {
+  width: 104px;
+  flex-shrink: 0;
+  text-align: right;
   color: var(--text-secondary);
   font-size: 14px;
-  text-align: right;
+  white-space: nowrap;
 }
 
 .order-form-field > .field-label.required::before {
@@ -480,21 +483,62 @@
   content: "*";
 }
 
-.order-form-field .form-control {
-  width: calc(100% - 50px);
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid #cfd5df;
-  border-radius: 3px;
-  background: #fff;
-  color: var(--text-primary);
-  font-family: inherit;
+/* select 下拉框：复用订单列表 filter-select 样式 */
+.order-form-field .filter-select {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0 28px 0 12px;
   font-size: 14px;
   outline: none;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;
+  appearance: none;
+  cursor: pointer;
+  color: var(--text-primary);
 }
 
-.order-form-field .form-control:focus {
+.order-form-field .filter-select:focus {
   border-color: var(--primary);
+}
+
+/* 日期输入框：复用订单列表 filter-input + date-input-control 样式 */
+.order-form-field .date-input-control {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.order-form-field .date-input-control .filter-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 30px 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.order-form-field .date-input-control .filter-input:focus {
+  border-color: var(--primary);
+}
+
+.order-form-field .date-input-control .filter-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.order-form-field .date-input-control .date-range-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  display: inline-flex;
 }
 
 .order-form-field textarea.form-control {
@@ -514,10 +558,13 @@
 
 .order-form-field .field-error {
   display: block;
-  min-height: 18px;
+  width: 100%;
+  min-height: 0;
   padding-top: 4px;
+  padding-left: 112px;
   color: var(--danger);
   font-size: 12px;
+  line-height: 18px;
 }
 
 .order-form-field [aria-invalid="true"] {
@@ -571,4 +618,26 @@
   .order-form-grid {
     grid-template-columns: minmax(360px, 640px);
   }
+}
+
+/* ===== 商品列表中的自定义下拉选择框（复用净菜加工模版样式） ===== */
+.order-goods-table .order-goods-select {
+  width: 100%;
+}
+
+.order-goods-table .order-goods-select .custom-select-trigger {
+  height: 30px;
+  font-size: 13px;
+}
+
+.order-goods-table .goods-name-cell {
+  min-width: 210px;
+  text-align: left !important;
+  padding: 6px 8px;
+}
+
+/* 批量添加商品弹窗样式修正 */
+.goods-picker-modal .operations-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
 }

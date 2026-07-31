@@ -20,7 +20,6 @@
         <button class="operations-status-tab" type="button" data-status="PENDING">未分拣</button>
         <button class="operations-status-tab" type="button" data-status="PARTIAL">部分分拣</button>
         <button class="operations-status-tab" type="button" data-status="SORTED">已分拣</button>
-        <button class="operations-status-tab" type="button" data-status="SHORTAGE">缺货</button>
       </div>
       <div class="operations-toolbar">
         <div class="operations-toolbar-main">
@@ -51,6 +50,13 @@
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function renderGoodsName(item) {
+    const name = escapeHtml(item.goodsName || '--');
+    return item.isNetVegetable
+      ? `<span class="net-vegetable-tag">净菜</span>${name}`
+      : name;
+  }
+
   function statusText(status) {
     return { PENDING: '未分拣', PARTIAL: '部分分拣', SORTED: '已分拣', SHORTAGE: '缺货' }[status] || status || '--';
   }
@@ -73,23 +79,34 @@
 
   function render() {
     const body = root.querySelector('#detailBody');
-    body.innerHTML = items.length ? items.map((item, index) => `
+    body.innerHTML = items.length ? items.map((item, index) => {
+      const isShortage = item.shortage === '是';
+      const statusClass = item.status === 'SORTED' ? 'success' : item.status === 'PARTIAL' ? 'warning' : 'danger';
+      const shortageBadge = isShortage ? '<span class="operation-status danger" style="margin-left:4px">缺货</span>' : '';
+      let actionsHtml;
+      if (item.status === 'SORTED') {
+        actionsHtml = '<button class="btn-text" data-row-action="resetSort">重置</button>';
+      } else if (isShortage) {
+        actionsHtml = '<button class="btn-text" data-row-action="sort" disabled>分拣</button><span class="divider">|</span><button class="btn-text" data-row-action="cancelShortage">取消缺货</button>';
+      } else {
+        actionsHtml = '<button class="btn-text" data-row-action="sort">分拣</button><span class="divider">|</span><button class="btn-text" data-row-action="markShortage">标记缺货</button>';
+      }
+      return `
       <tr data-id="${escapeHtml(item.id)}">
         <td><input class="detail-row-select" type="checkbox" ${selected.has(item.id) ? 'checked' : ''} aria-label="选择数据"></td>
         <td>${index + 1}</td>
-        <td>${escapeHtml(item.goodsName)}</td>
+        <td>${renderGoodsName(item)}</td>
         <td>${escapeHtml(item.orderNo)}</td>
         <td>${escapeHtml(item.orderQty)}</td>
         <td><input class="quantity-input detail-actual-qty" type="number" min="0" value="${escapeHtml(item.actualQty)}" aria-label="实际数量"></td>
         <td>${escapeHtml(item.unit)}</td>
         <td>${escapeHtml(item.stock)}</td>
-        <td><span class="operation-status ${item.status === 'SORTED' ? 'success' : item.status === 'PARTIAL' ? 'warning' : 'danger'}">${statusText(item.status)}</span></td>
+        <td><span class="operation-status ${statusClass}">${statusText(item.status)}</span>${shortageBadge}</td>
         <td>${escapeHtml(item.sorter || '--')}</td>
         <td>${escapeHtml(item.sortingAt || '--')}</td>
-        <td><div class="cell-actions">
-          ${item.status !== 'SORTED' && item.status !== 'SHORTAGE' ? '<button class="btn-text" data-row-action="sort">分拣</button><span class="divider">|</span><button class="btn-text" data-row-action="markShortage">标记缺货</button>' : '<button class="btn-text" data-row-action="resetSort">重置</button>'}
-        </div></td>
-      </tr>`).join('') : '<tr><td class="empty-cell" colspan="12">暂无数据</td></tr>';
+        <td><div class="cell-actions">${actionsHtml}</div></td>
+      </tr>`;
+    }).join('') : '<tr><td class="empty-cell" colspan="12">暂无数据</td></tr>';
     root.querySelector('#detailTotal').textContent = `共 ${items.length} 条数据`;
     updateSelection();
   }

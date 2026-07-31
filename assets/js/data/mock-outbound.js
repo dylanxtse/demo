@@ -11,9 +11,19 @@
       status: '已完成',
       creator: '杨',
       remark: '学校食堂日常配送',
+      attachments: [
+        { name: '出库单.pdf', format: 'pdf', size: '96KB' },
+        { name: '配送照片.jpg', format: 'jpg', size: '512KB' }
+      ],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-28 16:45:20' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-28 16:50:00' },
+        { action: '审核', operator: '张三', desc: '张三 审核通过 2026-07-28 17:10:05' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-28 17:11:30' }
+      ],
       items: [
-        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', conversionRate: 1, currentStock: 120, outboundQty: 15, unitPrice: '20.00', amount: '300.00', remark: '' },
-        { productCode: 'SP0300014', productName: '苹果', unit: '斤', conversionRate: 1, currentStock: 80, outboundQty: 7, unitPrice: '23.00', amount: '161.00', remark: '' }
+        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', brand: '--', spec: '--', conversionRate: 1, currentStock: 120, outboundQty: 15, unitPrice: '20.00', amount: '300.00', remark: '' },
+        { productCode: 'SP0300014', productName: '苹果', unit: '斤', brand: '--', spec: '--', conversionRate: 1, currentStock: 80, outboundQty: 7, unitPrice: '23.00', amount: '161.00', remark: '' }
       ]
     },
     {
@@ -27,8 +37,12 @@
       status: '待出库',
       creator: '杨',
       remark: '待仓库备货出库',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-28 14:20:10' }
+      ],
       items: [
-        { productCode: 'SP0300025', productName: '大米', unit: 'KG', conversionRate: 1, currentStock: 200, outboundQty: 20, unitPrice: '19.00', amount: '380.00', remark: '' }
+        { productCode: 'SP0300025', productName: '大米', unit: 'KG', brand: '--', spec: '--', conversionRate: 1, currentStock: 200, outboundQty: 20, unitPrice: '19.00', amount: '380.00', remark: '' }
       ]
     },
     {
@@ -42,8 +56,17 @@
       status: '已完成',
       creator: '杨',
       remark: '食堂配送已完成',
+      attachments: [
+        { name: '签收单.jpg', format: 'jpg', size: '248KB' }
+      ],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-27 10:15:30' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-27 10:20:00' },
+        { action: '审核', operator: '李四', desc: '李四 审核通过 2026-07-27 10:40:12' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-27 10:41:00' }
+      ],
       items: [
-        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', conversionRate: 1, currentStock: 50, outboundQty: 50, unitPrice: '5.00', amount: '250.00', remark: '' }
+        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', brand: '--', spec: '--', conversionRate: 1, currentStock: 50, outboundQty: 50, unitPrice: '5.00', amount: '250.00', remark: '' }
       ]
     },
     {
@@ -57,8 +80,13 @@
       status: '待审核',
       creator: '杨',
       remark: '大米质量问题，退货待审核',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-27 15:33:42' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-27 15:38:00' }
+      ],
       items: [
-        { productCode: 'SP0300025', productName: '大米', unit: 'KG', conversionRate: 1, currentStock: 180, outboundQty: 9, unitPrice: '19.00', amount: '171.00', remark: '临期退回' }
+        { productCode: 'SP0300025', productName: '大米', unit: 'KG', brand: '--', spec: '--', conversionRate: 1, currentStock: 180, outboundQty: 9, unitPrice: '19.00', amount: '171.00', remark: '临期退回' }
       ]
     },
     {
@@ -72,8 +100,15 @@
       status: '已完成',
       creator: '杨',
       remark: '每日生鲜配送',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-26 09:50:18' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-26 09:55:00' },
+        { action: '审核', operator: '张三', desc: '张三 审核通过 2026-07-26 10:15:33' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-26 10:16:20' }
+      ],
       items: [
-        { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', conversionRate: 1, currentStock: 50, outboundQty: 15, unitPrice: '22.00', amount: '330.00', remark: '' }
+        { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', brand: '--', spec: '--', conversionRate: 1, currentStock: 50, outboundQty: 15, unitPrice: '22.00', amount: '330.00', remark: '' }
       ]
     },
     {
@@ -87,8 +122,15 @@
       status: '已完成',
       creator: '杨',
       remark: '联营出库给合作方',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-26 11:40:05' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-26 11:45:00' },
+        { action: '审核', operator: '李四', desc: '李四 审核通过 2026-07-26 12:05:18' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-26 12:06:00' }
+      ],
       items: [
-        { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', conversionRate: 1, currentStock: 30, outboundQty: 20, unitPrice: '15.00', amount: '300.00', remark: '' }
+        { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', brand: '--', spec: '--', conversionRate: 1, currentStock: 30, outboundQty: 20, unitPrice: '15.00', amount: '300.00', remark: '' }
       ]
     },
     {
@@ -102,8 +144,14 @@
       status: '已驳回',
       creator: '杨',
       remark: '客户取消订单，出库已驳回',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-25 14:05:50' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-25 14:10:00' },
+        { action: '审核', operator: '李四', desc: '李四 驳回 2026-07-25 15:30:20' }
+      ],
       items: [
-        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', conversionRate: 1, currentStock: 60, outboundQty: 20, unitPrice: '10.00', amount: '200.00', remark: '客户取消' }
+        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', brand: '三元', spec: '10瓶1箱', conversionRate: 1, currentStock: 60, outboundQty: 20, unitPrice: '10.00', amount: '200.00', remark: '客户取消' }
       ]
     },
     {
@@ -117,8 +165,17 @@
       status: '已完成',
       creator: '杨',
       remark: '鸡蛋破损3斤，报损处理',
+      attachments: [
+        { name: '报损照片.png', format: 'png', size: '180KB' }
+      ],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-24 16:18:22' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-24 16:23:00' },
+        { action: '审核', operator: '张三', desc: '张三 审核通过 2026-07-24 16:40:10' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-24 16:41:00' }
+      ],
       items: [
-        { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', conversionRate: 1, currentStock: 45, outboundQty: 3, unitPrice: '22.00', amount: '66.00', remark: '运输破损' }
+        { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', brand: '--', spec: '--', conversionRate: 1, currentStock: 45, outboundQty: 3, unitPrice: '22.00', amount: '66.00', remark: '运输破损' }
       ]
     },
     {
@@ -132,9 +189,16 @@
       status: '已完成',
       creator: '杨',
       remark: '日常配送',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-23 10:30:15' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-23 10:35:00' },
+        { action: '审核', operator: '张三', desc: '张三 审核通过 2026-07-23 10:55:08' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-23 10:56:00' }
+      ],
       items: [
-        { productCode: 'SP0300025', productName: '大米', unit: 'KG', conversionRate: 1, currentStock: 190, outboundQty: 10, unitPrice: '19.00', amount: '190.00', remark: '' },
-        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', conversionRate: 1, currentStock: 80, outboundQty: 23, unitPrice: '10.00', amount: '230.00', remark: '' }
+        { productCode: 'SP0300025', productName: '大米', unit: 'KG', brand: '--', spec: '--', conversionRate: 1, currentStock: 190, outboundQty: 10, unitPrice: '19.00', amount: '190.00', remark: '' },
+        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', brand: '三元', spec: '10瓶1箱', conversionRate: 1, currentStock: 80, outboundQty: 23, unitPrice: '10.00', amount: '230.00', remark: '' }
       ]
     },
     {
@@ -148,8 +212,15 @@
       status: '已完成',
       creator: '杨',
       remark: '箱转瓶单位转换出库',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-15 09:20:40' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-15 09:25:00' },
+        { action: '审核', operator: '李四', desc: '李四 审核通过 2026-07-15 09:45:22' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-15 09:46:00' }
+      ],
       items: [
-        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', conversionRate: 10, currentStock: 100, outboundQty: 10, unitPrice: '10.00', amount: '100.00', remark: '转换出库' }
+        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', brand: '三元', spec: '10瓶1箱', conversionRate: 10, currentStock: 100, outboundQty: 10, unitPrice: '10.00', amount: '100.00', remark: '转换出库' }
       ]
     },
     {
@@ -163,8 +234,13 @@
       status: '已关闭',
       creator: '杨',
       remark: '联营退货超期，已关闭处理',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-10 13:55:28' },
+        { action: '关闭', operator: '系统', desc: '系统 超期自动关闭 2026-07-12 00:00:00' }
+      ],
       items: [
-        { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', conversionRate: 1, currentStock: 25, outboundQty: 10, unitPrice: '15.00', amount: '150.00', remark: '联营退回' }
+        { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', brand: '--', spec: '--', conversionRate: 1, currentStock: 25, outboundQty: 10, unitPrice: '15.00', amount: '150.00', remark: '联营退回' }
       ]
     },
     {
@@ -178,8 +254,15 @@
       status: '已完成',
       creator: '杨',
       remark: '员工食堂领用',
+      attachments: [],
+      operationLogs: [
+        { action: '添加', operator: '杨', desc: '杨 添加出库单 2026-07-01 15:40:12' },
+        { action: '提交审核', operator: '杨', desc: '杨 提交审核 2026-07-01 15:45:00' },
+        { action: '审核', operator: '张三', desc: '张三 审核通过 2026-07-01 16:05:30' },
+        { action: '完成', operator: '系统', desc: '系统 标记完成 2026-07-01 16:06:20' }
+      ],
       items: [
-        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', conversionRate: 1, currentStock: 40, outboundQty: 23, unitPrice: '1.00', amount: '23.00', remark: '内部领用' }
+        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', brand: '--', spec: '--', conversionRate: 1, currentStock: 40, outboundQty: 23, unitPrice: '1.00', amount: '23.00', remark: '内部领用' }
       ]
     }
   ];

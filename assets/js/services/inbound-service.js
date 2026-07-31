@@ -1,17 +1,36 @@
 (function () {
   const storageKey = 'procurement-inbound-orders';
+  const dataVersion = 2;
+  const versionKey = 'procurement-inbound-orders-version';
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
 
   function load() {
-    const orders = window.AppStorage?.read(storageKey, window.MockInboundOrders) || window.MockInboundOrders;
+    let useMock = false;
+    try {
+      const cachedVersion = window.localStorage.getItem(versionKey);
+      if (cachedVersion !== String(dataVersion)) {
+        useMock = true;
+        window.localStorage.setItem(versionKey, String(dataVersion));
+        window.localStorage.removeItem(storageKey);
+      }
+    } catch {
+      useMock = true;
+    }
+
+    const orders = (useMock || !window.AppStorage)
+      ? window.MockInboundOrders
+      : (window.AppStorage.read(storageKey, window.MockInboundOrders) || window.MockInboundOrders);
     return clone(orders);
   }
 
   function save(orders) {
-    if (window.AppStorage) window.AppStorage.write(storageKey, orders);
+    if (window.AppStorage) {
+      window.AppStorage.write(storageKey, orders);
+      try { window.localStorage.setItem(versionKey, String(dataVersion)); } catch {}
+    }
   }
 
   function generateId() {

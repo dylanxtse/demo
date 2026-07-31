@@ -51,6 +51,7 @@
     materialWarehouse: '',
     outputWarehouse: '',
     remark: '',
+    attachments: [],
     operationMode: 'plan',
     costMode: 'auto',
     materials: [],
@@ -69,6 +70,11 @@
 
   function findProduct(code) {
     return state.products.find((p) => p.code === code) || null;
+  }
+
+  function productNetTag(productCode) {
+    const product = findProduct(productCode);
+    return product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
   }
 
   function renderProductSelect(fieldType, selectedCode, isTemplateProduct = false, outputIndex = null) {
@@ -285,13 +291,21 @@
                 <textarea class="form-control" id="opRemark" maxlength="200" rows="3" placeholder="请输入">${escapeHtml(state.remark || '')}</textarea>
                 <span class="remark-counter" id="opRemarkCounter">${(state.remark || '').length}/200</span>
               </div>
+              <div class="remark-upload-area">
+                <button class="btn btn-sm btn-blue remark-upload-btn" type="button" data-action="upload-attachment">
+                  <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  上传附件
+                </button>
+                <input type="file" id="opAttachmentInput" accept="image/*,.txt,.doc,.docx,.pdf,.xls,.xlsx" multiple style="display:none">
+                <div class="remark-attachment-list" id="opAttachmentList"></div>
+              </div>
             </div>
           </div>
         </div>
 
       </div>
       <div class="processing-form-footer">
-        <button class="btn btn-primary" type="button" data-action="save-process">确认加工</button>
+        <button class="btn btn-primary" type="button" data-action="save-process">保存</button>
         <button class="btn" type="button" data-action="reset-form">重置</button>
       </div>
     `;
@@ -325,7 +339,32 @@
     renderOpMaterialTable();
     renderOpOutputTable();
     updateOpCostModeVisibility();
+    renderOpAttachments();
     bindOperationFormEvents();
+  }
+
+  function renderOpAttachments() {
+    const container = document.getElementById('opAttachmentList');
+    if (!container) return;
+    container.innerHTML = state.attachments.map((file, index) => `
+      <div class="remark-attachment-item">
+        <span class="remark-attachment-thumb">${escapeHtml((file.format || '').toUpperCase())}</span>
+        <span class="remark-attachment-name">${escapeHtml(file.name)}</span>
+        <span class="remark-attachment-meta">${escapeHtml(file.size)}</span>
+        <button class="remark-attachment-remove" type="button" data-action="remove-attachment" data-index="${index}">×</button>
+      </div>
+    `).join('');
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + 'B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
+  }
+
+  function getFileFormat(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    return ext;
   }
 
   function renderOpMaterialTable() {
@@ -335,7 +374,7 @@
       const unit = product ? product.unit : (item.unit || '--');
       return `
         <tr data-op-material-index="${index}">
-          <td><span class="sub-table-readonly">${escapeHtml(item.productName)}</span></td>
+          <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(item.productName)}</span></td>
           <td><span class="sub-table-readonly">${escapeHtml(unit)}</span></td>
           <td><span class="sub-table-readonly">${item.stock !== '' && item.stock != null ? item.stock : '--'}</span></td>
           <td><span class="sub-table-readonly">${item.avgPrice !== '' && item.avgPrice != null ? item.avgPrice : '--'}</span></td>
@@ -367,7 +406,7 @@
           </div>`;
       return `
         <tr data-op-output-index="${index}">
-          <td><span class="sub-table-readonly">${escapeHtml(item.productName)}</span></td>
+          <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(item.productName)}</span></td>
           <td><span class="sub-table-readonly">${escapeHtml(unit)}</span></td>
           <td><span class="sub-table-readonly">${item.refCoefficient || '--'}</span></td>
           <td><span class="sub-table-readonly">${item.refQty || '--'}</span></td>
@@ -517,6 +556,7 @@
     state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
     state.outputWarehouse = tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
+    state.attachments = [];
 
     // 从模版填充原料
     state.materials = (tpl.materials || []).map((m) => {
@@ -561,6 +601,7 @@
     state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
     state.outputWarehouse = tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
+    state.attachments = [];
     state.costMode = tpl.costMode || 'auto';
     state.materials = (tpl.materials || []).map((m) => {
       const product = findProduct(m.productCode);
@@ -602,6 +643,7 @@
       // 保留旧字段，兼容加工记录和已有数据
       warehouse: document.getElementById('opMaterialWarehouse').value,
       remark: document.getElementById('opRemark').value.trim(),
+      attachments: [...state.attachments],
       processingMode: state.operationMode,
       costMode: state.costMode,
       materials: state.materials.map((m) => ({
@@ -676,12 +718,12 @@
       showOpFormStatus('保存失败，请重试。', 'error');
       return;
     }
-    if (targetStatus === '待提交' && state.selectedTemplateId) {
+    if (targetStatus === '待确认' && state.selectedTemplateId) {
       window.ProcessingTemplateService.markProcessed(state.selectedTemplateId);
       state.templates = window.ProcessingTemplateService.getList();
       renderTemplateList();
     }
-    showOpFormStatus(targetStatus === '待提交' ? '加工单已创建，请到加工记录中提交。' : '草稿保存成功！', 'success');
+    showOpFormStatus(targetStatus === '待确认' ? '保存成功，请到加工记录中提交审核。' : '草稿保存成功！', 'success');
     setTimeout(() => {
       resetOperationForm();
     }, 1000);
@@ -704,8 +746,20 @@
         fillActualQtyByReference();
         return;
       }
-      if (action === 'save-process') { submitOperation('待提交'); return; }
+      if (action === 'save-process') { submitOperation('待确认'); return; }
       if (action === 'reset-form') { resetOperationForm(); return; }
+      if (action === 'upload-attachment') {
+        document.getElementById('opAttachmentInput')?.click();
+        return;
+      }
+      if (action === 'remove-attachment') {
+        const index = Number(event.target.closest('[data-action]')?.dataset.index);
+        if (Number.isFinite(index)) {
+          state.attachments.splice(index, 1);
+          renderOpAttachments();
+        }
+        return;
+      }
       if (action === 'goto-records') {
         window.location.href = './processing-record.html';
         return;
@@ -724,6 +778,18 @@
       if (event.target.id === 'opCustomer') {
         state.customer = event.target.value;
         renderOpOutputTable();
+      }
+      if (event.target.id === 'opAttachmentInput') {
+        const files = Array.from(event.target.files || []);
+        files.forEach((file) => {
+          state.attachments.push({
+            name: file.name,
+            format: getFileFormat(file.name),
+            size: formatFileSize(file.size)
+          });
+        });
+        renderOpAttachments();
+        event.target.value = '';
       }
     });
 

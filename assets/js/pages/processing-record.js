@@ -20,7 +20,7 @@
                 <label class="filter-label" for="recStatusFilter">状态</label>
                 <select class="filter-select" id="recStatusFilter">
                 <option>全部</option>
-                <option>待提交</option>
+                <option>待确认</option>
                 <option>待审核</option>
                 <option>已驳回</option>
                 <option>已完成</option>
@@ -43,17 +43,15 @@
               <input class="filter-input" id="recInboundFilter" placeholder="请输入入库单号">
             </div>
           </div>
-          <div class="action-controls">
-            <button class="btn btn-primary btn-sm btn-fixed" type="button" data-action="query">查询</button>
-            <button class="btn btn-sm btn-fixed" type="button" data-action="reset">重置</button>
+          <div class="action-controls action-controls-multi">
+            <div class="action-controls-row">
+              <button class="btn btn-primary btn-sm btn-fixed" type="button" data-action="query">查询</button>
+              <button class="btn btn-sm btn-fixed" type="button" data-action="reset">重置</button>
+            </div>
+            <div class="action-controls-row">
+              <button class="btn btn-sm btn-fixed" type="button" data-action="export">${downloadIcon}导出</button>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div class="action-bar">
-        <div class="action-main"></div>
-        <div class="action-controls">
-          <button class="btn btn-sm btn-fixed" type="button">${downloadIcon}导出</button>
         </div>
       </div>
 
@@ -121,9 +119,42 @@
     return window.DomUtils.escapeHtml(value);
   }
 
+  function productNetTag(productCode) {
+    if (!productCode) return '';
+    const products = window.ProductService?.getList?.() || window.MockProducts || [];
+    const product = products.find((p) => p.code === productCode);
+    return product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+  }
+
+  function renderOperationLogs(logs) {
+    if (!logs || !logs.length) return '<span class="detail-empty">--</span>';
+    return logs.map((log) => `
+      <div class="detail-timeline-item">
+        <div class="detail-timeline-node"></div>
+        <div class="detail-timeline-content">
+          <span class="detail-timeline-action">${escapeHtml(log.action)}</span>
+          <span class="detail-timeline-desc">${escapeHtml(log.desc)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderAttachments(attachments) {
+    if (!attachments || !attachments.length) return '<span class="detail-empty">--</span>';
+    return attachments.map((file) => `
+      <div class="detail-attachment-item">
+        <div class="detail-attachment-thumb">${escapeHtml(file.format)}</div>
+        <div class="detail-attachment-info">
+          <span class="detail-attachment-name">${escapeHtml(file.name)}</span>
+          <span class="detail-attachment-meta">${escapeHtml(file.format.toUpperCase())} · ${escapeHtml(file.size)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
   function getStatusClass(status) {
     if (status === '已完成') return 'online';
-    if (status === '待提交') return 'pending';
+    if (status === '待确认') return 'pending';
     if (status === '待审核') return 'draft';
     if (status === '已驳回') return 'cancelled';
     return 'offline';
@@ -131,7 +162,7 @@
 
   function getDisplayStatus(order) {
     const status = order.status;
-    return { 已加工: '已完成', 草稿: '待提交', 已作废: '已驳回' }[status] || status;
+    return { 已加工: '已完成', 草稿: '待确认', 已作废: '已驳回' }[status] || status;
   }
 
   function getRelatedOrderId(order, type) {
@@ -169,8 +200,8 @@
     const id = escapeHtml(order.id);
     const status = getDisplayStatus(order);
     const detailButton = `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">详情</button>`;
-    if (status === '待提交') {
-      return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">提交</button>${detailButton}`;
+    if (status === '待确认') {
+      return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">确认</button>${detailButton}`;
     }
     if (status === '待审核') {
       return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">审核</button>${detailButton}`;
@@ -282,8 +313,8 @@
   function renderDetailFooter(order, displayStatus) {
     const id = escapeHtml(order.id);
     const returnButton = '<button class="btn" type="button" data-action="back-to-list">返回</button>';
-    if (displayStatus === '待提交') {
-      return `<button class="btn btn-primary" type="button" data-action="detail-submit" data-id="${id}">提交</button>${returnButton}`;
+    if (displayStatus === '待确认') {
+      return `<button class="btn btn-primary" type="button" data-action="detail-submit" data-id="${id}">确认保存</button>${returnButton}`;
     }
     if (displayStatus === '待审核') {
       return `
@@ -302,7 +333,7 @@
     const statusClass = getStatusClass(displayStatus);
     const materialRows = (order.materials || []).map((m) => `
       <tr>
-        <td>${escapeHtml(m.productName)}</td>
+        <td>${productNetTag(m.productCode)}${escapeHtml(m.productName)}</td>
         <td>${escapeHtml(m.unit)}</td>
         <td>${m.stock ?? '--'}</td>
         <td>${m.avgPrice ?? '--'}</td>
@@ -313,7 +344,7 @@
 
     const outputRows = (order.outputs || []).map((o) => `
       <tr>
-        <td>${escapeHtml(o.productName)}</td>
+        <td>${productNetTag(o.productCode)}${escapeHtml(o.productName)}</td>
         <td>${escapeHtml(o.unit)}</td>
         <td>${o.refCoefficient ?? '--'}</td>
         <td>${o.refQty ?? '--'}</td>
@@ -335,7 +366,6 @@
           <div class="info-item"><span class="info-label">操作人：</span><span class="info-value">${escapeHtml(order.operator)}</span></div>
           <div class="info-item"><span class="info-label">创建时间：</span><span class="info-value">${escapeHtml(order.createTime)}</span></div>
           <div class="info-item"><span class="info-label">成本模式：</span><span class="info-value">${order.costMode === 'auto' ? '按原料成本及实际获得量计算' : '手动输入成品入库单价'}</span></div>
-          <div class="info-item"><span class="info-label">备注：</span><span class="info-value">${escapeHtml(order.remark || '--')}</span></div>
         </div>
       </div>
       <div class="processing-detail-section">
@@ -355,6 +385,18 @@
           </thead>
           <tbody>${outputRows || '<tr><td colspan="7">暂无数据</td></tr>'}</tbody>
         </table>
+      </div>
+      <div class="processing-detail-section">
+        <h3>备注</h3>
+        <div class="detail-remark-box">${escapeHtml(order.remark || '--')}</div>
+      </div>
+      <div class="processing-detail-section">
+        <h3>附件</h3>
+        <div class="detail-attachment-list">${renderAttachments(order.attachments)}</div>
+      </div>
+      <div class="processing-detail-section">
+        <h3>操作记录</h3>
+        <div class="detail-timeline">${renderOperationLogs(order.operationLogs)}</div>
       </div>
     `;
     document.getElementById('recDetailFooter').innerHTML = renderDetailFooter(order, displayStatus);

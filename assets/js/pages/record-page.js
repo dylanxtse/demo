@@ -170,7 +170,8 @@
     function currentToolbar() {
       const active = config.tabs?.find((tab) => tab.key === state.activeTab);
       const actions = active?.toolbar || config.toolbar || [];
-      return actions.filter((action) => !action.visibleStatuses || action.visibleStatuses.includes(state.activeStatus));
+      const activeStatuses = String(state.activeStatus).split(',');
+      return actions.filter((action) => !action.visibleStatuses || activeStatuses.some((s) => action.visibleStatuses.includes(s)));
     }
 
     function currentFormFields() {
@@ -191,7 +192,11 @@
     function currentActions(item) {
       const active = config.tabs?.find((tab) => tab.key === state.activeTab);
       const actions = active?.rowActions || config.rowActions || [];
-      return actions.filter((action) => !action.visible || action.visible.includes(item.status));
+      return actions.filter((action) => {
+        if (action.visibleFn) return action.visibleFn(item);
+        if (action.visible) return action.visible.includes(item.status);
+        return true;
+      });
     }
 
     function isSelectable(item) {
@@ -210,6 +215,7 @@
     }
 
     function formatCell(item, column) {
+      if (column.render) return column.render(item);
       const value = item[column.key];
       if (column.editableNumber) {
         return `<input class="quantity-input record-inline-input" data-inline-field="${column.key}" type="number" min="0" value="${escapeHtml(value ?? 0)}" aria-label="${escapeHtml(column.label)}">`;
@@ -259,9 +265,10 @@
             }
             return `<td>${column.link ? `<button class="cell-link" data-row-action="view">${cell}</button>` : cell}</td>`;
           }).join('')}
-          <td><div class="cell-actions">${actions.map((action, actionIndex) =>
-            `${actionIndex ? '<span class="divider">|</span>' : ''}<button class="btn-text ${action.danger ? 'danger' : ''}" data-row-action="${action.key}">${action.label}</button>`
-          ).join('') || '--'}</div></td>
+          <td><div class="cell-actions">${actions.map((action, actionIndex) => {
+            const isDisabled = action.disabled && action.disabled(item);
+            return `${actionIndex ? '<span class="divider">|</span>' : ''}<button class="btn-text ${action.danger ? 'danger' : ''}" data-row-action="${action.key}"${isDisabled ? ' disabled' : ''}>${action.label}</button>`;
+          }).join('') || '--'}</div></td>
         </tr>`;
       }).join('');
     }
@@ -318,8 +325,10 @@
       try {
         const condition = { ...state.condition };
         if (currentStatusTabs().length) {
-          if (state.activeStatus) condition.status = state.activeStatus;
-          else delete condition.status;
+          if (state.activeStatus) {
+            const statuses = String(state.activeStatus).split(',');
+            condition.status = statuses.length > 1 ? statuses : state.activeStatus;
+          } else delete condition.status;
         }
         const result = await service.list(currentResource(), { page: state.page, pageSize: state.pageSize, condition });
         state.items = result.items;
@@ -597,7 +606,10 @@
       }
       if (event.target.id === 'recordQuery') {
         state.condition = collectCondition();
-        if (state.activeStatus) state.condition.status = state.activeStatus;
+        if (state.activeStatus) {
+          const statuses = String(state.activeStatus).split(',');
+          state.condition.status = statuses.length > 1 ? statuses : state.activeStatus;
+        }
         state.page = 1;
         state.selected.clear();
         return load();
@@ -606,7 +618,10 @@
         root.querySelectorAll('.operations-filter input,.operations-filter select').forEach((element) => { element.value = ''; });
         datePickers.forEach((picker) => picker.clear(false));
         state.condition = {};
-        if (state.activeStatus) state.condition.status = state.activeStatus;
+        if (state.activeStatus) {
+          const statuses = String(state.activeStatus).split(',');
+          state.condition.status = statuses.length > 1 ? statuses : state.activeStatus;
+        }
         state.page = 1;
         state.selected.clear();
         return load();

@@ -1,12 +1,29 @@
 (function () {
   const storageKey = 'procurement-products';
+  // 数据版本：mock 数据结构或内容变更时递增，自动失效旧缓存
+  const dataVersion = 2;
+  const versionKey = 'procurement-products-version';
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
 
   function load() {
-    const products = window.AppStorage?.read(storageKey, window.MockProducts) || window.MockProducts;
+    let useMock = false;
+    try {
+      const cachedVersion = window.localStorage.getItem(versionKey);
+      if (cachedVersion !== String(dataVersion)) {
+        useMock = true;
+        window.localStorage.setItem(versionKey, String(dataVersion));
+        window.localStorage.removeItem(storageKey);
+      }
+    } catch {
+      useMock = true;
+    }
+
+    const products = (useMock || !window.AppStorage)
+      ? window.MockProducts
+      : (window.AppStorage.read(storageKey, window.MockProducts) || window.MockProducts);
     const clonedProducts = clone(products);
     const demoPotato = window.MockProducts?.find((product) => product.code === 'SP0300040');
     if (demoPotato && !clonedProducts.some((product) => product.code === demoPotato.code)) {
@@ -23,7 +40,10 @@
   }
 
   function save(products) {
-    if (window.AppStorage) window.AppStorage.write(storageKey, products);
+    if (window.AppStorage) {
+      window.AppStorage.write(storageKey, products);
+      try { window.localStorage.setItem(versionKey, String(dataVersion)); } catch {}
+    }
   }
 
   window.ProductService = {

@@ -2,7 +2,13 @@
   function autoSelectByHref(menu, currentPath) {
     const routeAliases = {
       'outbound-detail.html': 'outbound.html',
-      'inbound-detail.html': 'inbound.html'
+      'inbound-detail.html': 'inbound.html',
+      'outbound-detail': 'outbound',
+      'inbound-detail': 'inbound',
+      'order-detail.html': 'order-management.html',
+      'order-detail': 'order-management',
+      'order-add.html': 'order-management.html',
+      'order-add': 'order-management'
     };
     const cleanPath = (routeAliases[currentPath] || currentPath).replace(/\.html$/, '');
     function hrefMatches(href) {

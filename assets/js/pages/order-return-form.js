@@ -37,6 +37,7 @@
   function toast(message, isError) {
     status.textContent = message;
     status.className = `order-form-status is-visible${isError ? ' error' : ''}`;
+    window.setTimeout(() => { status.className = 'order-form-status'; }, 2400);
   }
 
   function normalizeOrderLines(order, full) {
@@ -108,6 +109,7 @@
 
   function clearErrors() {
     root.querySelectorAll('[data-error-for]').forEach((element) => { element.textContent = ''; });
+    root.querySelectorAll('[aria-invalid="true"]').forEach((element) => element.removeAttribute('aria-invalid'));
     document.getElementById('returnGoodsError').textContent = '';
   }
 
@@ -119,22 +121,26 @@
       canteen: '请选择食堂!',
       reason: '请输入退货原因!'
     };
-    let invalid = false;
+    let first = null;
     Object.entries(required).forEach(([key, message]) => {
-      if (!document.getElementById(key).value.trim()) {
+      const field = document.getElementById(key);
+      if (!field.value.trim()) {
         root.querySelector(`[data-error-for="${key}"]`).textContent = message;
-        invalid = true;
+        field.setAttribute('aria-invalid', 'true');
+        first ||= field;
       }
     });
     if (document.getElementById('returnMode').value === 'RELATED' && !document.getElementById('orderNo').value) {
       root.querySelector('[data-error-for="orderNo"]').textContent = '请选择订单';
-      invalid = true;
+      document.getElementById('orderNo').setAttribute('aria-invalid', 'true');
+      first ||= document.getElementById('orderNo');
     }
     if (!lines.length || lines.every((line) => !(line.applyQty > 0))) {
       document.getElementById('returnGoodsError').textContent = '请至少添加一个商品';
-      invalid = true;
+      first ||= document.getElementById('chooseOrder');
     }
-    return !invalid;
+    first?.focus();
+    return !first;
   }
 
   function data() {

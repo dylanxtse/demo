@@ -15,7 +15,17 @@
         { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.2, refQty: 60, actualQty: 58, allocatedCost: '15.18', costPrice: '0.26' },
         { productCode: 'SP0300014', productName: '苹果', unit: '斤', refCoefficient: 0.8, refQty: 40, actualQty: 39, allocatedCost: '234.82', costPrice: '6.02' }
       ],
-      createTime: '2026-07-28 09:30:00'
+      createTime: '2026-07-28 09:30:00',
+      attachments: [
+        { name: '加工现场照片.jpg', format: 'jpg', size: '1.2MB' },
+        { name: '原料检验报告.pdf', format: 'pdf', size: '256KB' }
+      ],
+      operationLogs: [
+        { action: '创建', desc: '管理员 创建加工单 2026-07-28 09:30:00' },
+        { action: '提交审核', desc: '管理员 提交审核 2026-07-28 09:31:00' },
+        { action: '审核通过', desc: '管理员 审核通过 2026-07-28 10:00:00' },
+        { action: '加工完成', desc: '管理员 加工完成 2026-07-28 14:30:00' }
+      ]
     },
     {
       id: 'JG20260727002',
@@ -31,7 +41,14 @@
       outputs: [
         { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', refCoefficient: 1.0, refQty: 30, actualQty: 30, costPrice: 19.00 }
       ],
-      createTime: '2026-07-27 14:20:00'
+      createTime: '2026-07-27 14:20:00',
+      attachments: [],
+      operationLogs: [
+        { action: '创建', desc: '管理员 创建加工单 2026-07-27 14:20:00' },
+        { action: '提交审核', desc: '管理员 提交审核 2026-07-27 14:21:00' },
+        { action: '审核通过', desc: '管理员 审核通过 2026-07-27 15:00:00' },
+        { action: '加工完成', desc: '管理员 加工完成 2026-07-27 17:00:00' }
+      ]
     },
     {
       id: 'JG20260726003',
@@ -47,7 +64,13 @@
       outputs: [
         { productCode: 'SP0300015', productName: '香蕉', unit: '斤', refCoefficient: 1.0, refQty: 20, actualQty: 20, costPrice: 23.00 }
       ],
-      createTime: '2026-07-26 16:45:00'
+      createTime: '2026-07-26 16:45:00',
+      attachments: [
+        { name: '加工说明.txt', format: 'txt', size: '4KB' }
+      ],
+      operationLogs: [
+        { action: '创建', desc: '管理员 创建加工单 2026-07-26 16:45:00' }
+      ]
     },
     {
       id: 'JG20260725004',
@@ -63,7 +86,12 @@
       outputs: [
         { productCode: 'SP0300031', productName: '鲫鱼', unit: 'L', refCoefficient: 1.0, refQty: 10, actualQty: 10, costPrice: 15.00 }
       ],
-      createTime: '2026-07-25 10:00:00'
+      createTime: '2026-07-25 10:00:00',
+      attachments: [],
+      operationLogs: [
+        { action: '创建', desc: '管理员 创建加工单 2026-07-25 10:00:00' },
+        { action: '作废', desc: '管理员 作废加工单 2026-07-25 11:30:00' }
+      ]
     },
     {
       id: 'JG20260724005',
@@ -80,7 +108,17 @@
         { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.5, refQty: 22.5, actualQty: 22, allocatedCost: '25.74', costPrice: '1.17' },
         { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.9, refQty: 13.5, actualQty: 13, allocatedCost: '304.26', costPrice: '23.40' }
       ],
-      createTime: '2026-07-24 11:15:00'
+      createTime: '2026-07-24 11:15:00',
+      attachments: [
+        { name: '成品检验照片.png', format: 'png', size: '892KB' },
+        { name: '加工记录单.docx', format: 'docx', size: '48KB' }
+      ],
+      operationLogs: [
+        { action: '创建', desc: '管理员 创建加工单 2026-07-24 11:15:00' },
+        { action: '提交审核', desc: '管理员 提交审核 2026-07-24 11:16:00' },
+        { action: '审核通过', desc: '管理员 审核通过 2026-07-24 14:00:00' },
+        { action: '加工完成', desc: '管理员 加工完成 2026-07-24 18:00:00' }
+      ]
     }
   ];
 })();

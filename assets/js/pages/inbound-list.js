@@ -12,7 +12,7 @@
     '水产品-水产品二级',
     '其他材料-其他二级'
   ];
-  const entryTypes = ['全部', '采购入库', '联营采购入库', '其他入库', '订单退货入库', '联营退货入库', '报溢入库', '单位转换入库'];
+  const entryTypes = ['全部', '采购入库', '联营采购入库', '其他入库', '订单退货入库', '联营退货入库', '报溢入库', '单位转换入库', '净菜加工入库'];
   const statuses = ['全部', '待入库', '待审核', '已驳回', '已完成', '已关闭'];
   const warehouses = ['全部', '生鲜仓库', '公司市区仓库', '东南区域仓库'];
   const formWarehouses = ['生鲜仓库', '公司市区仓库', '东南区域仓库'];
@@ -689,17 +689,13 @@
         <h3>基本信息</h3>
         <div class="processing-detail-info">
           <div class="info-item"><span class="info-label">入库单号：</span><span class="info-value">${escapeHtml(order.id)}</span></div>
-          <div class="info-item"><span class="info-label">入库时间：</span><span class="info-value">${escapeHtml(order.entryTime)}</span></div>
           <div class="info-item"><span class="info-label">仓库：</span><span class="info-value">${escapeHtml(order.warehouseName)}</span></div>
           <div class="info-item"><span class="info-label">入库类型：</span><span class="info-value">${escapeHtml(order.entryType)}</span></div>
-          <div class="info-item info-item-wide"><span class="info-label">供应商/采购员/客户：</span><span class="info-value">${escapeHtml(order.supplierPurchaserCustomerName)}</span></div>
-          <div class="info-item"><span class="info-label">入库金额：</span><span class="info-value">${escapeHtml(order.entryAmt)}</span></div>
           <div class="info-item"><span class="info-label">关联单号：</span><span class="info-value">${escapeHtml(order.relNo)}</span></div>
-          <div class="info-item info-item-wide"><span class="info-label">期望送货日期：</span><span class="info-value">${escapeHtml(order.expectedDeliveryDate)}</span></div>
-          <div class="info-item"><span class="info-label">单据状态：</span><span class="info-value"><span class="status-tag ${statusClass}">${escapeHtml(order.status)}</span></span></div>
+          <div class="info-item"><span class="info-label">入库时间：</span><span class="info-value">${escapeHtml(order.entryTime)}</span></div>
+          <div class="info-item"><span class="info-label">供应商/采购员/客户：</span><span class="info-value">${escapeHtml(order.supplierPurchaserCustomerName)}</span></div>
           <div class="info-item"><span class="info-label">采购负责人：</span><span class="info-value">${escapeHtml(order.purchaserLeaderName)}</span></div>
-          <div class="info-item"><span class="info-label">添加人：</span><span class="info-value">${escapeHtml(order.creator)}</span></div>
-          <div class="info-item"><span class="info-label">备注：</span><span class="info-value">${escapeHtml(order.remark || '--')}</span></div>
+          <div class="info-item"><span class="info-label">制单人：</span><span class="info-value">${escapeHtml(order.creator)}</span></div>
         </div>
       </div>
       <div class="processing-detail-section">

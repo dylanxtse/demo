@@ -101,6 +101,31 @@
   flex: 1;
 }
 
+/* 日期输入框控件 - 与订单管理页面期望送达时间样式一致 */
+.operations-field > .operations-date-control {
+  position: relative;
+  width: 0;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.operations-field .operations-date-control .operations-date-input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+.operations-field .operations-date-control .date-range-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  display: inline-flex;
+}
+
 .operations-filter-actions {
   display: flex;
   justify-content: center;
@@ -140,7 +165,7 @@
 .operations-table th,
 .operations-table td {
   height: 42px;
-  padding: 7px 10px;
+  padding: 7px 12px;
   border-right: 1px solid #edf0f5;
   border-bottom: 1px solid #edf0f5;
   text-align: left;
@@ -431,6 +456,8 @@
 
 .sorting-module-page .operations-tabs { flex-shrink: 0; }
 .sorting-module-page .operations-status-tabs { flex-shrink: 0; }
+.sorting-module-page .operations-table { min-width: 1480px; }
+.sorting-customer-detail-page .operations-table { min-width: 1280px; }
 .sorting-module-page .operations-filter { flex-shrink: 0; margin-bottom: 12px; padding: 0; border: 0; background: transparent; }
 .sorting-module-page .operations-filter-main {
   display: grid;
@@ -488,11 +515,25 @@
   background: #fff;
 }
 .sorting-module-page .operations-table-wrap { flex: 1; min-height: 0; overflow: auto; border: 0; }
-.sorting-module-page .operations-table { min-width: 1180px; font-size: 14px; }
+.sorting-module-page .operations-table { min-width: 1620px; font-size: 14px; }
 .sorting-module-page .operations-table th,
 .sorting-module-page .operations-table td { height: 44px; padding: 8px 12px; border-color: var(--border-light); text-align: center; }
 .sorting-module-page .operations-table th { background: #fafafa; color: var(--text-secondary); }
 .sorting-module-page .operations-table .cell-actions { justify-content: center; }
+.sorting-module-page .operations-table th:nth-child(12),
+.sorting-module-page .operations-table td:nth-child(12) { min-width: 110px; }
+.sorting-module-page .operations-table th:nth-child(13),
+.sorting-module-page .operations-table td:nth-child(13) { min-width: 90px; }
+.sorting-module-page .operations-table th:nth-child(6),
+.sorting-module-page .operations-table td:nth-child(6),
+.sorting-module-page .operations-table th:nth-child(7),
+.sorting-module-page .operations-table td:nth-child(7) { min-width: 90px; }
+.sorting-module-page .operations-table th:nth-child(14),
+.sorting-module-page .operations-table td:nth-child(14) { min-width: 120px; }
+.sorting-module-page .operations-table th:nth-child(15),
+.sorting-module-page .operations-table td:nth-child(15) { min-width: 90px; }
+.sorting-module-page .operations-table th:nth-child(16),
+.sorting-module-page .operations-table td:nth-child(16) { min-width: 130px; }
 .sorting-module-page .operations-table th:last-child,
 .sorting-module-page .operations-table td:last-child {
   position: sticky;

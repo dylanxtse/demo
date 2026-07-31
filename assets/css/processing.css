@@ -185,6 +185,80 @@
   line-height: 16px;
   pointer-events: none;
 }
+/* 加工备注上传附件区域 */
+.remark-upload-area {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.remark-upload-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+}
+.remark-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.remark-attachment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  background: #fafbfc;
+  font-size: 12px;
+}
+.remark-attachment-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.remark-attachment-name {
+  color: var(--text-primary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remark-attachment-meta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+.remark-attachment-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+}
+.remark-attachment-remove:hover {
+  color: var(--danger);
+  background: #fff1f0;
+}
 .basic-info-field.readonly-value {
   color: var(--text-primary);
   font-size: 14px;
@@ -439,6 +513,20 @@
   padding-left: 12px;
   border-left: 1px solid #dfe3eb;
 }
+.inbound-detail-page .detail-header-status,
+.outbound-detail-page .detail-header-status,
+.order-detail-page .detail-header-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inbound-detail-page .detail-header-status-label,
+.outbound-detail-page .detail-header-status-label,
+.order-detail-page .detail-header-status-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
 .processing-detail-page-body {
   flex: 1;
   overflow: auto;
@@ -495,6 +583,219 @@
 .processing-detail-info .info-item.info-item-wide .info-label {
   width: 144px;
 }
+/* 入库/出库/订单详情页：一行三列，标签加宽以适配"供应商/采购员/客户" */
+.inbound-detail-page .processing-detail-info,
+.outbound-detail-page .processing-detail-info,
+.order-detail-page .processing-detail-info {
+  --detail-grid-columns: 3;
+  --detail-field-label-width: 140px;
+}
+
+/* 入库/出库/订单详情页：商品图片、商品名称子文本 */
+.inbound-detail-table .detail-product-img,
+.outbound-detail-table .detail-product-img,
+.order-detail-table .detail-product-img {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.order-detail-table .detail-product-name {
+  display: inline;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 20px;
+}
+.inbound-detail-table .detail-product-name,
+.outbound-detail-table .detail-product-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 20px;
+}
+.order-detail-table .detail-product-sub {
+  display: inline;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 18px;
+}
+.inbound-detail-table .detail-product-sub,
+.outbound-detail-table .detail-product-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 18px;
+}
+
+/* 入库/出库/订单/加工详情页：备注框 */
+.inbound-detail-page .detail-remark-box,
+.outbound-detail-page .detail-remark-box,
+.order-detail-page .detail-remark-box,
+.processing-detail-page .detail-remark-box {
+  padding: 10px 12px;
+  background: #fafbfc;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 22px;
+  min-height: 40px;
+}
+.inbound-detail-page .detail-empty,
+.outbound-detail-page .detail-empty,
+.order-detail-page .detail-empty,
+.processing-detail-page .detail-empty {
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+/* 入库/出库/加工详情页：附件列表 */
+.inbound-detail-page .detail-attachment-list,
+.outbound-detail-page .detail-attachment-list,
+.processing-detail-page .detail-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.inbound-detail-page .detail-attachment-item,
+.outbound-detail-page .detail-attachment-item,
+.processing-detail-page .detail-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: #fafbfc;
+}
+.inbound-detail-page .detail-attachment-thumb,
+.outbound-detail-page .detail-attachment-thumb,
+.processing-detail-page .detail-attachment-thumb {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.inbound-detail-page .detail-attachment-info,
+.outbound-detail-page .detail-attachment-info,
+.processing-detail-page .detail-attachment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.inbound-detail-page .detail-attachment-name,
+.outbound-detail-page .detail-attachment-name,
+.processing-detail-page .detail-attachment-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 18px;
+  white-space: nowrap;
+}
+.inbound-detail-page .detail-attachment-meta,
+.outbound-detail-page .detail-attachment-meta,
+.processing-detail-page .detail-attachment-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 16px;
+}
+
+/* 入库/出库/订单/加工详情页：操作记录时间轴 */
+.inbound-detail-page .detail-timeline,
+.outbound-detail-page .detail-timeline,
+.order-detail-page .detail-timeline,
+.processing-detail-page .detail-timeline {
+  padding: 4px 0 4px 8px;
+}
+.inbound-detail-page .detail-timeline-item,
+.outbound-detail-page .detail-timeline-item,
+.order-detail-page .detail-timeline-item,
+.processing-detail-page .detail-timeline-item {
+  position: relative;
+  padding: 0 0 40px 20px;
+}
+.inbound-detail-page .detail-timeline-item:last-child,
+.outbound-detail-page .detail-timeline-item:last-child,
+.order-detail-page .detail-timeline-item:last-child,
+.processing-detail-page .detail-timeline-item:last-child {
+  padding-bottom: 0;
+}
+.inbound-detail-page .detail-timeline-item::before,
+.outbound-detail-page .detail-timeline-item::before,
+.order-detail-page .detail-timeline-item::before,
+.processing-detail-page .detail-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+}
+.inbound-detail-page .detail-timeline-item:last-child::before,
+.outbound-detail-page .detail-timeline-item:last-child::before,
+.order-detail-page .detail-timeline-item:last-child::before,
+.processing-detail-page .detail-timeline-item:last-child::before {
+  display: none;
+}
+.inbound-detail-page .detail-timeline-node,
+.outbound-detail-page .detail-timeline-node,
+.order-detail-page .detail-timeline-node,
+.processing-detail-page .detail-timeline-node {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.inbound-detail-page .detail-timeline-content,
+.outbound-detail-page .detail-timeline-content,
+.order-detail-page .detail-timeline-content,
+.processing-detail-page .detail-timeline-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.inbound-detail-page .detail-timeline-action,
+.outbound-detail-page .detail-timeline-action,
+.order-detail-page .detail-timeline-action,
+.processing-detail-page .detail-timeline-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.inbound-detail-page .detail-timeline-desc,
+.outbound-detail-page .detail-timeline-desc,
+.order-detail-page .detail-timeline-desc,
+.processing-detail-page .detail-timeline-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 20px;
+}
 .processing-detail-table {
   width: 100%;
   border-collapse: collapse;
@@ -508,12 +809,23 @@
   font-weight: 500;
   color: var(--text-secondary);
   border: 1px solid var(--border-light);
+  white-space: nowrap;
 }
 .processing-detail-table td {
   padding: 6px 8px;
   text-align: center;
   color: var(--text-primary);
   border: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+/* 订单详情页：商品列表单行显示 + 横向滑动 */
+.order-detail-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-light);
+}
+.order-detail-table {
+  min-width: 2000px;
 }
 
 /* ===== 加工列表页操作列宽度 ===== */
@@ -524,6 +836,17 @@
   flex: 1;
 }
 .processing-record-page .action-main { display: flex; }
+.processing-record-page .action-controls-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.processing-record-page .action-controls-row {
+  display: flex;
+  gap: 8px;
+  height: 32px;
+}
 .processing-record-page .data-table th,
 .processing-record-page .data-table td { text-align: center; }
 .processing-record-page .data-table .processing-record-material-col {

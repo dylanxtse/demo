@@ -1,7 +1,7 @@
 (function () {
   const storageKey = 'procurement-processing-orders';
   const dataVersionKey = 'procurement-processing-data-version';
-  const dataVersion = '20260730-processing-v6';
+  const dataVersion = '20260731-processing-v12';
   const configKey = 'procurement-processing-config';
   const defaultConfig = { auditEnabled: true };
   const customerCodes = { 全部: '03', 客户A: '01', 客户B: '02', 客户C: '03' };
@@ -24,7 +24,7 @@
   }
 
   function normalizeStatus(status) {
-    return { 已加工: '已完成', 草稿: '待提交', 已作废: '已驳回' }[status] || status;
+    return { 已加工: '已完成', 草稿: '待确认', 已作废: '已驳回' }[status] || status;
   }
 
   function isValidPrice(value) {
@@ -129,13 +129,18 @@
   function load() {
     const canonicalOrders = clone(window.MockProcessingOrders || []);
     const storedVersion = window.AppStorage?.read(dataVersionKey, '') || '';
-    const storedOrders = storedVersion === dataVersion
-      ? window.AppStorage?.read(storageKey, canonicalOrders)
-      : canonicalOrders;
+    const versionChanged = storedVersion !== dataVersion;
+    const storedOrders = versionChanged
+      ? canonicalOrders
+      : window.AppStorage?.read(storageKey, canonicalOrders);
     const orders = clone(storedOrders || canonicalOrders).map(normalizeOrder).filter(Boolean);
     if (window.AppStorage) {
       window.AppStorage.write(dataVersionKey, dataVersion);
       window.AppStorage.write(storageKey, orders);
+      if (versionChanged) {
+        window.AppStorage.write('procurement-inbound-orders', clone(window.MockInboundOrders || []));
+        window.AppStorage.write('procurement-outbound-orders', clone(window.MockOutboundOrders || []));
+      }
     }
     return orders;
   }
@@ -206,6 +211,23 @@
     }));
   }
 
+  function buildOperationLogs(order, docType) {
+    const operator = order.operator || '管理员';
+    const baseDate = order.processingDate || order.createTime || '';
+    const dateStr = baseDate.length >= 10 ? baseDate.slice(0, 10) : '';
+    const createTime = order.createTime || (dateStr ? `${dateStr} 09:00:00` : '');
+    const submitTime = order.submittedAt || (dateStr ? `${dateStr} 09:31:00` : '');
+    const auditTime = order.auditedAt || (dateStr ? `${dateStr} 10:00:00` : '');
+    const completeTime = dateStr ? `${dateStr} 14:30:00` : '';
+    const docLabel = docType === 'inbound' ? '入库单' : '出库单';
+    return [
+      { action: '添加', operator, desc: `${operator} 添加${docLabel} ${createTime}` },
+      { action: '提交审核', operator, desc: `${operator} 提交审核 ${submitTime}` },
+      { action: '审核', operator: '张三', desc: `张三 审核通过 ${auditTime}` },
+      { action: '完成', operator: '系统', desc: `系统 标记完成 ${completeTime}` }
+    ];
+  }
+
   function ensureRelatedDocuments(order) {
     if (order.status !== '已完成') return order;
     const datePart = getDatePart(order.processingDate || order.createTime);
@@ -221,7 +243,7 @@
         id: inboundId,
         entryTime: now,
         supplierPurchaserCustomerName: '--',
-        entryType: '加工入库',
+        entryType: '净菜加工入库',
         entryAmt: buildInboundItems(order).reduce((sum, item) => sum + Number(item.amount), 0).toFixed(2),
         warehouseName: order.outputWarehouse || order.warehouse || '主仓库',
         relNo: order.id,
@@ -230,6 +252,8 @@
         purchaserLeaderName: order.operator || '管理员',
         creator: order.operator || '管理员',
         remark: order.remark || '加工成品入库',
+        attachments: [],
+        operationLogs: buildOperationLogs(order, 'inbound'),
         items: buildInboundItems(order)
       });
       saveDocumentCollection('procurement-inbound-orders', inboundOrders);
@@ -238,6 +262,8 @@
       if (inboundOrder && inboundOrder.relNo === order.id) {
         inboundOrder.items = buildInboundItems(order);
         inboundOrder.entryAmt = inboundOrder.items.reduce((sum, item) => sum + Number(item.amount), 0).toFixed(2);
+        if (!inboundOrder.operationLogs) inboundOrder.operationLogs = buildOperationLogs(order, 'inbound');
+        if (!inboundOrder.attachments) inboundOrder.attachments = [];
         saveDocumentCollection('procurement-inbound-orders', inboundOrders);
       }
     }
@@ -246,7 +272,7 @@
       outboundOrders.unshift({
         id: outboundId,
         outboundTime: now,
-        outboundType: '加工出库',
+        outboundType: '净菜加工出库',
         outboundAmt: (order.materials || []).reduce((sum, material) => (
           sum + (Number(material.consumeQty) || 0) * (Number(material.avgPrice) || 0)
         ), 0).toFixed(2),
@@ -256,6 +282,8 @@
         status: '已完成',
         creator: order.operator || '管理员',
         remark: order.remark || '加工原料出库',
+        attachments: [],
+        operationLogs: buildOperationLogs(order, 'outbound'),
         items: buildOutboundItems(order)
       });
       saveDocumentCollection('procurement-outbound-orders', outboundOrders);
@@ -264,6 +292,8 @@
       if (outboundOrder && outboundOrder.relNo === order.id) {
         outboundOrder.items = buildOutboundItems(order);
         outboundOrder.outboundAmt = outboundOrder.items.reduce((sum, item) => sum + Number(item.amount), 0).toFixed(2);
+        if (!outboundOrder.operationLogs) outboundOrder.operationLogs = buildOperationLogs(order, 'outbound');
+        if (!outboundOrder.attachments) outboundOrder.attachments = [];
         saveDocumentCollection('procurement-outbound-orders', outboundOrders);
       }
     }
@@ -288,7 +318,7 @@
         ...data,
         customerCode,
         id: generateId(data.processingDate, customerCode, orders),
-        status: data.status || '待提交',
+        status: data.status || '待确认',
         operator: data.operator || '管理员',
         createTime: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
       };
@@ -313,7 +343,7 @@
     submit(id) {
       const orders = load();
       const index = orders.findIndex((order) => order.id === id);
-      if (index < 0 || !['待提交', '草稿'].includes(orders[index].status)) return null;
+      if (index < 0 || !['待确认', '草稿'].includes(orders[index].status)) return null;
       const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
       orders[index] = ensureRelatedDocuments({
         ...orders[index],

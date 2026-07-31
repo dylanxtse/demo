@@ -120,6 +120,7 @@
       ['changeCustomer', '请选择客户'],
       ['changeCanteen', '请选择食堂'],
       ['changeOrderNo', '请选择关联订单'],
+      ['changeDate', '请选择变更日期'],
       ['changeReason', '请输入变更原因']
     ];
     let invalid = false;
@@ -149,6 +150,7 @@
       canteen: document.getElementById('changeCanteen').value,
       orderId: document.getElementById('changeOrderNo').dataset.orderId || record?.orderId || '',
       orderNo: document.getElementById('changeOrderNo').value,
+      changeDate: document.getElementById('changeDate').value,
       changeReason: document.getElementById('changeReason').value.trim(),
       items: lines,
       beforeQty: summary.beforeQty,
@@ -189,6 +191,7 @@
     document.getElementById('changeCanteen').value = record.canteen || '';
     document.getElementById('changeOrderNo').value = record.orderNo || '';
     document.getElementById('changeOrderNo').dataset.orderId = record.orderId || '';
+    document.getElementById('changeDate').value = record.changeDate || record.createdAt || '';
     document.getElementById('changeReason').value = record.changeReason || '验收数量调整';
     document.getElementById('changeRemark').value = record.remark || '';
     attachment = record.attachment || '';
