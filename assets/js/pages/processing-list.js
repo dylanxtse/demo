@@ -6,7 +6,38 @@
 
   const warehouses = ['主仓库', '分仓库A', '分仓库B'];
   const customers = ['全部', '客户A', '客户B', '客户C'];
-  const sortedOrderRecords = window.MockSortedOrderRecords || [];
+  const sortingStorageKey = 'procurement-operations-v1-sortingItems';
+
+  function getSortingRecords() {
+    const fallback = window.MockOperations?.sortingItems || [];
+    return window.AppStorage?.read(sortingStorageKey, fallback) || fallback;
+  }
+
+  function getCanteenOptions() {
+    return ['全部', ...new Set(getSortingRecords().map((record) => record.canteen).filter(Boolean))];
+  }
+
+  function getCompletedProcessingQty(productCode) {
+    const startDate = state.expectedDeliveryStart;
+    const endDate = state.expectedDeliveryEnd;
+    return (window.ProcessingService?.getList?.() || [])
+      .filter((order) => {
+        if (!['已完成', '已加工'].includes(order.status)) return false;
+        const orderStart = String(order.expectedDeliveryStart || '').slice(0, 10);
+        const orderEnd = String(order.expectedDeliveryEnd || '').slice(0, 10);
+        if (!orderStart || !orderEnd || orderEnd < startDate || orderStart > endDate) return false;
+        const customerMatch = state.customer === '全部'
+          || !order.customer
+          || order.customer === state.customer;
+        const canteenMatch = state.canteen === '全部'
+          || !order.canteen
+          || order.canteen === state.canteen;
+        return customerMatch && canteenMatch;
+      })
+      .reduce((total, order) => total + (order.outputs || [])
+        .filter((output) => output.productCode === productCode)
+        .reduce((subtotal, output) => subtotal + (Number(output.actualQty) || 0), 0), 0);
+  }
 
   /* ===== 页面骨架 HTML ===== */
   const workspaceHTML = `
@@ -48,6 +79,7 @@
     expectedDeliveryStart: '',
     expectedDeliveryEnd: '',
     customer: '全部',
+    canteen: '全部',
     materialWarehouse: '',
     outputWarehouse: '',
     remark: '',
@@ -60,6 +92,7 @@
     templateEditMode: null,    // 'create' | 'edit'
     templateEditData: null
   };
+  const OUTPUT_LIMIT = 200;
   let orderDatePicker = null;
   let processingDatePicker = null;
 
@@ -175,14 +208,16 @@
     form.style.display = 'flex';
     hideOrderDatePicker();
     form.innerHTML = `
-      <div class="operation-form-header">
-        <h1>${escapeHtml(tpl.name)}</h1>
-        <span class="operation-form-desc">${escapeHtml(tpl.description || '')}</span>
-        <button class="btn btn-sm btn-fixed" type="button" data-action="goto-records">${recordIcon}加工记录</button>
-      </div>
       <div class="operation-mode-tabs" role="tablist" aria-label="加工模式">
         <button class="operation-mode-tab ${state.operationMode === 'plan' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.operationMode === 'plan'}" data-action="switch-operation-mode" data-mode="plan">按计划加工</button>
         <button class="operation-mode-tab ${state.operationMode === 'order' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.operationMode === 'order'}" data-action="switch-operation-mode" data-mode="order">按订单加工</button>
+        <button class="btn btn-sm btn-fixed operation-record-button" type="button" data-action="goto-records">${recordIcon}加工记录</button>
+      </div>
+      <div class="operation-form-header">
+        <div class="operation-form-title-group">
+          <h1>${escapeHtml(tpl.name)}</h1>
+          <span class="operation-form-desc">${escapeHtml(tpl.description || '')}</span>
+        </div>
       </div>
       <div class="operation-form-status" id="operationFormStatus" role="status"></div>
       <div class="operation-form-body" id="operationFormBody">
@@ -225,6 +260,12 @@
                   <label class="field-label" for="opCustomer">客户名称</label>
                   <select class="form-control" id="opCustomer">
                     ${customers.map((customer) => `<option value="${escapeHtml(customer)}" ${customer === state.customer ? 'selected' : ''}>${escapeHtml(customer)}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="basic-info-field order-processing-field">
+                  <label class="field-label" for="opCanteen">食堂名称</label>
+                  <select class="form-control" id="opCanteen">
+                    ${getCanteenOptions().map((canteen) => `<option value="${escapeHtml(canteen)}" ${canteen === state.canteen ? 'selected' : ''}>${escapeHtml(canteen)}</option>`).join('')}
                   </select>
                 </div>
               ` : ''}
@@ -398,11 +439,9 @@
       const costPriceContent = state.costMode === 'auto'
         ? `<div class="unit-price-control unit-price-readonly">
             <span class="unit-price-value" data-auto-cost-index="${index}">${unitPrice || '--'}</span>
-            <span class="unit-price-suffix">/${escapeHtml(unit)}</span>
           </div>`
         : `<div class="unit-price-control">
             <input class="sub-table-input cost-price-input" type="number" min="0" step="0.01" placeholder="请输入" data-op-output-field="costPrice" value="${unitPrice}">
-            <span class="unit-price-suffix">/${escapeHtml(unit)}</span>
           </div>`;
       return `
         <tr data-op-output-index="${index}">
@@ -431,14 +470,24 @@
     const startDate = state.expectedDeliveryStart;
     const endDate = state.expectedDeliveryEnd;
     if (state.operationMode !== 'order' || !startDate || !endDate) return 0;
-    return sortedOrderRecords
+    const orderQty = getSortingRecords()
       .filter((record) => {
-        const deliveryDate = String(record.expectedDeliveryDate || record.deliveryDate || '').slice(0, 10);
+        const deliveryDate = String(record.expectedAt || record.expectedDeliveryDate || record.deliveryDate || '').slice(0, 10);
         if (!deliveryDate || deliveryDate < startDate || deliveryDate > endDate) return false;
-        if (record.productCode !== item.productCode) return false;
-        return state.customer === '全部' || !record.customer || record.customer === state.customer;
+        if (record.goodsCode !== item.productCode && record.productCode !== item.productCode) return false;
+        const orderProduct = findProduct(record.goodsCode || record.productCode);
+        if (record.isNetVegetable === false && !orderProduct?.isNetVegetable) return false;
+        const customerMatch = state.customer === '全部'
+          || !record.customer
+          || record.customer === state.customer
+          || record.customerName === state.customer;
+        const canteenMatch = state.canteen === '全部'
+          || !record.canteen
+          || record.canteen === state.canteen;
+        return customerMatch && canteenMatch;
       })
-      .reduce((total, record) => total + (Number(record.sortedQty) || 0), 0);
+      .reduce((total, record) => total + (Number(record.orderQty ?? record.quantity) || 0), 0);
+    return Math.max(orderQty - getCompletedProcessingQty(item.productCode), 0);
   }
 
   function updateRemainingQty(index) {
@@ -553,6 +602,7 @@
     state.expectedDeliveryStart = '';
     state.expectedDeliveryEnd = '';
     state.customer = '全部';
+    state.canteen = '全部';
     state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
     state.outputWarehouse = tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
@@ -598,6 +648,7 @@
     state.expectedDeliveryStart = '';
     state.expectedDeliveryEnd = '';
     state.customer = '全部';
+    state.canteen = '全部';
     state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
     state.outputWarehouse = tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
@@ -638,6 +689,7 @@
       expectedDeliveryStart: document.getElementById('opExpectedDeliveryStart')?.value || '',
       expectedDeliveryEnd: document.getElementById('opExpectedDeliveryEnd')?.value || '',
       customer: document.getElementById('opCustomer')?.value || '全部',
+      canteen: document.getElementById('opCanteen')?.value || '全部',
       materialWarehouse: document.getElementById('opMaterialWarehouse').value,
       outputWarehouse: document.getElementById('opOutputWarehouse').value,
       // 保留旧字段，兼容加工记录和已有数据
@@ -777,6 +829,10 @@
       if (event.target.id === 'opOutputWarehouse') state.outputWarehouse = event.target.value;
       if (event.target.id === 'opCustomer') {
         state.customer = event.target.value;
+        renderOpOutputTable();
+      }
+      if (event.target.id === 'opCanteen') {
+        state.canteen = event.target.value;
         renderOpOutputTable();
       }
       if (event.target.id === 'opAttachmentInput') {
@@ -1065,7 +1121,6 @@
         <div class="template-editor-section">
           <div class="form-section-header">
             <span class="section-title-mark">成品商品</span>
-            <button class="btn btn-sm btn-blue" type="button" data-action="tpl-add-output" style="${data.outputs.length >= 100 ? 'display:none' : ''}">${addIcon}添加成品</button>
           </div>
           <table class="processing-sub-table">
             <thead>
@@ -1125,6 +1180,7 @@
   function renderTplOutputTable() {
     const tbody = document.getElementById('tplOutputBody');
     if (!tbody) return;
+    normalizeOutputRows();
     const materialWarehouse = state.templateEditData.materials[0]?.warehouse || '';
     tbody.innerHTML = state.templateEditData.outputs.map((item, index) => {
       const product = item.productCode ? findProduct(item.productCode) : null;
@@ -1144,8 +1200,15 @@
         </tr>
       `;
     }).join('');
-    const addOutputButton = document.querySelector('[data-action="tpl-add-output"]');
-    if (addOutputButton) addOutputButton.style.display = state.templateEditData.outputs.length >= 100 ? 'none' : '';
+  }
+
+  function normalizeOutputRows() {
+    const outputs = Array.isArray(state.templateEditData.outputs) ? state.templateEditData.outputs : [];
+    const selected = outputs.filter((item) => item.productCode).slice(0, OUTPUT_LIMIT);
+    state.templateEditData.outputs = selected;
+    if (selected.length < OUTPUT_LIMIT) {
+      state.templateEditData.outputs.push({ warehouse: '', productCode: '', productName: '', unit: '', refCoefficient: '' });
+    }
   }
 
   function bindTemplateEditorEvents() {
@@ -1156,12 +1219,6 @@
 
     body.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
-      if (action === 'tpl-add-output') {
-        if (state.templateEditData.outputs.length >= 100) return;
-        state.templateEditData.outputs.push({ warehouse: '', productCode: '', productName: '', unit: '', refCoefficient: '' });
-        renderTplOutputTable();
-        return;
-      }
       if (action === 'tpl-delete-output') {
         if (state.templateEditData.outputs.length <= 1) return;
         const index = Number(event.target.closest('[data-action]').dataset.index);
@@ -1314,6 +1371,7 @@
     const description = document.getElementById('tplDesc').value.trim();
     if (!name) { alert('请输入方案名称'); return; }
 
+    normalizeOutputRows();
     const validMaterials = state.templateEditData.materials.filter((m) => m.productCode);
     if (state.templateEditData.materials.length !== 1 || validMaterials.length !== 1) {
       alert('原料只能设置1条且不能为空');
@@ -1328,11 +1386,11 @@
         // 成品未单独选择仓库时，使用界面显示的原料仓库作为实际入库仓库。
         warehouse: output.warehouse || defaultOutputWarehouse
       }));
-    if (state.templateEditData.outputs.length === 0 || validOutputs.length !== state.templateEditData.outputs.length) {
+    if (validOutputs.length === 0) {
       alert('成品商品不能为空');
       return;
     }
-    if (validOutputs.length > 100) { alert('成品最多添加100条'); return; }
+    if (validOutputs.length > OUTPUT_LIMIT) { alert(`成品最多添加${OUTPUT_LIMIT}条`); return; }
     const outputCodes = validOutputs.map((output) => output.productCode);
     if (new Set(outputCodes).size !== outputCodes.length) {
       alert('成品商品不能重复，一个商品只能设置一行');

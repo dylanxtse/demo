@@ -175,7 +175,11 @@
   resize: vertical;
   box-sizing: border-box;
 }
-.operation-remark-field textarea.form-control:focus { border-color: var(--primary); }
+.operation-remark-field textarea.form-control:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(2, 73, 196, 0.14);
+}
 .remark-counter {
   position: absolute;
   right: 10px;
@@ -390,6 +394,11 @@
 .processing-sub-table .sub-table-input[aria-invalid="true"] {
   border-color: var(--danger);
 }
+/* 加工成品的实际获得量与入库单价输入内容居中显示 */
+#opOutputBody [data-op-output-field="actualQty"],
+#opOutputBody .cost-price-input {
+  text-align: center;
+}
 .unit-price-control {
   display: flex;
   align-items: center;
@@ -404,13 +413,13 @@
   min-width: 0;
   height: 30px;
   box-sizing: border-box;
-  text-align: right;
+  text-align: center;
 }
 .unit-price-control .unit-price-value {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-align: right;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-secondary);
@@ -847,13 +856,56 @@
   gap: 8px;
   height: 32px;
 }
+.processing-record-page .action-controls-row:last-child {
+  justify-content: flex-end;
+}
 .processing-record-page .data-table th,
 .processing-record-page .data-table td { text-align: center; }
 .processing-record-page .data-table .processing-record-material-col {
-  min-width: 150px;
+  width: 230px;
+  min-width: 230px;
+  max-width: 230px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .processing-record-page .data-table .processing-record-product-col {
-  min-width: 170px;
+  width: 230px;
+  min-width: 230px;
+  max-width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.processing-record-page .data-table .action-cell {
+  min-width: 140px;
+  white-space: nowrap;
+}
+.processing-record-page .table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+}
+.processing-record-page .data-table {
+  min-width: 1900px;
+}
+.processing-record-page .processing-record-product-name {
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+.processing-record-page .processing-record-material-col .processing-record-product-name {
+  text-align: center;
+}
+.processing-record-page .processing-record-product-name .name-main,
+.processing-record-page .processing-record-product-name .name-sub {
+  white-space: nowrap;
+}
+.processing-record-page .processing-record-product-more {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 .processing-record-page .data-table tbody tr { height: 64px; }
 .processing-record-page .data-table tbody td { height: 64px; vertical-align: middle; }
@@ -1212,7 +1264,7 @@
   align-items: center;
   gap: 12px;
   padding: 0 24px;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 0;
   background: #fff;
   flex-shrink: 0;
 }
@@ -1220,12 +1272,19 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  padding-left: 12px;
-  border-left: 1px solid #dfe3eb;
+  padding: 5px 8px;
+  border-left: 0;
+  border-radius: 3px;
+  background: var(--primary-light);
+  white-space: nowrap;
 }
 .operation-form-desc {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: min(60%, 520px);
+  padding: 5px 8px;
+  border-radius: 3px;
+  background: var(--primary-light);
   font-size: 13px;
   color: var(--text-tertiary);
   white-space: nowrap;
@@ -1268,6 +1327,12 @@
   background: var(--primary);
 }
 .operation-mode-tab:hover { color: var(--primary); }
+
+.operation-record-button {
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
 
 .operation-form-status {
   display: none;
@@ -1434,6 +1499,40 @@
   padding: 0 24px;
   border-bottom: 1px solid #edf0f5;
   background: #fff;
+}
+
+/* 操作面板的方案标题与描述使用内容宽度的选中态底色，不显示标题栏下划线 */
+.processing-operation-panel .operation-form-header {
+  border-bottom: 0;
+}
+.processing-operation-panel .operation-form-title-group {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: min(60%, 520px);
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 3px;
+  background: var(--primary-light);
+}
+.processing-operation-panel .operation-form-header h1 {
+  display: inline-block;
+  width: fit-content;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border-left: 0;
+  background: transparent;
+  white-space: nowrap;
+}
+.processing-operation-panel .operation-form-desc {
+  display: inline-block;
+  width: fit-content;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: 12px;
+  padding: 0;
+  background: transparent;
 }
 
 .operation-form-body,

@@ -1,6 +1,7 @@
 (function () {
   const storageKey = 'procurement-processing-templates';
   const versionKey = 'procurement-processing-templates-v3';
+  const outputLimit = 200;
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -31,7 +32,7 @@
     return {
       ...template,
       materials: Array.isArray(template.materials) ? template.materials.slice(0, 1) : [],
-      outputs: Array.isArray(template.outputs) ? template.outputs.slice(0, 100) : []
+      outputs: Array.isArray(template.outputs) ? template.outputs.slice(0, outputLimit) : []
     };
   }
 
@@ -77,7 +78,7 @@
         ...data,
         id: generateId(),
         materials: Array.isArray(data.materials) ? data.materials.slice(0, 1) : [],
-        outputs: Array.isArray(data.outputs) ? data.outputs.slice(0, 100) : [],
+        outputs: Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : [],
         createTime: createdAt,
         lastActionType: 'created',
         lastActionAt: createdAt
@@ -95,7 +96,7 @@
         ...data,
         id: templates[index].id,
         materials: Array.isArray(data.materials) ? data.materials.slice(0, 1) : [],
-        outputs: Array.isArray(data.outputs) ? data.outputs.slice(0, 100) : [],
+        outputs: Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : [],
         lastActionType: 'edited',
         lastActionAt: formatNow(),
         updatedAt: formatNow()

@@ -62,7 +62,7 @@
               <tr>
                 <th class="checkbox-cell" rowspan="2"><span class="custom-checkbox" role="checkbox" aria-checked="false" data-action="toggle-all"></span></th>
                 <th rowspan="2">加工单号</th>
-                <th rowspan="2" class="processing-record-material-col">加工原料</th>
+                <th rowspan="2" class="processing-record-material-col">原料商品（计量单位/品牌/规格）</th>
                 <th rowspan="2">原料用量</th>
                 <th colspan="2">加工成品</th>
                 <th rowspan="2">原料出库单</th>
@@ -73,7 +73,7 @@
                 <th rowspan="2">操作</th>
               </tr>
               <tr>
-                <th class="processing-record-product-col">成品商品</th>
+                <th class="processing-record-product-col">成品商品（计量单位/品牌/规格）</th>
                 <th>实际获得量</th>
               </tr>
             </thead>
@@ -124,6 +124,19 @@
     const products = window.ProductService?.getList?.() || window.MockProducts || [];
     const product = products.find((p) => p.code === productCode);
     return product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+  }
+
+  function renderProductName(productCode, productName, unit) {
+    const products = window.ProductService?.getList?.() || window.MockProducts || [];
+    const product = products.find((item) => item.code === productCode) || {};
+    const name = product.name || productName || '--';
+    const displayUnit = product.unit || unit || '--';
+    const brand = product.brand || '--';
+    const spec = product.spec || '--';
+    return `<div class="name-cell processing-record-product-name">
+      <div class="name-main">${productNetTag(productCode)}${escapeHtml(name)}</div>
+      <div class="name-sub">${escapeHtml(displayUnit)}/${escapeHtml(brand)}/${escapeHtml(spec)}</div>
+    </div>`;
   }
 
   function renderOperationLogs(logs) {
@@ -192,8 +205,8 @@
 
   function summarizeMaterials(materials) {
     if (!materials || materials.length === 0) return '--';
-    if (materials.length === 1) return escapeHtml(materials[0].productName);
-    return `${escapeHtml(materials[0].productName)} 等${materials.length}种`;
+    if (materials.length === 1) return renderProductName(materials[0].productCode, materials[0].productName, materials[0].unit);
+    return `${renderProductName(materials[0].productCode, materials[0].productName, materials[0].unit)}<span class="processing-record-product-more">等${materials.length}种</span>`;
   }
 
   function renderRowActions(order) {
@@ -239,7 +252,7 @@
       <tr class="processing-record-sub-row ${rowClass}" data-order-id="${escapeHtml(order.id)}">
         ${sharedCells(index)}
         <td class="record-output-product-cell processing-record-product-col">
-          <span class="record-output-product">${escapeHtml(output.productName || '--')}${outputCount > 2 && index === 1 ? `<button class="btn-text record-output-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : ''}</span>
+          <div class="record-output-product">${renderProductName(output.productCode, output.productName, output.unit)}${outputCount > 2 && index === 1 ? `<button class="btn-text record-output-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : ''}</div>
         </td>
         <td class="record-output-qty-cell">${escapeHtml(output.actualQty !== '' && output.actualQty != null ? `${output.actualQty}${output.unit || ''}` : '--')}</td>
         ${tailCells(index)}
@@ -360,12 +373,14 @@
         <div class="processing-detail-info">
           <div class="info-item"><span class="info-label">加工单号：</span><span class="info-value">${escapeHtml(order.id)}</span></div>
           <div class="info-item"><span class="info-label">加工日期：</span><span class="info-value">${escapeHtml(order.processingDate)}</span></div>
-          <div class="info-item"><span class="info-label">原料出库：</span><span class="info-value">${escapeHtml(order.materialWarehouse || order.warehouse || '--')}</span></div>
-          <div class="info-item"><span class="info-label">成品入库：</span><span class="info-value">${escapeHtml(order.outputWarehouse || order.warehouse || '--')}</span></div>
           <div class="info-item"><span class="info-label">状态：</span><span class="info-value"><span class="status-tag ${statusClass}">${escapeHtml(displayStatus)}</span></span></div>
-          <div class="info-item"><span class="info-label">操作人：</span><span class="info-value">${escapeHtml(order.operator)}</span></div>
-          <div class="info-item"><span class="info-label">创建时间：</span><span class="info-value">${escapeHtml(order.createTime)}</span></div>
           <div class="info-item"><span class="info-label">成本模式：</span><span class="info-value">${order.costMode === 'auto' ? '按原料成本及实际获得量计算' : '手动输入成品入库单价'}</span></div>
+          <div class="info-item"><span class="info-label">创建时间：</span><span class="info-value">${escapeHtml(order.createTime || '--')}</span></div>
+          <div class="info-item"><span class="info-label">操作人：</span><span class="info-value">${escapeHtml(order.operator || '--')}</span></div>
+          <div class="info-item"><span class="info-label">原料出库：</span><span class="info-value">${escapeHtml(order.materialWarehouse || order.warehouse || '--')}</span></div>
+          <div class="info-item"><span class="info-label">原料出库单：</span><span class="info-value">${renderRelatedOrderLink(order, 'outbound')}</span></div>
+          <div class="info-item"><span class="info-label">成品入库：</span><span class="info-value">${escapeHtml(order.outputWarehouse || order.warehouse || '--')}</span></div>
+          <div class="info-item"><span class="info-label">成品入库单：</span><span class="info-value">${renderRelatedOrderLink(order, 'inbound')}</span></div>
         </div>
       </div>
       <div class="processing-detail-section">
