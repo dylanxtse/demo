@@ -942,10 +942,19 @@
   min-width: 100px;
 }
 .record-output-product {
+  display: block;
+  white-space: nowrap;
+}
+.record-output-product-cell .processing-record-product-name {
+  text-align: center;
+}
+.record-output-product-cell .processing-record-product-name .name-main {
   display: inline-flex;
   align-items: center;
-  white-space: nowrap;
   gap: 4px;
+}
+.record-output-product-cell .processing-record-product-name .name-sub {
+  text-align: center;
 }
 .record-output-more {
   flex-shrink: 0;
@@ -1334,6 +1343,31 @@
   flex-shrink: 0;
 }
 
+.order-processing-query {
+  flex-shrink: 0;
+}
+.order-processing-query-header {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 24px 0;
+}
+.order-processing-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 16px 32px;
+  align-items: end;
+  padding: 4px 24px 12px;
+  flex-shrink: 0;
+}
+.order-processing-context .basic-info-field {
+  min-width: 0;
+}
+.order-processing-query-button {
+  min-width: 52px;
+  margin-bottom: 0;
+}
+
 .operation-form-status {
   display: none;
   margin: 0 24px 12px;
@@ -1514,6 +1548,14 @@
   padding: 5px 8px;
   border-radius: 3px;
   background: var(--primary-light);
+}
+.operation-form.is-order-mode .operation-form-header {
+  height: 42px;
+  min-height: 42px;
+}
+.operation-form.is-order-mode .operation-form-title-group {
+  padding-top: 3px;
+  padding-bottom: 3px;
 }
 .processing-operation-panel .operation-form-header h1 {
   display: inline-block;

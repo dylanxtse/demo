@@ -33,6 +33,12 @@
   const statusClassMap = { DRAFT: 'info', PENDING: 'warning', REJECTED: 'danger', APPROVED: 'success', CONFIRMED: 'success', COMPLETED: 'success', CLOSED: 'danger' };
   const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const money = (value) => Number(value || 0).toFixed(2);
+  const productIsNetVegetable = (line) => {
+    const code = line.goodsCode || line.goodsId;
+    const catalogProduct = (window.MockProducts || []).find((product) => product.code === code);
+    if (catalogProduct) return Boolean(catalogProduct.isNetVegetable);
+    return Boolean(line.isNetVegetable);
+  };
   const datePicker = window.DatePicker?.mount({ input: '#goodsExpectedAt', panelId: 'orderGoodsExpectedPicker' });
 
   function categoryFor(line) {
@@ -74,7 +80,7 @@
         (!receiptStatus || order.receiptStatus === receiptStatus) &&
         (!orderType || (order.orderType || '销售订单') === orderType));
     document.getElementById('orderGoodsBody').innerHTML = rows.length ? rows.map(({ order, ...line }, index) => `<tr>
-      <td>${index + 1}</td><td><a class="cell-link order-goods-link" href="./order-detail.html?id=${encodeURIComponent(order.id)}"><span>${esc(order.orderNo)}</span><small>${esc(order.createdAt || '--')}</small></a></td><td>${esc(line.goodsName)}</td><td>${esc(order.customerName)}</td><td>${esc(order.canteen)}</td><td>${esc(order.customerType)}</td><td>${esc(order.orderTag)}</td><td>${esc(line.unit)}</td><td>${money(line.unitPrice)}</td><td>${line.quantity || 0}</td><td>${money((line.quantity || 0) * (line.unitPrice || 0))}</td><td>${line.shippedQty || 0}</td><td>${money(line.shippedAmount)}</td><td>${esc(order.expectedAt)}</td><td class="status-column"><span class="operation-status ${statusClassMap[order.status] || 'info'}">${esc(statusMap[order.status] || order.status)}</span></td><td>${esc(order.receiptStatus || '--')}</td><td>${esc(order.warehouse || '--')}</td><td>${esc(line.remark || order.remark || '--')}</td><td>${esc(order.route || '--')}</td><td>${esc(order.creator || '--')}</td>
+      <td>${index + 1}</td><td><a class="cell-link order-goods-link" href="./order-detail.html?id=${encodeURIComponent(order.id)}"><span>${esc(order.orderNo)}</span><small>${esc(order.createdAt || '--')}</small></a></td><td>${productIsNetVegetable(line) ? '<span class="net-vegetable-tag">净菜</span>' : ''}${esc(line.goodsName)}</td><td>${esc(order.customerName)}</td><td>${esc(order.canteen)}</td><td>${esc(order.customerType)}</td><td>${esc(order.orderTag)}</td><td>${esc(line.unit)}</td><td>${money(line.unitPrice)}</td><td>${line.quantity || 0}</td><td>${money((line.quantity || 0) * (line.unitPrice || 0))}</td><td>${line.shippedQty || 0}</td><td>${money(line.shippedAmount)}</td><td>${esc(order.expectedAt)}</td><td class="status-column"><span class="operation-status ${statusClassMap[order.status] || 'info'}">${esc(statusMap[order.status] || order.status)}</span></td><td>${esc(order.receiptStatus || '--')}</td><td>${esc(order.warehouse || '--')}</td><td>${esc(line.remark || order.remark || '--')}</td><td>${esc(order.route || '--')}</td><td>${esc(order.creator || '--')}</td>
     </tr>`).join('') : '<tr><td class="empty-cell" colspan="20">暂无数据</td></tr>';
     document.getElementById('orderGoodsPagination').textContent = `共 ${rows.length} 条数据`;
   }

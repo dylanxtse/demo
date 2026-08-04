@@ -42,13 +42,16 @@
 
   const productColumns = [
     { key: 'goodsName', label: '商品名称（计量单位/品牌/规格）', render: renderGoodsName },
+    { key: 'orderNo', label: '所属订单号', href: (item) => {
+      const orderId = item.orderId || window.MockOperations?.orders?.find((order) => order.orderNo === item.orderNo)?.id || '';
+      return `./order-detail.html?id=${encodeURIComponent(orderId)}&orderNo=${encodeURIComponent(item.orderNo || '')}`;
+    } },
     { key: 'customerName', label: '客户名称' },
     { key: 'canteen', label: '食堂' },
     { key: 'orderQty', label: '下单数量' },
-    { key: 'actualQty', label: '实际数量', editableNumber: true },
+    { key: 'actualQty', label: '实际数量', editableNumber: true, blankZero: true, placeholder: '请输入' },
     { key: 'unit', label: '计量单位' },
     { key: 'route', label: '线路' },
-    { key: 'orderNo', label: '所属订单号', href: (item) => `./order-detail.html?id=${encodeURIComponent(item.orderId || '')}` },
     { key: 'shipped', label: '是否发货' },
     { key: 'progress', label: '分拣进度', render: renderProgress },
     { key: 'stock', label: '库存' },
@@ -80,6 +83,10 @@
       { key: 'expectedAt', label: '期望送达时间', type: 'date', defaultValue: defaultDate },
       { key: 'warehouse', label: '仓库', options: ['中心仓', '北区仓', '临时仓'] },
       { key: 'goodsName', label: '商品名称', placeholder: '请输入' },
+      { key: 'isNetVegetable', label: '是否净菜', options: [
+        { label: '是', value: 'true' },
+        { label: '否', value: 'false' }
+      ] },
       { key: 'category', label: '商品分类', options: ['果蔬', '蛋奶类', '水产品', '主食', '肉类'] },
       { key: 'sorter', label: '分拣员', options: ['陈分拣', '李分拣', '王分拣'] },
       { key: 'supplier', label: '供应商/采购员', placeholder: '请输入' },
@@ -103,16 +110,31 @@
           { label: '全部', value: '' }
         ],
         toolbar: [
-          { key: 'batchSort', label: '一键分拣', primary: true, batchTransition: 'sort', message: '确定一键分拣选中商品吗？', visibleStatuses: ['PENDING', ''] },
+          {
+            key: 'batchPrintQr',
+            label: '一键打印',
+            primary: true,
+            requiresSelection: true,
+            validateSelection: (items) => items.length && items.every((item) => item.status === 'SORTED') ? '' : '仅已分拣商品可以打印二维码',
+            toast: '已生成商品分拣二维码打印预览',
+            dropdownVisibleStatuses: [''],
+            defaultActionByStatus: { PENDING: 'batchSort', SORTED: 'batchResetSort', '': 'batchPrintQr' },
+            labelByStatus: { PENDING: '一键分拣', SORTED: '一键重置分拣', '': '一键打印' },
+            dropdownOptions: [
+              { key: 'batchSort', label: '一键分拣', batchTransition: 'sort', message: '确定一键分拣选中商品吗？', visibleStatuses: ['PENDING', ''] },
+              { key: 'batchResetSort', label: '一键重置分拣', batchTransition: 'resetSort', message: '确定一键重置选中商品的分拣状态吗？', visibleStatuses: ['SORTED', 'PARTIAL', ''] }
+            ]
+          },
           { key: 'batchShortage', label: '批量标记缺货', batchTransition: 'markShortage', message: '确定标记选中商品为缺货？', visibleStatuses: ['PENDING', ''] },
-          { key: 'print', label: '一键打印', toast: '已生成商品分拣打印预览', visibleStatuses: ['SORTED'] }
+          { key: 'export', label: '导出' },
+          { key: 'printDocument', label: '打印', side: true, toast: '已生成分拣单据打印预览' }
         ],
         rowActions: [
           { key: 'sort', label: '分拣', transition: 'sort', visible: ['PENDING', 'PARTIAL'], disabled: isShortage, message: '确定分拣该商品吗？' },
           { key: 'markShortage', label: '标记缺货', transition: 'markShortage', visibleFn: (item) => !isShortage(item) && ['PENDING', 'PARTIAL'].includes(item.status), message: '确定标记该商品为缺货？' },
           { key: 'cancelShortage', label: '取消缺货', transition: 'cancelShortage', visibleFn: isShortage, message: '确定要取消该商品缺货状态吗？' },
           { key: 'resetSort', label: '重置', transition: 'resetSort', visible: ['SORTED', 'PARTIAL'], message: '确定重置该商品分拣状态和实际数量？' },
-          { key: 'print', label: '打印', toast: '已生成商品分拣打印预览' }
+          { key: 'print', label: '打印', visibleFn: (item) => item.status === 'SORTED', toast: '已生成商品分拣二维码打印预览' }
         ]
       },
       {
@@ -127,7 +149,8 @@
         ],
         toolbar: [
           { key: 'batchSort', label: '一键分拣', primary: true, batchTransition: 'sort', message: '确定一键分拣选中客户的商品吗？', visibleStatuses: ['PENDING', 'PARTIAL', ''] },
-          { key: 'print', label: '一键打印', toast: '已生成客户分拣打印预览', visibleStatuses: ['SORTED'] }
+          { key: 'print', label: '一键打印', toast: '已生成客户分拣打印预览', visibleStatuses: ['SORTED'] },
+          { key: 'export', label: '导出' }
         ],
         rowActions: [
           {

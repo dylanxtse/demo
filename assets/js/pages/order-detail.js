@@ -2,6 +2,12 @@
   const backIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/><path d="M19 12H9"/></svg>';
   const escapeHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   const money = (value) => Number(value || 0).toFixed(2);
+  const productIsNetVegetable = (line) => {
+    const code = line.goodsCode || line.goodsId;
+    const catalogProduct = (window.MockProducts || []).find((product) => product.code === code);
+    if (catalogProduct) return Boolean(catalogProduct.isNetVegetable);
+    return Boolean(line.isNetVegetable);
+  };
 
   const formatTraceCode = (line) => {
     if (!line.goodsCode) return '--';
@@ -28,6 +34,7 @@
 
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
+  const orderNo = params.get('orderNo');
 
   function renderProductImg() {
     return `<div class="detail-product-img">图片</div>`;
@@ -67,7 +74,7 @@
         <td>${index + 1}</td>
         <td>${renderProductImg()}</td>
         <td>
-          <div class="detail-product-name">${line.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}${escapeHtml(line.goodsName)}</div>
+          <div class="detail-product-name">${productIsNetVegetable(line) ? '<span class="net-vegetable-tag">净菜</span>' : ''}${escapeHtml(line.goodsName)}</div>
           <div class="detail-product-sub">(${escapeHtml(line.unit)}/${escapeHtml(line.brand || '--')}/${escapeHtml(line.spec || '--')})</div>
         </td>
         <td>${escapeHtml(line.goodsCode || line.goodsId || '--')}</td>
@@ -165,7 +172,18 @@
     </div>`;
   }
 
-  window.OperationsService.get('orders', id).then((order) => {
+  async function loadOrder() {
+    const direct = await window.OperationsService.get('orders', id);
+    if (direct) return direct;
+    if (orderNo) {
+      const result = await window.OperationsService.list('orders', { page: 1, pageSize: 1000, condition: { orderNo } });
+      const matched = result.items[0];
+      if (matched) return matched;
+    }
+    return (window.MockOperations?.orders || []).find((order) => order.id === id || (orderNo && order.orderNo === orderNo)) || null;
+  }
+
+  loadOrder().then((order) => {
     window.AppShell.mount({ title: '订单管理', content: render(order) });
     document.getElementById('pageContent').addEventListener('click', (event) => {
       if (event.target.closest('[data-action="back"]')) {

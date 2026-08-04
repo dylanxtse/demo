@@ -9,7 +9,7 @@
       { action: '提交审核', desc: '王采购 提交审核 2026-07-30 09:19:05' }
     ] },
     { id: 'ORD-20260729-012', orderNo: 'DD202607290200012', customerName: '阳光幼儿园', canteen: '园区食堂', customerType: '幼儿园', orderTag: '普通餐', orderAmount: 1568, shippingAmount: 1520, returnAmount: 48, reconciliationAmount: 1472, expectedAt: '2026-07-30 08:00', status: 'CONFIRMED', receiptStatus: '部分收货', productCount: 12, warehouse: '中心仓', supplement: '否', remark: '', route: '南城二线', driver: '李师傅', source: '平台添加', creator: '管理员', createdAt: '2026-07-29 14:36:10', items: [
-      { goodsName: '鲫鱼', isNetVegetable: false, goodsCode: 'SP0300031', unit: '斤', brand: '--', spec: '--', unitPrice: 20, quantity: 20, subtotal: 400, shippedQty: 8, shippedAmount: 160, returnQty: 12, returnAmount: 240, reconciliationQty: 8, reconciliationAmount: 160, acceptedQty: 8, acceptedAmount: 160, remark: '库存不足', productionDate: '2026-07-29', inspectionImages: [{ name: '鲫鱼验货.jpg' }], inspectionVideos: [] },
+      { goodsName: '鲫鱼', isNetVegetable: true, goodsCode: 'SP0300031', unit: '斤', brand: '--', spec: '--', unitPrice: 20, quantity: 20, subtotal: 400, shippedQty: 8, shippedAmount: 160, returnQty: 12, returnAmount: 240, reconciliationQty: 8, reconciliationAmount: 160, acceptedQty: 8, acceptedAmount: 160, remark: '库存不足', productionDate: '2026-07-29', inspectionImages: [{ name: '鲫鱼验货.jpg' }], inspectionVideos: [] },
       { goodsName: '西红柿', isNetVegetable: false, goodsCode: 'SP0300025', unit: 'KG', brand: '--', spec: '--', unitPrice: 4.5, quantity: 30, subtotal: 135, shippedQty: 30, shippedAmount: 135, returnQty: 0, returnAmount: 0, reconciliationQty: 30, reconciliationAmount: 135, acceptedQty: 30, acceptedAmount: 135, remark: '', productionDate: '2026-07-29', inspectionImages: [], inspectionVideos: [] },
       { goodsName: '猪肉', isNetVegetable: false, goodsCode: 'SP0300015', unit: '斤', brand: '双汇', spec: '500g/份', unitPrice: 18, quantity: 40, subtotal: 720, shippedQty: 40, shippedAmount: 720, returnQty: 0, returnAmount: 0, reconciliationQty: 40, reconciliationAmount: 720, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-29', inspectionImages: [{ name: '猪肉检疫.jpg' }, { name: '猪肉外观.jpg' }], inspectionVideos: [{ name: '验货视频.mp4' }] }
     ], operationLogs: [
@@ -99,6 +99,67 @@
     { id: 'SORT-024', orderId: 'ORD-20260730-025', goodsCode: 'SP0300014', isNetVegetable: false, goodsName: '苹果(斤/--/--)', customerName: '阳光幼儿园', canteen: '分园食堂', orderQty: 40, actualQty: 40, unit: '斤', route: '南城二线', orderNo: 'DD202607300100025', orderTag: '普通餐', shipped: '否', progress: '100%', remark: '', stock: 180, status: 'SORTED', sorter: '李分拣', sortingAt: '2026-07-31 06:30', warehouse: '中心仓', category: '果蔬', shortage: '否', supplier: '绿源供应商', expectedAt: '2026-07-31 08:00' }
   ];
 
+  // 为分拣列表中存在但订单档案尚未建模的订单补齐可下钻详情数据。
+  const orderIds = new Set(orders.map((order) => order.orderNo));
+  const missingSortingOrders = sortingItems.filter((item) => !orderIds.has(item.orderNo));
+  const missingOrderGroups = new Map();
+  missingSortingOrders.forEach((item) => {
+    if (!missingOrderGroups.has(item.orderNo)) missingOrderGroups.set(item.orderNo, []);
+    missingOrderGroups.get(item.orderNo).push(item);
+  });
+  missingOrderGroups.forEach((group, orderNo) => {
+    const first = group[0];
+    const items = group.map((item) => ({
+      goodsName: String(item.goodsName || '').replace(/\([^)]*\)$/, ''),
+      isNetVegetable: Boolean(item.isNetVegetable),
+      goodsCode: item.goodsCode,
+      unit: item.unit || '--',
+      brand: '--',
+      spec: '--',
+      unitPrice: 0,
+      quantity: Number(item.orderQty || 0),
+      subtotal: 0,
+      shippedQty: item.shipped === '是' ? Number(item.actualQty || 0) : 0,
+      shippedAmount: 0,
+      returnQty: 0,
+      returnAmount: 0,
+      reconciliationQty: 0,
+      reconciliationAmount: 0,
+      acceptedQty: Number(item.actualQty || 0),
+      acceptedAmount: 0,
+      remark: item.remark || '',
+      productionDate: String(item.expectedAt || '').slice(0, 10),
+      inspectionImages: [],
+      inspectionVideos: []
+    }));
+    orders.push({
+      id: first.orderId || `ORD-SORT-${orderNo}`,
+      orderNo,
+      customerName: first.customerName || '--',
+      canteen: first.canteen || '--',
+      customerType: '学校',
+      orderTag: first.orderTag || '普通餐',
+      orderAmount: 0,
+      shippingAmount: 0,
+      returnAmount: 0,
+      reconciliationAmount: 0,
+      expectedAt: first.expectedAt || '',
+      status: group.every((item) => Number(item.actualQty || 0) >= Number(item.orderQty || 0)) ? 'COMPLETED' : 'PENDING',
+      receiptStatus: '待收货',
+      productCount: items.length,
+      warehouse: first.warehouse || '',
+      supplement: '否',
+      remark: '',
+      route: first.route || '',
+      driver: '',
+      source: '客户下单',
+      creator: '系统模拟',
+      createdAt: first.expectedAt || '',
+      items,
+      operationLogs: []
+    });
+  });
+
   const sortingProgress = [
     { id: 'SPG-001', customerName: '第一实验学校', canteen: '第一食堂', sortedCount: 2, orderCount: 4, progress: '2/4', status: 'PARTIAL', warehouse: '中心仓', expectedAt: '2026-07-31 07:30', route: '东城一线', consignee: '王老师', consigneePhone: '13800002001', consigneeAddress: '东城教育路18号' },
     { id: 'SPG-002', customerName: '阳光幼儿园', canteen: '园区食堂', sortedCount: 2, orderCount: 3, progress: '2/3', status: 'PARTIAL', warehouse: '中心仓', expectedAt: '2026-07-31 08:00', route: '南城二线', consignee: '李老师', consigneePhone: '13800002002', consigneeAddress: '南城阳光路8号' },
@@ -110,6 +171,17 @@
     { id: 'SPG-008', customerName: '育才中学', canteen: '初中部食堂', sortedCount: 1, orderCount: 2, progress: '1/2', status: 'PARTIAL', warehouse: '北区仓', expectedAt: '2026-07-31 07:00', route: '北城一线', consignee: '赵老师', consigneePhone: '13800002008', consigneeAddress: '北城育才路66号' },
     { id: 'SPG-009', customerName: '阳光幼儿园', canteen: '分园食堂', sortedCount: 2, orderCount: 2, progress: '2/2', status: 'SORTED', warehouse: '中心仓', expectedAt: '2026-07-31 08:00', route: '南城二线', consignee: '李老师', consigneePhone: '13800002009', consigneeAddress: '南城阳光路8号附1号' }
   ];
+
+  // 客户分拣按客户汇总商品；“是否净菜”按该客户是否包含净菜商品汇总。
+  const netVegetableByCustomer = new Map();
+  sortingItems.forEach((item) => {
+    const key = `${item.customerName || ''}::${item.canteen || ''}`;
+    netVegetableByCustomer.set(key, Boolean(netVegetableByCustomer.get(key) || item.isNetVegetable));
+  });
+  sortingProgress.forEach((item) => {
+    const key = `${item.customerName || ''}::${item.canteen || ''}`;
+    item.isNetVegetable = Boolean(netVegetableByCustomer.get(key));
+  });
 
   const shortageItems = sortingItems.filter((item) => item.shortage === '是').map((item) => ({
     ...item,

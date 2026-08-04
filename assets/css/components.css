@@ -284,3 +284,16 @@
 }
 .cal-hint { color: var(--text-tertiary); font-size: 12px; }
 .cal-btns { display: flex; gap: 6px; }
+
+/* 全局输入控件聚焦态统一使用系统蓝色，避免浏览器默认高亮颜色干扰页面样式。 */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary) !important;
+  outline: none !important;
+}
+input[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus {
+  border-color: var(--danger) !important;
+}

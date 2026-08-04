@@ -8,6 +8,16 @@
   const customers = ['全部', '客户A', '客户B', '客户C'];
   const sortingStorageKey = 'procurement-operations-v1-sortingItems';
 
+  function getLocalDateString(offsetDays = 0) {
+    const date = new Date();
+    date.setDate(date.getDate() + offsetDays);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  function getDefaultExpectedDeliveryDate() {
+    return getLocalDateString(1);
+  }
+
   function getSortingRecords() {
     const fallback = window.MockOperations?.sortingItems || [];
     return window.AppStorage?.read(sortingStorageKey, fallback) || fallback;
@@ -53,13 +63,7 @@
         <div class="template-list" id="templateList"></div>
       </div>
       <div class="processing-operation-panel" id="operationPanel">
-        <div class="operation-empty" id="operationEmpty">
-          <div class="operation-empty-icon">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          </div>
-          <p>请从左侧选择加工方案</p>
-        </div>
-        <div class="operation-form" id="operationForm" style="display:none;"></div>
+        <div class="operation-form" id="operationForm"></div>
       </div>
     </div>
   `;
@@ -76,8 +80,8 @@
     products: window.ProcessingService.getProducts(),
     // 操作表单
     processingDate: '',
-    expectedDeliveryStart: '',
-    expectedDeliveryEnd: '',
+    expectedDeliveryStart: getDefaultExpectedDeliveryDate(),
+    expectedDeliveryEnd: getDefaultExpectedDeliveryDate(),
     customer: '全部',
     canteen: '全部',
     materialWarehouse: '',
@@ -150,6 +154,77 @@
     `;
   }
 
+  function renderOperationModeTabs() {
+    return `
+      <div class="operation-mode-tabs" role="tablist" aria-label="加工模式">
+        <button class="operation-mode-tab ${state.operationMode === 'plan' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.operationMode === 'plan'}" data-action="switch-operation-mode" data-mode="plan">按计划加工</button>
+        <button class="operation-mode-tab ${state.operationMode === 'order' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.operationMode === 'order'}" data-action="switch-operation-mode" data-mode="order">按订单加工</button>
+        <button class="btn btn-sm btn-fixed operation-record-button" type="button" data-action="goto-records">${recordIcon}加工记录</button>
+      </div>
+    `;
+  }
+
+  function renderOperationEmpty() {
+    return `
+      <div class="operation-empty" id="operationEmpty">
+        <div class="operation-empty-icon">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <p>请从左侧选择加工方案</p>
+      </div>
+    `;
+  }
+
+  function renderOrderProcessingContext() {
+    return `
+      <div class="order-processing-query">
+        <div class="order-processing-query-header">
+          <span class="section-title-mark">订单需求查询</span>
+        </div>
+        <div class="order-processing-context">
+          <div class="basic-info-field date-range-group">
+            <label class="field-label" for="opExpectedDeliveryDisplay">期望送达时间</label>
+            <div class="date-range-picker order-date-range-picker" id="opExpectedDeliveryRange">
+              <input class="form-control date-range-display" id="opExpectedDeliveryDisplay" data-action="toggle-order-date" placeholder="请选择日期" readonly>
+              <span class="date-range-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+              <input type="hidden" id="opExpectedDeliveryStart" value="${escapeHtml(state.expectedDeliveryStart)}">
+              <input type="hidden" id="opExpectedDeliveryEnd" value="${escapeHtml(state.expectedDeliveryEnd)}">
+            </div>
+          </div>
+          <div class="basic-info-field">
+            <label class="field-label" for="opCustomer">客户名称</label>
+            <select class="form-control" id="opCustomer">
+              ${customers.map((customer) => `<option value="${escapeHtml(customer)}" ${customer === state.customer ? 'selected' : ''}>${escapeHtml(customer)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="basic-info-field">
+            <label class="field-label" for="opCanteen">食堂名称</label>
+            <select class="form-control" id="opCanteen">
+              ${getCanteenOptions().map((canteen) => `<option value="${escapeHtml(canteen)}" ${canteen === state.canteen ? 'selected' : ''}>${escapeHtml(canteen)}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm order-processing-query-button" type="button" data-action="query-order-demand">查询</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function mountOrderProcessingDatePicker() {
+    orderDatePicker?.destroy();
+    orderDatePicker = window.DateRangePicker.mount({
+      container: '#opExpectedDeliveryRange',
+      displayInput: '#opExpectedDeliveryDisplay',
+      startInput: '#opExpectedDeliveryStart',
+      endInput: '#opExpectedDeliveryEnd',
+      panelId: 'opExpectedDeliveryCalendarPanel',
+      onChange: ({ startDate, endDate }) => {
+        state.expectedDeliveryStart = startDate;
+        state.expectedDeliveryEnd = endDate;
+        renderOpOutputTable();
+      }
+    });
+  }
+
   /* ===== 左侧：模版列表渲染 ===== */
   function renderTemplateList() {
     const searchValue = (document.getElementById('templateSearch')?.value || '').trim().toLowerCase();
@@ -196,23 +271,24 @@
   function renderOperationForm() {
     const tpl = state.templates.find((t) => t.id === state.selectedTemplateId);
     const form = document.getElementById('operationForm');
-    const empty = document.getElementById('operationEmpty');
 
     if (!tpl) {
-      form.style.display = 'none';
-      empty.style.display = 'flex';
+      form.style.display = 'flex';
+      form.classList.toggle('is-order-mode', state.operationMode === 'order');
+      form.innerHTML = renderOperationModeTabs()
+        + (state.operationMode === 'order' ? renderOrderProcessingContext() : '')
+        + renderOperationEmpty();
+      if (state.operationMode === 'order') mountOrderProcessingDatePicker();
+      bindOperationFormEvents();
       return;
     }
 
-    empty.style.display = 'none';
     form.style.display = 'flex';
+    form.classList.toggle('is-order-mode', state.operationMode === 'order');
     hideOrderDatePicker();
     form.innerHTML = `
-      <div class="operation-mode-tabs" role="tablist" aria-label="加工模式">
-        <button class="operation-mode-tab ${state.operationMode === 'plan' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.operationMode === 'plan'}" data-action="switch-operation-mode" data-mode="plan">按计划加工</button>
-        <button class="operation-mode-tab ${state.operationMode === 'order' ? 'active' : ''}" type="button" role="tab" aria-selected="${state.operationMode === 'order'}" data-action="switch-operation-mode" data-mode="order">按订单加工</button>
-        <button class="btn btn-sm btn-fixed operation-record-button" type="button" data-action="goto-records">${recordIcon}加工记录</button>
-      </div>
+      ${renderOperationModeTabs()}
+      ${state.operationMode === 'order' ? renderOrderProcessingContext() : ''}
       <div class="operation-form-header">
         <div class="operation-form-title-group">
           <h1>${escapeHtml(tpl.name)}</h1>
@@ -246,29 +322,6 @@
                   ${warehouses.map((w) => `<option value="${w}" ${w === state.outputWarehouse ? 'selected' : ''}>${w}</option>`).join('')}
                 </select>
               </div>
-              ${state.operationMode === 'order' ? `
-                <div class="basic-info-field order-processing-field date-range-group">
-                  <label class="field-label" for="opExpectedDeliveryDisplay">期望送达时间</label>
-                  <div class="date-range-picker order-date-range-picker" id="opExpectedDeliveryRange">
-                    <input class="form-control date-range-display" id="opExpectedDeliveryDisplay" data-action="toggle-order-date" placeholder="请选择日期" readonly>
-                    <span class="date-range-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                    <input type="hidden" id="opExpectedDeliveryStart" value="${escapeHtml(state.expectedDeliveryStart)}">
-                    <input type="hidden" id="opExpectedDeliveryEnd" value="${escapeHtml(state.expectedDeliveryEnd)}">
-                  </div>
-                </div>
-                <div class="basic-info-field order-processing-field">
-                  <label class="field-label" for="opCustomer">客户名称</label>
-                  <select class="form-control" id="opCustomer">
-                    ${customers.map((customer) => `<option value="${escapeHtml(customer)}" ${customer === state.customer ? 'selected' : ''}>${escapeHtml(customer)}</option>`).join('')}
-                  </select>
-                </div>
-                <div class="basic-info-field order-processing-field">
-                  <label class="field-label" for="opCanteen">食堂名称</label>
-                  <select class="form-control" id="opCanteen">
-                    ${getCanteenOptions().map((canteen) => `<option value="${escapeHtml(canteen)}" ${canteen === state.canteen ? 'selected' : ''}>${escapeHtml(canteen)}</option>`).join('')}
-                  </select>
-                </div>
-              ` : ''}
             </div>
           </div>
         </div>
@@ -357,19 +410,7 @@
     document.getElementById('opMaterialWarehouse').value = state.materialWarehouse || '';
     document.getElementById('opOutputWarehouse').value = state.outputWarehouse || '';
     document.getElementById('opRemarkCounter').textContent = `${(state.remark || '').length}/200`;
-    orderDatePicker?.destroy();
-    orderDatePicker = window.DateRangePicker.mount({
-      container: '#opExpectedDeliveryRange',
-      displayInput: '#opExpectedDeliveryDisplay',
-      startInput: '#opExpectedDeliveryStart',
-      endInput: '#opExpectedDeliveryEnd',
-      panelId: 'opExpectedDeliveryCalendarPanel',
-      onChange: ({ startDate, endDate }) => {
-        state.expectedDeliveryStart = startDate;
-        state.expectedDeliveryEnd = endDate;
-        renderOpOutputTable();
-      }
-    });
+    if (state.operationMode === 'order') mountOrderProcessingDatePicker();
     processingDatePicker?.destroy();
     processingDatePicker = window.DatePicker.mount({
       input: '#opProcessingDate',
@@ -596,11 +637,10 @@
     if (!tpl) return;
 
     state.selectedTemplateId = templateId;
-    state.operationMode = 'plan';
     state.costMode = tpl.costMode || 'auto';
-    state.processingDate = new Date().toISOString().slice(0, 10);
-    state.expectedDeliveryStart = '';
-    state.expectedDeliveryEnd = '';
+    state.processingDate = getLocalDateString();
+    state.expectedDeliveryStart = getDefaultExpectedDeliveryDate();
+    state.expectedDeliveryEnd = getDefaultExpectedDeliveryDate();
     state.customer = '全部';
     state.canteen = '全部';
     state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
@@ -644,9 +684,9 @@
   function resetOperationForm() {
     const tpl = state.templates.find((t) => t.id === state.selectedTemplateId);
     if (!tpl) return;
-    state.processingDate = new Date().toISOString().slice(0, 10);
-    state.expectedDeliveryStart = '';
-    state.expectedDeliveryEnd = '';
+    state.processingDate = getLocalDateString();
+    state.expectedDeliveryStart = getDefaultExpectedDeliveryDate();
+    state.expectedDeliveryEnd = getDefaultExpectedDeliveryDate();
     state.customer = '全部';
     state.canteen = '全部';
     state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
@@ -788,6 +828,10 @@
 
     form.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
+      if (action === 'query-order-demand') {
+        renderOpOutputTable();
+        return;
+      }
       if (action === 'switch-operation-mode') {
         state.operationMode = event.target.closest('[data-action]')?.dataset.mode || 'plan';
         renderOperationForm();
@@ -1516,6 +1560,7 @@
   window.AppShell.mount({ title: '净菜加工', content: pageContent });
   state.filteredTemplates = [...state.templates];
   renderTemplateList();
+  renderOperationForm();
   bindGlobalEvents();
   bindTemplateEditorPageEvents();
 

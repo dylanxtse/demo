@@ -61,16 +61,32 @@
     const primaryFilterHtml = filters.slice(0, 3).map(renderFilter).join('');
     const advancedFilterHtml = filters.slice(3).map(renderFilter).join('');
     const toolbarActions = config.toolbar || [];
-    const toolbarHtml = toolbarActions.filter((action) => action.key !== 'export').map((action) =>
-      `<button class="btn btn-sm ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${action.key}">${action.label}</button>`
+    const isSideToolbarAction = (action) => action.key === 'export' || action.side === true;
+    const isToolbarActionVisible = (action) => !action.visibleStatuses
+      || String(state.activeStatus).split(',').some((status) => action.visibleStatuses.includes(status));
+    const renderToolbarButton = (action, compact = false) => {
+      const buttonClass = compact ? 'btn btn-sm' : 'btn';
+      const options = (action.dropdownOptions || []).filter(isToolbarActionVisible);
+      const activeStatus = String(state.activeStatus);
+      const effectiveKey = action.defaultActionByStatus?.[activeStatus] || action.key;
+      const effectiveLabel = action.labelByStatus?.[activeStatus] || action.label;
+      const dropdownVisible = !action.dropdownVisibleStatuses || action.dropdownVisibleStatuses.includes(activeStatus);
+      if (!options.length || !dropdownVisible) return `<button class="${buttonClass} ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${escapeHtml(effectiveKey)}">${escapeHtml(effectiveLabel)}</button>`;
+      return `<div class="toolbar-dropdown">
+        <button class="${buttonClass} toolbar-dropdown-main ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${escapeHtml(effectiveKey)}">${escapeHtml(effectiveLabel)}</button>
+        <button class="${buttonClass} toolbar-dropdown-toggle ${action.primary ? 'btn-primary' : ''}" type="button" data-toolbar-dropdown-toggle aria-label="更多操作">▾</button>
+        <div class="toolbar-dropdown-menu">${options.map((option) => `<button type="button" data-toolbar-option="${escapeHtml(option.key)}">${escapeHtml(option.label)}</button>`).join('')}</div>
+      </div>`;
+    };
+    const toolbarHtml = toolbarActions.filter((action) => !isSideToolbarAction(action)).map((action) =>
+      renderToolbarButton(action, true)
     ).join('');
-    const toolbarSideHtml = toolbarActions.filter((action) => action.key === 'export').map((action) =>
-      `<button class="btn btn-sm" data-toolbar-action="${action.key}">${action.label}</button>`
+    const toolbarSideHtml = toolbarActions.filter(isSideToolbarAction).map((action) =>
+      renderToolbarButton(action, true)
     ).join('');
     const legacyToolbarHtml = toolbarActions.map((action) =>
       `<button class="btn ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${action.key}">${action.label}</button>`
     ).join('');
-    const selectionSummaryHtml = config.selectable === false || config.showSelectionSummary === false ? '' : '<span class="operations-summary" id="recordSelection">已选择 0 条</span>';
     const standardContent = `
       <section class="page-card operations-page ${escapeHtml(config.pageClass || '')}" aria-label="${escapeHtml(config.title)}">
         ${config.tabs ? `<div class="operations-tabs">${config.tabs.map((tab, index) => `<button class="operations-tab ${index === 0 ? 'active' : ''}" data-view-tab="${tab.key}">${tab.label}</button>`).join('')}</div>` : ''}
@@ -88,7 +104,7 @@
         </div>
         <div class="operations-toolbar">
           <div class="operations-toolbar-main">${toolbarHtml}</div>
-          <div class="operations-toolbar-side">${selectionSummaryHtml}${toolbarSideHtml}</div>
+          <div class="operations-toolbar-side">${toolbarSideHtml}</div>
         </div>
         <div class="operations-table-container">
           <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
@@ -104,7 +120,7 @@
           <div class="operations-filter-grid">${filterHtml}</div>
           <div class="operations-filter-actions"><button class="btn btn-primary" id="recordQuery">查询</button><button class="btn" id="recordReset">重置</button></div>
         </div>
-        <div class="operations-toolbar">${legacyToolbarHtml}<span class="toolbar-spacer"></span><span class="operations-summary" id="recordSelection">已选择 0 条</span></div>
+        <div class="operations-toolbar">${legacyToolbarHtml}<span class="toolbar-spacer"></span></div>
         <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
         <div class="operations-pagination" id="recordPagination"></div>
       </section>
@@ -218,7 +234,8 @@
       if (column.render) return column.render(item);
       const value = item[column.key];
       if (column.editableNumber) {
-        return `<input class="quantity-input record-inline-input" data-inline-field="${column.key}" type="number" min="0" value="${escapeHtml(value ?? 0)}" aria-label="${escapeHtml(column.label)}">`;
+        const inputValue = column.blankZero && Number(value || 0) === 0 ? '' : (value ?? '');
+        return `<input class="quantity-input record-inline-input" data-inline-field="${column.key}" type="number" min="0" value="${escapeHtml(inputValue)}" placeholder="${escapeHtml(column.placeholder || '请输入')}" aria-label="${escapeHtml(column.label)}">`;
       }
       if (column.format === 'money') return Number(value || 0).toFixed(2);
       if (column.format === 'status') {
@@ -289,17 +306,16 @@
       const main = root.querySelector('.operations-toolbar-main');
       const side = root.querySelector('.operations-toolbar-side');
       if (!main || !side) return;
-      main.innerHTML = actions.filter((action) => action.key !== 'export').map((action) =>
-        `<button class="btn ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${action.key}">${action.label}</button>`
+      const isSideToolbarAction = (action) => action.key === 'export' || action.side === true;
+      main.innerHTML = actions.filter((action) => !isSideToolbarAction(action)).map((action) =>
+        renderToolbarButton(action)
       ).join('');
-      side.innerHTML = `${config.selectable === false || config.showSelectionSummary === false ? '' : `<span class="operations-summary" id="recordSelection">已选择 ${state.selected.size} 条</span>`}${actions.filter((action) => action.key === 'export').map((action) =>
-        `<button class="btn" data-toolbar-action="${action.key}">${action.label}</button>`
+      side.innerHTML = `${actions.filter(isSideToolbarAction).map((action) =>
+        renderToolbarButton(action)
       ).join('')}`;
     }
 
     function updateSelection() {
-      const summary = $('#recordSelection');
-      if (summary) summary.textContent = `已选择 ${state.selected.size} 条`;
       const all = $('#recordSelectAll');
       if (all) {
         all.checked = state.items.length > 0 && state.items.every((item) => state.selected.has(item.id));
@@ -351,8 +367,8 @@
       overlay.innerHTML = '';
     }
 
-    function modal(title, body, footer, detail = false) {
-      overlay.innerHTML = `<div class="operations-modal-backdrop"><section class="operations-modal ${detail ? 'is-detail' : ''}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+    function modal(title, body, footer, detail = false, variant = '') {
+      overlay.innerHTML = `<div class="operations-modal-backdrop"><section class="operations-modal ${detail ? 'is-detail' : ''} ${variant}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
         <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3><button data-record-close aria-label="关闭">×</button></header>
         <div class="operations-modal-body">${body}</div><footer class="operations-modal-footer">${footer}</footer>
       </section></div>`;
@@ -463,8 +479,8 @@
 
     function confirm(title, message, callback) {
       modal(title, `<p style="margin:0;text-align:center;color:var(--text-secondary)">${escapeHtml(message)}</p>`,
-        '<button class="btn" data-record-close>取消</button><button class="btn btn-primary" id="recordConfirm">确定</button>'
-      );
+        '<button class="btn" data-record-close>取消</button><button class="btn btn-primary" id="recordConfirm">确定</button>',
+        false, 'is-confirm');
       $('#recordConfirm').onclick = async () => {
         try {
           await callback();
@@ -533,8 +549,12 @@
       if (action.toast) return toast(action.toast);
     }
 
+    function findToolbarAction(actionKey) {
+      return currentToolbar().flatMap((entry) => [entry, ...(entry.dropdownOptions || [])]).find((entry) => entry.key === actionKey);
+    }
+
     async function toolbarAction(actionKey) {
-      const action = currentToolbar().find((entry) => entry.key === actionKey);
+      const action = findToolbarAction(actionKey);
       if (!action) return;
       if (action.key === 'add') {
         const addHref = currentTab()?.addHref || config.addHref;
@@ -543,6 +563,12 @@
           return;
         }
         return showForm();
+      }
+      if (action.requiresSelection || action.validateSelection) {
+        const selectedItems = state.items.filter((item) => state.selected.has(item.id));
+        if (action.requiresSelection && !selectedItems.length) return toast('请选择要操作的数据', 'error');
+        const message = action.validateSelection?.(selectedItems);
+        if (message) return toast(message, 'error');
       }
       if (action.key === 'export') return exportRows();
       if (action.batchUpdate && action.formFields) return showBatchForm(action);
@@ -578,6 +604,18 @@
         state.page = 1;
         state.selected.clear();
         return load();
+      }
+      const dropdownToggle = event.target.closest('[data-toolbar-dropdown-toggle]');
+      if (dropdownToggle) {
+        const dropdown = dropdownToggle.closest('.toolbar-dropdown');
+        root.querySelectorAll('.toolbar-dropdown.is-open').forEach((element) => { if (element !== dropdown) element.classList.remove('is-open'); });
+        dropdown?.classList.toggle('is-open');
+        return;
+      }
+      const dropdownOption = event.target.closest('[data-toolbar-option]');
+      if (dropdownOption) {
+        dropdownOption.closest('.toolbar-dropdown')?.classList.remove('is-open');
+        return toolbarAction(dropdownOption.dataset.toolbarOption);
       }
       const cellLink = event.target.closest('[data-cell-href]');
       if (cellLink) {

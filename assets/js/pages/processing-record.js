@@ -126,7 +126,7 @@
     return product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
   }
 
-  function renderProductName(productCode, productName, unit) {
+  function renderProductName(productCode, productName, unit, nameSuffix = '') {
     const products = window.ProductService?.getList?.() || window.MockProducts || [];
     const product = products.find((item) => item.code === productCode) || {};
     const name = product.name || productName || '--';
@@ -134,7 +134,7 @@
     const brand = product.brand || '--';
     const spec = product.spec || '--';
     return `<div class="name-cell processing-record-product-name">
-      <div class="name-main">${productNetTag(productCode)}${escapeHtml(name)}</div>
+      <div class="name-main">${productNetTag(productCode)}${escapeHtml(name)}${nameSuffix}</div>
       <div class="name-sub">${escapeHtml(displayUnit)}/${escapeHtml(brand)}/${escapeHtml(spec)}</div>
     </div>`;
   }
@@ -252,7 +252,7 @@
       <tr class="processing-record-sub-row ${rowClass}" data-order-id="${escapeHtml(order.id)}">
         ${sharedCells(index)}
         <td class="record-output-product-cell processing-record-product-col">
-          <div class="record-output-product">${renderProductName(output.productCode, output.productName, output.unit)}${outputCount > 2 && index === 1 ? `<button class="btn-text record-output-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : ''}</div>
+          <div class="record-output-product">${renderProductName(output.productCode, output.productName, output.unit, outputCount > 2 && index === 1 ? `<button class="btn-text record-output-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : '')}</div>
         </td>
         <td class="record-output-qty-cell">${escapeHtml(output.actualQty !== '' && output.actualQty != null ? `${output.actualQty}${output.unit || ''}` : '--')}</td>
         ${tailCells(index)}
