@@ -369,16 +369,6 @@
   orders.unshift(simulatedOrder);
   sortingItems.unshift(simulatedSortingItem);
 
-  // 当前浏览器已有本地数据时，将模拟记录合并进去，避免被 localStorage 的旧快照覆盖。
-  const storedOrders = window.AppStorage?.read('procurement-operations-v1-orders', null);
-  if (Array.isArray(storedOrders) && !storedOrders.some((item) => item.orderNo === simulatedOrder.orderNo)) {
-    window.AppStorage.write('procurement-operations-v1-orders', [simulatedOrder, ...storedOrders]);
-  }
-  const storedSortingItems = window.AppStorage?.read('procurement-operations-v1-sortingItems', null);
-  if (Array.isArray(storedSortingItems) && !storedSortingItems.some((item) => item.orderNo === simulatedSortingItem.orderNo)) {
-    window.AppStorage.write('procurement-operations-v1-sortingItems', [simulatedSortingItem, ...storedSortingItems]);
-  }
-
   window.MockOperations = {
     orders,
     returns,

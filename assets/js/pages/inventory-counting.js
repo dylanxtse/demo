@@ -1,14 +1,14 @@
 (function () {
   const countActions = [
-    { key: 'approve', label: '审核', href: (item) => `./inventory-document.html?type=count&mode=review&id=${encodeURIComponent(item.id)}`, visible: ['PENDING'] },
-    { key: 'edit', label: '编辑', visible: ['PENDING'] },
+    { key: 'approve', label: '审核', href: (item) => `./inventory-document.html?type=count&mode=review&id=${encodeURIComponent(item.id)}`, visible: ['PENDING_AUDIT'] },
+    { key: 'edit', label: '编辑', visible: ['PENDING_AUDIT'] },
     { key: 'copy', label: '复制', href: (item) => `./inventory-document.html?type=count&mode=copy&id=${encodeURIComponent(item.id)}` },
-    { key: 'close', label: '关闭', transition: 'close', visible: ['PENDING', 'APPROVED'], message: '确定要关闭该盘点单吗？' }
+    { key: 'close', label: '关闭', transition: 'close', visible: ['PENDING_AUDIT', 'APPROVED'], message: '确定要关闭该盘点单吗？' }
   ];
   const lossActions = [
-    { key: 'approve', label: '审核', href: (item) => `./inventory-document.html?type=loss&mode=review&id=${encodeURIComponent(item.id)}`, visible: ['PENDING'] },
-    { key: 'edit', label: '编辑', visible: ['PENDING'] },
-    { key: 'close', label: '关闭', transition: 'close', visible: ['PENDING', 'APPROVED'], message: '确定关闭该损溢单吗？' }
+    { key: 'approve', label: '审核', href: (item) => `./inventory-document.html?type=loss&mode=review&id=${encodeURIComponent(item.id)}`, visible: ['PENDING_AUDIT'] },
+    { key: 'edit', label: '编辑', visible: ['PENDING_AUDIT'] },
+    { key: 'close', label: '关闭', transition: 'close', visible: ['PENDING_AUDIT', 'APPROVED'], message: '确定关闭该损溢单吗？' }
   ];
   window.RecordPageConfig = {
     title: '库存盘点',
@@ -21,7 +21,7 @@
       { key: 'goodsName', label: '商品名称', placeholder: '请输入名称/编号' },
       { key: 'warehouse', label: '仓库', options: ['中心仓', '北区仓', '临时仓'] },
       { key: 'status', label: '单据状态', options: [
-        { label: '待审核', value: 'PENDING' },
+        { label: '待审核', value: 'PENDING_AUDIT' },
         { label: '已审核', value: 'APPROVED' },
         { label: '已关闭', value: 'CLOSED' }
       ] },
@@ -60,7 +60,7 @@
           { key: 'lossAmount', label: '盘损金额', type: 'number', defaultValue: 0 },
           { key: 'overflowAmount', label: '盘溢金额', type: 'number', defaultValue: 0 }
         ],
-        createDefaults: { status: 'PENDING', creator: '当前用户' }
+        createDefaults: { status: 'PENDING_AUDIT', creator: '当前用户' }
       },
       {
         key: 'loss',
@@ -91,7 +91,7 @@
           { key: 'productCount', label: '商品数', required: true, type: 'number' },
           { key: 'amount', label: '损溢金额', required: true, type: 'number' }
         ],
-        createDefaults: { status: 'PENDING', creator: '当前用户' }
+        createDefaults: { status: 'PENDING_AUDIT', creator: '当前用户' }
       }
     ]
   };

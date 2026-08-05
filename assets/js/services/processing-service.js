@@ -1,8 +1,4 @@
 (function () {
-  const storageKey = 'procurement-processing-orders';
-  const dataVersionKey = 'procurement-processing-data-version';
-  const dataVersion = '20260731-processing-v12';
-  const configKey = 'procurement-processing-config';
   const defaultConfig = { auditEnabled: true };
   const customerCodes = { 全部: '03', 客户A: '01', 客户B: '02', 客户C: '03' };
 
@@ -23,8 +19,18 @@
     return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   }
 
+  function canonicalProcessingId(id, datePart, customerCode, fallbackSequence) {
+    const value = String(id || '');
+    if (/^JGD\d{8}\d{2}\d{5}$/.test(value)) return value;
+    const legacy = value.match(/^JG?D?(\d{8})(\d{1,5})$/);
+    if (legacy) {
+      return `JGD${legacy[1]}${customerCode}${legacy[2].padStart(5, '0')}`;
+    }
+    return `JGD${datePart}${customerCode}${String(fallbackSequence).padStart(5, '0')}`;
+  }
+
   function normalizeStatus(status) {
-    return { 已加工: '已完成', 草稿: '待确认', 已作废: '已驳回' }[status] || status;
+    return window.BusinessRules.normalizeStatus('processingOrders', status);
   }
 
   function isValidPrice(value) {
@@ -113,57 +119,36 @@
       customerCode,
       status: normalizeStatus(order.status)
     };
-    const normalizedOrder = currentId.startsWith('JGD')
-      ? normalizedBase
-      : {
-        ...normalizedBase,
-        id: `JGD${datePart}${customerCode}${(
-          currentId.match(/^JG\d{8}(\d{3,5})$/)?.[1]
-          || currentId.match(/(\d{1,5})$/)?.[1]
-          || String(index + 1)
-        ).padStart(5, '0')}`
-      };
+    const sequence = currentId.match(/(\d{1,5})$/)?.[1] || String(index + 1);
+    const normalizedOrder = {
+      ...normalizedBase,
+      id: canonicalProcessingId(currentId, datePart, customerCode, sequence)
+    };
     return hasValidProcessingPayload(normalizedOrder) ? normalizedOrder : null;
   }
 
   function load() {
-    if (window.DemoStore) {
-      return clone(window.DemoStore.get('processingOrders') || [])
-        .map(normalizeOrder)
-        .filter(Boolean);
-    }
-    const canonicalOrders = clone(window.MockProcessingOrders || []);
-    const storedVersion = window.AppStorage?.read(dataVersionKey, '') || '';
-    const versionChanged = storedVersion !== dataVersion;
-    const storedOrders = versionChanged
-      ? canonicalOrders
-      : window.AppStorage?.read(storageKey, canonicalOrders);
-    const orders = clone(storedOrders || canonicalOrders).map(normalizeOrder).filter(Boolean);
-    if (window.AppStorage) {
-      window.AppStorage.write(dataVersionKey, dataVersion);
-      window.AppStorage.write(storageKey, orders);
-      if (versionChanged) {
-        window.AppStorage.write('procurement-inbound-orders', clone(window.MockInboundOrders || []));
-        window.AppStorage.write('procurement-outbound-orders', clone(window.MockOutboundOrders || []));
-      }
-    }
-    return orders;
+    if (!window.DemoStore) throw new Error('统一数据仓库未加载');
+    return clone(window.DemoStore.get('processingOrders') || [])
+      .map(normalizeOrder)
+      .filter(Boolean);
   }
 
   function save(orders) {
-    if (window.DemoStore) {
-      window.DemoStore.replace('processingOrders', orders);
-      return;
-    }
-    if (window.AppStorage) window.AppStorage.write(storageKey, orders);
+    window.DemoStore.replace('processingOrders', orders);
   }
 
   function getConfig() {
-    return { ...defaultConfig, ...(window.AppStorage?.read(configKey, defaultConfig) || {}) };
+    return {
+      ...defaultConfig,
+      auditEnabled: window.DemoStore?.getSettings?.().processingAuditEnabled ?? defaultConfig.auditEnabled
+    };
   }
 
   function saveConfig(config) {
-    return Boolean(window.AppStorage?.write(configKey, { ...getConfig(), ...config }));
+    if (!window.DemoStore) return false;
+    window.DemoStore.updateSettings({ processingAuditEnabled: Boolean(config.auditEnabled) });
+    return true;
   }
 
   function generateId(processingDate, customerCode, orders) {
@@ -178,24 +163,17 @@
   }
 
   function getDocumentCollection(key, fallback) {
-    if (window.DemoStore) {
-      const resource = key === 'procurement-inbound-orders' ? 'inboundOrders' : 'outboundOrders';
-      return clone(window.DemoStore.get(resource) || []);
-    }
-    return clone(window.AppStorage?.read(key, fallback || []) || []);
+    const resource = key === 'procurement-inbound-orders' ? 'inboundOrders' : 'outboundOrders';
+    return clone(window.DemoStore.get(resource) || fallback || []);
   }
 
   function saveDocumentCollection(key, value) {
-    if (window.DemoStore) {
-      const resource = key === 'procurement-inbound-orders' ? 'inboundOrders' : 'outboundOrders';
-      window.DemoStore.replace(resource, value);
-      return;
-    }
-    if (window.AppStorage) window.AppStorage.write(key, value);
+    const resource = key === 'procurement-inbound-orders' ? 'inboundOrders' : 'outboundOrders';
+    window.DemoStore.replace(resource, value);
   }
 
   function applyProcessedQuantities(order) {
-    if (!window.DemoStore || !order || order.status !== '已完成') return;
+    if (!window.DemoStore || !order || order.status !== 'COMPLETED') return;
     const refsByProduct = new Map();
     (order.outputs || []).forEach((output) => {
       const refs = Array.isArray(output.orderLineRefs) ? output.orderLineRefs : [];
@@ -271,12 +249,12 @@
   }
 
   function ensureRelatedDocuments(order) {
-    if (order.status !== '已完成') return order;
+    if (order.status !== 'COMPLETED') return order;
     const datePart = getDatePart(order.processingDate || order.createTime);
     const customerCode = getCustomerCode(order);
     const inboundOrders = getDocumentCollection('procurement-inbound-orders', window.MockInboundOrders);
     const outboundOrders = getDocumentCollection('procurement-outbound-orders', window.MockOutboundOrders);
-    const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+    const now = window.BusinessRules.now();
     const inboundId = generateProcessingDocumentId('RKD', datePart, customerCode, order);
     const outboundId = generateProcessingDocumentId('CKD', datePart, customerCode, order);
 
@@ -284,13 +262,14 @@
       inboundOrders.unshift({
         id: inboundId,
         entryTime: now,
-        supplierPurchaserCustomerName: '--',
+        supplierPurchaserCustomerName: order.customer || '企业自加工',
+        customerName: order.customer || '企业自加工',
         entryType: '净菜加工入库',
-        entryAmt: buildInboundItems(order).reduce((sum, item) => sum + Number(item.amount), 0).toFixed(2),
+        entryAmt: window.BusinessRules.totalAmount(buildInboundItems(order), ['actualQty']),
         warehouseName: order.outputWarehouse || order.warehouse || '主仓库',
         relNo: order.id,
         expectedDeliveryDate: order.processingDate || '--',
-        status: '已完成',
+        status: 'COMPLETED',
         purchaserLeaderName: order.operator || '管理员',
         creator: order.operator || '管理员',
         remark: order.remark || '加工成品入库',
@@ -313,15 +292,18 @@
     if (!outboundOrders.some((item) => item.id === outboundId)) {
       outboundOrders.unshift({
         id: outboundId,
+        outboundOrderId: outboundId,
         outboundTime: now,
         outboundType: '净菜加工出库',
         outboundAmt: (order.materials || []).reduce((sum, material) => (
           sum + (Number(material.consumeQty) || 0) * (Number(material.avgPrice) || 0)
         ), 0).toFixed(2),
         warehouseName: order.materialWarehouse || order.warehouse || '主仓库',
-        supplierPurchaserCustomerName: '--',
+        warehouse: order.materialWarehouse || order.warehouse || '主仓库',
+        supplierPurchaserCustomerName: order.customer || '企业自加工',
+        customerName: order.customer || '企业自加工',
         relNo: order.id,
-        status: '已完成',
+        status: 'COMPLETED',
         creator: order.operator || '管理员',
         remark: order.remark || '加工原料出库',
         attachments: [],
@@ -346,7 +328,7 @@
   window.ProcessingService = {
     getList() {
       const orders = load().map(ensureRelatedDocuments);
-      if (window.AppStorage) window.AppStorage.write(storageKey, orders);
+      save(orders);
       return clone(orders);
     },
     getDetail(id) {
@@ -360,13 +342,20 @@
         ...data,
         customerCode,
         id: generateId(data.processingDate, customerCode, orders),
-        status: data.status || '待确认',
+        status: normalizeStatus(data.status || 'PENDING_CONFIRM'),
         operator: data.operator || '管理员',
-        createTime: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+        createTime: window.BusinessRules.now(now)
       };
-      orders.unshift(created);
+      const normalized = normalizeOrder(created, orders.length);
+      if (!normalized) {
+        const error = new Error('加工单原料、产出数量和成本信息不完整');
+        error.code = 'INVALID_PROCESSING_DATA';
+        throw error;
+      }
+      window.BusinessRules.assertValid('processingOrders', normalized);
+      orders.unshift(normalized);
       save(orders);
-      return clone(created);
+      return clone(normalized);
     },
     update(id, data) {
       const orders = load();
@@ -385,25 +374,25 @@
     submit(id) {
       const orders = load();
       const index = orders.findIndex((order) => order.id === id);
-      if (index < 0 || !['待确认', '草稿'].includes(orders[index].status)) return null;
-      const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+      if (index < 0 || !['PENDING_CONFIRM', 'DRAFT'].includes(orders[index].status)) return null;
+      const now = window.BusinessRules.now();
       orders[index] = ensureRelatedDocuments({
         ...orders[index],
-        status: getConfig().auditEnabled ? '待审核' : '已完成',
+        status: getConfig().auditEnabled ? 'PENDING_AUDIT' : 'COMPLETED',
         submittedAt: now
       });
       save(orders);
-      if (orders[index].status === '已完成') applyProcessedQuantities(orders[index]);
+      if (orders[index].status === 'COMPLETED') applyProcessedQuantities(orders[index]);
       return clone(orders[index]);
     },
     audit(id, approved) {
       const orders = load();
       const index = orders.findIndex((order) => order.id === id);
-      if (index < 0 || orders[index].status !== '待审核') return null;
-      const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+      if (index < 0 || orders[index].status !== 'PENDING_AUDIT') return null;
+      const now = window.BusinessRules.now();
       orders[index] = ensureRelatedDocuments({
         ...orders[index],
-        status: approved ? '已完成' : '已驳回',
+        status: approved ? 'COMPLETED' : 'REJECTED',
         auditedAt: now,
         auditResult: approved ? '通过' : '驳回'
       });

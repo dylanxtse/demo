@@ -2,7 +2,7 @@
   const id = new URLSearchParams(window.location.search).get('id') || '';
   const root = window.AppShell.mount({ title: '实收变更', content: document.getElementById('changeDetailTemplate').innerHTML });
   const content = document.getElementById('changeDetailContent');
-  const statusMap = { PENDING: '待审核', APPROVED: '已审核', REJECTED: '已驳回', CLOSED: '已关闭' };
+  const statusMap = { PENDING_AUDIT: '待审核', APPROVED: '已审核', REJECTED: '已驳回', CLOSED: '已关闭' };
   const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const money = (value) => Number(value || 0).toFixed(2);
   const field = (label, value) => `<div class="order-detail-item"><dt>${label}</dt><dd>${esc(value || '--')}</dd></div>`;

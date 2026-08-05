@@ -174,8 +174,7 @@
   }
 
   function getDisplayStatus(order) {
-    const status = order.status;
-    return { 已加工: '已完成', 草稿: '待确认', 已作废: '已驳回' }[status] || status;
+    return window.BusinessRules.statusLabel('processingOrders', order.status);
   }
 
   function getRelatedOrderId(order, type) {

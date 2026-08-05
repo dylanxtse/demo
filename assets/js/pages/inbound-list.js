@@ -191,10 +191,10 @@
   }
 
   function getStatusClass(status) {
-    if (status === '待入库' || status === '待审核') return 'pending';
-    if (status === '已完成') return 'completed';
-    if (status === '已驳回') return 'rejected';
-    if (status === '已关闭') return 'closed';
+    if (status === 'PENDING' || status === 'PENDING_AUDIT') return 'pending';
+    if (status === 'COMPLETED') return 'completed';
+    if (status === 'REJECTED') return 'rejected';
+    if (status === 'CLOSED') return 'closed';
     return 'pending';
   }
 
@@ -244,9 +244,10 @@
     } else {
       tbody.innerHTML = orders.map((order) => {
         const isChecked = state.selectedIds.has(order.id);
-        const canAudit = order.status === '待审核' || order.status === '待入库';
-        const canEdit = order.status === '待入库' || order.status === '待审核' || order.status === '已驳回';
-        const canClose = order.status === '待入库' || order.status === '待审核' || order.status === '已驳回';
+        const statusLabel = window.BusinessRules.statusLabel('inboundOrders', order.status);
+        const canAudit = order.status === 'PENDING_AUDIT' || order.status === 'PENDING';
+        const canEdit = ['PENDING', 'PENDING_AUDIT', 'REJECTED'].includes(order.status);
+        const canClose = ['PENDING', 'PENDING_AUDIT', 'REJECTED'].includes(order.status);
         return `
           <tr>
             <td class="checkbox-cell">
@@ -260,7 +261,7 @@
             <td>${escapeHtml(order.warehouseName)}</td>
             <td>${escapeHtml(order.relNo)}</td>
             <td>${escapeHtml(order.expectedDeliveryDate)}</td>
-            <td><span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(order.status)}</span></td>
+            <td><span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(statusLabel)}</span></td>
             <td>${escapeHtml(order.purchaserLeaderName)}</td>
             <td>${escapeHtml(order.creator)}</td>
             <td class="action-cell">
@@ -365,7 +366,7 @@
       }
       if (relNo && !(order.relNo || '').toLowerCase().includes(relNo)) return false;
       if (entryType !== '全部' && order.entryType !== entryType) return false;
-      if (status !== '全部' && order.status !== status) return false;
+      if (status !== '全部' && window.BusinessRules.statusLabel('inboundOrders', order.status) !== status) return false;
       if (orderNo && !(order.id || '').toLowerCase().includes(orderNo)) return false;
       if (warehouse !== '全部' && order.warehouseName !== warehouse) return false;
       return true;
@@ -831,6 +832,10 @@
               <label class="filter-label required" for="inbFormEntryTime">入库时间</label>
               <input class="filter-input" id="inbFormEntryTime" type="text" readonly value="${escapeHtml(defaultDate)}">
             </div>
+            <div class="filter-group">
+              <label class="filter-label required" for="inbFormCounterparty">往来单位</label>
+              <input class="filter-input" id="inbFormCounterparty" type="text" maxlength="60" placeholder="请输入供应商/采购员/客户" value="${escapeHtml(state.formMode === 'edit' ? (state.orders.find((order) => order.id === state.editId)?.supplierPurchaserCustomerName || '') : '')}">
+            </div>
           </div>
         </div>
       </div>
@@ -918,11 +923,16 @@
   function calculateRowAmount(index) {
     const item = state.formItems[index];
     if (!item) return;
+    const expectedQty = Number(item.expectedQty) || 0;
+    const damageQty = Number(item.damageQty) || 0;
+    item.actualQty = Math.max(expectedQty - damageQty, 0);
     const actualQty = Number(item.actualQty) || 0;
     const unitPrice = Number(item.unitPrice) || 0;
     item.amount = (actualQty * unitPrice).toFixed(2);
     const row = document.querySelector(`[data-form-item-index="${index}"]`);
     if (row) {
+      const actualQtyCell = row.querySelector('[data-form-cell="actualQty"]');
+      if (actualQtyCell) actualQtyCell.textContent = String(item.actualQty);
       const amountInput = row.querySelector('[data-form-field="amount"]');
       if (amountInput) amountInput.value = item.amount;
     }
@@ -1043,6 +1053,7 @@
   function collectFormData(targetStatus) {
     const warehouse = document.getElementById('inbFormWarehouse').value;
     const entryTime = document.getElementById('inbFormEntryTime').value;
+    const counterparty = document.getElementById('inbFormCounterparty').value.trim();
 
     const items = state.formItems
       .filter((item) => item.productCode)
@@ -1076,7 +1087,7 @@
       entryAmt: totalAmount,
       status: targetStatus,
       entryType: original?.entryType || '采购入库',
-      supplierPurchaserCustomerName: original?.supplierPurchaserCustomerName || '--',
+      supplierPurchaserCustomerName: counterparty || original?.supplierPurchaserCustomerName || '',
       relNo: original?.relNo || '--',
       expectedDeliveryDate: original?.expectedDeliveryDate || '--',
       purchaserLeaderName: original?.purchaserLeaderName || '杨',
@@ -1091,6 +1102,10 @@
     }
     if (!data.entryTime) {
       showFormStatus('请选择入库时间', 'error');
+      return false;
+    }
+    if (window.BusinessRules.isMissing(data.supplierPurchaserCustomerName)) {
+      showFormStatus('请输入供应商/采购员/客户', 'error');
       return false;
     }
     if (!data.items || data.items.length === 0) {
@@ -1324,7 +1339,7 @@
       const index = Number(row.dataset.formItemIndex);
       if (state.formItems[index]) {
         state.formItems[index][field] = fieldEl.value;
-        if (field === 'unitPrice') {
+        if (field === 'expectedQty' || field === 'damageQty' || field === 'unitPrice') {
           calculateRowAmount(index);
         }
         if (field === 'amount') {

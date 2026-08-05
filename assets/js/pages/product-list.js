@@ -216,15 +216,17 @@
     state.visibleProducts = products;
     document.getElementById('tableBody').innerHTML = products.map((product) => {
       const safe = Object.fromEntries(Object.entries(product).map(([key, value]) => [key, window.DomUtils.escapeHtml(value)]));
+      const statusLabel = window.BusinessRules.statusLabel('products', product.status);
+      const isEnabled = product.status === 'ENABLE';
       const purchaseType = window.DomUtils.escapeHtml(product.purchaseType);
       const shelfLife = product.shelfLife === false || product.shelfLife == null || product.shelfLife === ''
         ? '--'
         : window.DomUtils.escapeHtml(product.shelfLife);
-      const nextAction = product.status === '已上架' ? '下架' : '上架';
+      const nextAction = isEnabled ? '下架' : '上架';
       const netVegetableTag = product.isNetVegetable
         ? '<span class="net-vegetable-tag">净菜</span>'
         : '';
-      const editDisabled = product.status === '已上架';
+      const editDisabled = isEnabled;
       return `
         <tr>
           <td class="checkbox-cell"><span class="custom-checkbox" role="checkbox" aria-checked="false" data-action="toggle-row"></span></td>
@@ -235,7 +237,7 @@
           <td>${safe.category}</td>
           <td>${safe.unit}</td>
           <td>${safe.marketPrice}</td>
-          <td><span class="status-tag ${product.status === '已上架' ? 'online' : 'offline'}">${safe.status}</span></td>
+          <td><span class="status-tag ${isEnabled ? 'online' : 'offline'}">${window.DomUtils.escapeHtml(statusLabel)}</span></td>
           <td>${safe.alias || '--'}</td>
           <td>${safe.origin || '--'}</td>
           <td>${shelfLife}</td>
@@ -273,7 +275,7 @@
     const result = state.products.filter((product) => (
       (!nameOrCode || `${product.name} ${product.code}`.toLowerCase().includes(nameOrCode)) &&
       (!brand || product.brand.toLowerCase().includes(brand)) &&
-      (status === '全部' || product.status === status) &&
+      (status === '全部' || window.BusinessRules.statusLabel('products', product.status) === status) &&
       (purchaseType === '全部' || product.purchaseType === purchaseType) &&
       (source === '全部' || product.source === source) &&
       (netVegetable === '全部' || (netVegetable === '净菜' && product.isNetVegetable) || (netVegetable === '非净菜' && !product.isNetVegetable))
@@ -338,13 +340,45 @@
       return;
     }
     const product = state.products.find((item) => item.code === modal.dataset.productCode);
-    if (product && updateProductStatus(product, '已下架', value)) closeUnshelfModal();
+    if (product && updateProductStatus(product, 'DISABLE', value)) closeUnshelfModal();
   }
 
   function bindEvents() {
     const root = document.querySelector('.product-list-page');
     root.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
+      const selectedCodes = () => [...document.querySelectorAll('#tableBody .custom-checkbox.checked')]
+        .map((checkbox) => checkbox.closest('tr')?.querySelector('[data-code]')?.dataset.code)
+        .filter(Boolean);
+      if (event.target.id === 'batchShelfBtn') {
+        selectedCodes().forEach((code) => {
+          const product = state.products.find((item) => item.code === code);
+          if (product) updateProductStatus(product, 'ENABLE');
+        });
+        return;
+      }
+      if (event.target.id === 'batchUnshelfBtn') {
+        selectedCodes().forEach((code) => {
+          const product = state.products.find((item) => item.code === code);
+          if (product) updateProductStatus(product, 'DISABLE', '批量下架');
+        });
+        return;
+      }
+      if (event.target.id === 'batchDeleteBtn') {
+        if (!window.confirm('确认删除选中的未引用商品吗？')) return;
+        const failures = [];
+        selectedCodes().forEach((code) => {
+          try {
+            window.ProductService.remove(code);
+            state.products = state.products.filter((item) => item.code !== code);
+          } catch (error) {
+            failures.push(error.message);
+          }
+        });
+        filterProducts();
+        if (failures.length) window.alert([...new Set(failures)].join('\n'));
+        return;
+      }
       if (action === 'query') filterProducts();
       if (action === 'reset') resetFilters();
       if (action === 'add-product') window.location.href = './goodsAdd.html';
@@ -390,10 +424,19 @@
         if (rowAction.dataset.rowAction === 'edit') window.location.href = `./goodsAdd.html?mode=edit&id=${encodeURIComponent(product.code)}`;
         if (rowAction.dataset.rowAction === 'detail') window.location.href = `./goodsAdd.html?mode=view&id=${encodeURIComponent(product.code)}`;
         if (rowAction.dataset.rowAction === 'status') {
-          if (product.status === '已上架') openUnshelfModal(product);
-          else updateProductStatus(product, '已上架');
+          if (product.status === 'ENABLE') openUnshelfModal(product);
+          else updateProductStatus(product, 'ENABLE');
         }
-        if (rowAction.dataset.rowAction === 'delete') window.alert(`删除: ${product.name}`);
+        if (rowAction.dataset.rowAction === 'delete') {
+          if (!window.confirm(`确认删除商品「${product.name}」吗？`)) return;
+          try {
+            window.ProductService.remove(product.code);
+            state.products = state.products.filter((item) => item.code !== product.code);
+            filterProducts();
+          } catch (error) {
+            window.alert(error.message);
+          }
+        }
       }
     });
 

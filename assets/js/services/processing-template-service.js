@@ -1,6 +1,4 @@
 (function () {
-  const storageKey = 'procurement-processing-templates';
-  const versionKey = 'procurement-processing-templates-v5';
   const outputLimit = 200;
 
   function clone(value) {
@@ -8,7 +6,7 @@
   }
 
   function formatNow() {
-    return new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+    return window.BusinessRules.now();
   }
 
   function getActionMeta(template) {
@@ -60,22 +58,17 @@
   }
 
   function load() {
-    // 检查版本，若旧数据无仓库字段则重置为最新 mock
-    const version = window.AppStorage?.read(versionKey, '0');
-    if (version !== '5') {
-      window.AppStorage?.write(storageKey, window.MockProcessingTemplates);
-      window.AppStorage?.write(versionKey, '5');
-    }
-    const templates = window.AppStorage?.read(storageKey, window.MockProcessingTemplates) || window.MockProcessingTemplates;
+    if (!window.DemoStore) throw new Error('统一数据仓库未加载');
+    const templates = window.DemoStore.get('processingTemplates') || [];
     const normalizedTemplates = clone(templates).map(normalizeTemplate);
     if (JSON.stringify(normalizedTemplates) !== JSON.stringify(templates)) {
-      window.AppStorage?.write(storageKey, normalizedTemplates);
+      window.DemoStore.replace('processingTemplates', normalizedTemplates);
     }
     return sortTemplates(normalizedTemplates);
   }
 
   function save(templates) {
-    if (window.AppStorage) window.AppStorage.write(storageKey, templates);
+    window.DemoStore.replace('processingTemplates', templates);
   }
 
   function generateId() {

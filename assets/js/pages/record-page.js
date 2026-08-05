@@ -243,7 +243,8 @@
       }
       if (column.format === 'money') return Number(value || 0).toFixed(2);
       if (column.format === 'status') {
-        const status = statusMap[value] || [value || '--', ''];
+        const status = statusMap[value]
+          || [window.BusinessRules?.statusLabel(currentResource(), value) || value || '--', ''];
         return `<span class="operation-status ${status[1]}">${escapeHtml(status[0])}</span>`;
       }
       if (column.format === 'signed') return `${Number(value || 0) > 0 ? '+' : ''}${value ?? 0}`;
@@ -382,7 +383,9 @@
       modal(`${currentEntityTitle()}详情`, `<dl class="operations-detail-grid">${currentColumns().map((column) => {
         let value = item[column.key];
         if (column.format === 'money') value = Number(value || 0).toFixed(2);
-        if (column.format === 'status') value = statusMap[value]?.[0] || value;
+        if (column.format === 'status') {
+          value = statusMap[value]?.[0] || window.BusinessRules?.statusLabel(currentResource(), value) || value;
+        }
         return `<div class="operations-detail-item"><dt>${column.label}</dt><dd>${escapeHtml(value || '--')}</dd></div>`;
       }).join('')}</dl>`, '<button class="btn btn-primary" data-record-close>关闭</button>', true);
     }

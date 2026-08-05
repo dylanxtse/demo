@@ -22,14 +22,16 @@
 /*
  * Procurement demo source of truth.
  *
- * The application is intentionally static, so the v2 store keeps the same
+ * The application is intentionally static, so the v3 store keeps the same
  * persistence boundary as the existing localStorage adapters while making all
  * cross-page relations explicit.  The store is lazy: seed data is built only
  * after the page has loaded its mock data scripts.
  */
 (function () {
-  const storageKey = 'procurement-demo-v2';
-  const schemaVersion = '20260805-flow-v2.6';
+  const storageKey = 'procurement-demo-v3';
+  const previousStorageKey = 'procurement-demo-v2';
+  const backupStorageKey = 'procurement-demo-v3-migration-backup';
+  const schemaVersion = '20260805-flow-v3.0';
   const legacyBusinessStoragePrefixes = [
     'procurement-products',
     'procurement-inbound-orders',
@@ -48,26 +50,62 @@
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
-  const timestamp = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
-  const normalizeDateTime = (value) => {
-    const text = String(value || '').trim();
-    if (!text) return '';
-    const parts = text.split(/\s+/);
-    const time = parts[1] || '08:00:00';
-    return `${parts[0]} ${`${time}:00`.slice(0, 8)}`;
-  };
+  const timestamp = () => window.BusinessRules?.now() || new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const normalizeDateTime = (value) => window.BusinessRules?.normalizeDateTime(value) || String(value || '');
 
   function nextOutboundNumber(records, record = {}) {
-    const dateSource = record.outboundTime || record.shippingAt || record.createdAt || timestamp();
-    const datePart = String(dateSource).slice(0, 10).replace(/-/g, '') || timestamp().slice(0, 10).replace(/-/g, '');
-    const prefix = `CKD${datePart}03`;
-    let sequence = records.filter((item) => String(item.id || '').startsWith(prefix)).length + 1;
-    let candidate = `${prefix}${String(sequence).padStart(5, '0')}`;
-    while (records.some((item) => item.id === candidate || item.outboundOrderId === candidate)) {
-      sequence += 1;
-      candidate = `${prefix}${String(sequence).padStart(5, '0')}`;
-    }
-    return candidate;
+    return window.BusinessRules.documentNumber('outboundOrders', {
+      date: record.outboundTime || record.shippingAt || record.createdAt || timestamp(),
+      businessCode: record.customerCode || record.businessCode || '03',
+      records,
+      fields: ['id', 'outboundOrderId']
+    });
+  }
+
+  function canonicalProcessingId(id, customerCode = '03') {
+    return window.BusinessRules.canonicalDocumentNumber('processingOrders', id, { businessCode: customerCode });
+  }
+
+  function normalizeOrderNumbers(state) {
+    let changed = false;
+    const customers = state.customers || [];
+    const names = [...new Set((state.orders || []).map((order) => order.customerName).filter(Boolean))];
+    const normalized = [];
+    (state.orders || []).forEach((order) => {
+      const customerIndex = customers.findIndex((customer) => (
+        (order.customerId && (customer.id === order.customerId || customer.customerId === order.customerId))
+        || (order.customerName && customer.customerName === order.customerName)
+      ));
+      const fallbackIndex = order.customerName ? names.indexOf(order.customerName) : -1;
+      const customer = customerIndex >= 0 ? customers[customerIndex] : null;
+      const customerCode = window.BusinessRules.businessCode(
+        order.customerCode || customer?.customerCode || (fallbackIndex >= 0 ? fallbackIndex + 1 : names.length + 1),
+        '03'
+      );
+      const current = String(order.orderNo || '');
+      const duplicate = normalized.some((item) => item.orderNo === current);
+      if (!window.BusinessRules.documentRegex('orders').test(current) || duplicate) {
+        order.orderNo = window.BusinessRules.documentNumber('orders', {
+          date: order.createdAt || timestamp(),
+          businessCode: customerCode,
+          records: normalized,
+          fields: ['orderNo']
+        });
+        changed = true;
+      }
+      order.customerCode = customerCode;
+      normalized.push(order);
+    });
+    const orderById = new Map((state.orders || []).map((order) => [order.id, order]));
+    [...(state.sortingTasks || []), ...(state.shippingOrders || []), ...(state.outboundOrders || [])].forEach((record) => {
+      const order = orderById.get(record.orderId);
+      if (order && record.orderNo !== order.orderNo) {
+        record.orderNo = order.orderNo;
+        if (record.relNo && String(record.relNo).startsWith('DD')) record.relNo = order.orderNo;
+        changed = true;
+      }
+    });
+    return changed;
   }
 
   function migrateOutboundNumbers(current) {
@@ -495,6 +533,336 @@
     return changed;
   }
 
+  function normalizeProcessingIds(state) {
+    let changed = false;
+    (state.processingOrders || []).forEach((record) => {
+      const nextId = canonicalProcessingId(record.id, record.customerCode || '03');
+      if (nextId && nextId !== record.id) {
+        record.id = nextId;
+        changed = true;
+      }
+      if (!record.customerCode) {
+        record.customerCode = '03';
+        changed = true;
+      }
+    });
+    if (state.processingIdSeedRevision !== 'processing-ids-v2') {
+      state.processingIdSeedRevision = 'processing-ids-v2';
+      changed = true;
+    }
+    return changed;
+  }
+
+  function normalizeStateContracts(state) {
+    const rules = window.BusinessRules;
+    let changed = false;
+    const fixes = [];
+    const mark = (resource, field, from, to) => {
+      if (String(from ?? '') === String(to ?? '')) return;
+      changed = true;
+      fixes.push({ resource, field, from: from ?? '', to: to ?? '' });
+    };
+    const set = (record, resource, field, value) => {
+      if (record[field] === value) return;
+      mark(resource, field, record[field], value);
+      record[field] = value;
+    };
+    const missing = (value) => rules.isMissing(value);
+    const inboundCounterparty = (record) => {
+      const type = String(record.entryType || '');
+      if (type.includes('报溢')) return '仓库报溢';
+      if (type.includes('单位转换')) return '单位转换';
+      if (type.includes('加工')) return '企业自加工';
+      return record.supplierName || record.customerName || '平台默认供应商';
+    };
+    const outboundCounterparty = (record) => {
+      const type = String(record.outboundType || '');
+      if (type.includes('报损')) return '仓库报损';
+      if (type.includes('单位转换')) return '单位转换';
+      if (type.includes('加工')) return '企业自加工';
+      return record.customerName || record.supplierName || '平台默认客户';
+    };
+
+    if (!Array.isArray(state.units)) {
+      state.units = clone(window.MockUnitMeasurements || []);
+      changed = true;
+    }
+    if (!Array.isArray(state.goodsReviews)) {
+      state.goodsReviews = clone(window.MockGoodsReviews || []);
+      changed = true;
+    }
+    if (!Array.isArray(state.processingTemplates)) {
+      state.processingTemplates = clone(window.MockProcessingTemplates || []);
+      changed = true;
+    }
+
+    (state.products || []).forEach((product) => {
+      if (!product.id) set(product, 'products', 'id', product.code);
+      set(product, 'products', 'status', rules.normalizeStatus('products', product.status));
+      if (product.addTime) set(product, 'products', 'addTime', rules.normalizeDateTime(product.addTime));
+    });
+
+    const products = state.products || [];
+    (state.orders || []).flatMap((order) => order.items || []).forEach((line) => {
+      const code = line.productId || line.productCode || line.goodsCode;
+      const lineName = String(line.goodsName || line.productName || code).split('(')[0];
+      const current = products.find((product) => (product.code || product.id) === code);
+      const sameName = products.find((product) => product.name === lineName && (!line.unit || product.unit === line.unit))
+        || products.find((product) => product.name === lineName);
+      if (sameName) {
+        const productId = sameName.code || sameName.id;
+        if (line.productId !== productId || line.goodsCode !== productId) {
+          line.productId = productId;
+          line.goodsCode = productId;
+          changed = true;
+        }
+        return;
+      }
+      if (!code || (current && current.name === lineName)) return;
+      const nextProductNumber = products.reduce((max, product) => {
+        const match = String(product.code || '').match(/^SP(\d{7})$/);
+        return Math.max(max, match ? Number(match[1]) : 0);
+      }, 0) + 1;
+      const productCode = current ? `SP${String(nextProductNumber).padStart(7, '0')}` : code;
+      products.push({
+        id: productCode,
+        code: productCode,
+        name: lineName,
+        goodsName: lineName,
+        unit: line.unit || 'KG',
+        brand: line.brand || '--',
+        spec: line.spec || '--',
+        category: line.category || '业务补录商品',
+        marketPrice: number(line.unitPrice),
+        status: 'ENABLE',
+        source: '历史单据迁移',
+        addTime: timestamp(),
+        purchaseType: line.isNetVegetable ? '企业自加工' : '供应商送货',
+        isNetVegetable: line.isNetVegetable === true
+      });
+      line.productId = productCode;
+      line.goodsCode = productCode;
+      changed = true;
+    });
+    const productsByCode = new Map(products.map((product) => [product.code || product.id, product]));
+    const findProduct = (line) => {
+      const code = line.productId || line.productCode || line.goodsCode;
+      const current = productsByCode.get(code);
+      const rawName = String(line.productName || line.goodsName || '').split('(')[0];
+      if (current && (!rawName || current.name === rawName)) return current;
+      return products.find((product) => product.name === rawName && (!line.unit || product.unit === line.unit))
+        || products.find((product) => product.name === rawName)
+        || current;
+    };
+    const normalizeLine = (line, resource) => {
+      const product = findProduct(line);
+      if (product) {
+        const productId = product.code || product.id;
+        set(line, resource, 'productId', productId);
+        if ('goodsCode' in line) set(line, resource, 'goodsCode', productId);
+        if ('productCode' in line) set(line, resource, 'productCode', productId);
+        if (!line.goodsName && !line.productName) set(line, resource, 'productName', product.name);
+      }
+      if (line.amount !== undefined) {
+        set(line, resource, 'amount', Number(rules.itemAmount(line).toFixed(2)));
+      }
+    };
+
+    const dateFields = {
+      orders: ['createdAt', 'createTime', 'updatedAt', 'expectedAt', 'shippingAt'],
+      shippingOrders: ['createdAt', 'expectedAt'],
+      sortingTasks: ['expectedAt', 'sortingAt'],
+      inboundOrders: ['entryTime'],
+      outboundOrders: ['outboundTime'],
+      processingOrders: ['createTime'],
+      returns: ['createdAt', 'auditAt', 'acceptedAt'],
+      receiptChanges: ['createdAt', 'shippingAt', 'auditAt'],
+      inventoryLedger: ['occurredAt']
+    };
+    Object.entries(dateFields).forEach(([resource, fields]) => {
+      (state[resource] || []).forEach((record) => fields.forEach((field) => {
+        if (record[field]) set(record, resource, field, rules.normalizeDateTime(record[field]));
+      }));
+    });
+
+    const statusResources = [
+      'products', 'orders', 'inboundOrders', 'outboundOrders', 'processingOrders', 'returns',
+      'receiptChanges', 'inventoryCounts', 'inventoryLosses', 'openingInventory', 'qualityReports'
+    ];
+    statusResources.forEach((resource) => (state[resource] || []).forEach((record) => {
+      set(record, resource, 'status', rules.normalizeStatus(resource, record.status));
+    }));
+
+    const contactNames = ['王老师', '李老师', '周老师', '赵老师', '孙老师', '刘主任'];
+    (state.customerLocations || []).forEach((location, index) => {
+      if (missing(location.receiver)) {
+        set(location, 'customerLocations', 'receiver', contactNames[index % contactNames.length]);
+      }
+      if (missing(location.phone)) {
+        set(location, 'customerLocations', 'phone', `1380000${String(index + 200).padStart(4, '0')}`);
+      }
+      if (missing(location.address)) {
+        set(location, 'customerLocations', 'address', `配送路${index + 1}号`);
+      }
+      if (missing(location.route)) {
+        set(location, 'customerLocations', 'route', `配送线路${(index % 5) + 1}`);
+      }
+    });
+
+    (state.orders || []).forEach((order) => {
+      (order.items || []).forEach((line) => normalizeLine(line, 'orders'));
+      order.orderLines = order.items;
+      set(order, 'orders', 'orderAmount', Number(rules.totalAmount(order.items, ['quantity', 'orderQty']).toFixed(2)));
+    });
+    state.orderLines = (state.orders || []).flatMap((order) => (order.items || []).map((line) => clone(line)));
+
+    (state.sortingTasks || []).forEach((task) => normalizeLine(task, 'sortingTasks'));
+    (state.shippingOrders || []).forEach((shipping) => {
+      if (!Array.isArray(shipping.items) || shipping.items.length === 0) {
+        shipping.items = (state.sortingTasks || [])
+          .filter((task) => task.orderId === shipping.orderId)
+          .map((task) => ({ ...clone(task), shippingQty: number(task.actualQty || task.orderQty) }));
+        changed = true;
+      }
+      (shipping.items || []).forEach((line) => normalizeLine(line, 'shippingOrders'));
+      const order = (state.orders || []).find((item) => item.id === shipping.orderId);
+      if (order) {
+        set(shipping, 'shippingOrders', 'customerId', order.customerId || '');
+        set(shipping, 'shippingOrders', 'customerName', order.customerName || '');
+        set(shipping, 'shippingOrders', 'canteen', order.canteen || '');
+        set(shipping, 'shippingOrders', 'orderNo', order.orderNo || '');
+      }
+      const location = (state.customerLocations || []).find((item) => (
+        item.customerId === shipping.customerId && item.canteen === shipping.canteen
+      )) || (state.customerLocations || []).find((item) => (
+        item.customerName === shipping.customerName && item.canteen === shipping.canteen
+      ));
+      if (location) {
+        if (missing(shipping.receiver)) set(shipping, 'shippingOrders', 'receiver', location.receiver);
+        if (missing(shipping.phone)) set(shipping, 'shippingOrders', 'phone', location.phone);
+        if (missing(shipping.address)) set(shipping, 'shippingOrders', 'address', location.address);
+        if (missing(shipping.route)) set(shipping, 'shippingOrders', 'route', location.route);
+      }
+    });
+
+    (state.inboundOrders || []).forEach((record) => {
+      (record.items || []).forEach((line) => normalizeLine(line, 'inboundOrders'));
+      set(record, 'inboundOrders', 'entryAmt', Number(rules.totalAmount(record.items, ['actualQty', 'entryQty', 'expectedQty']).toFixed(2)));
+      if (missing(record.supplierPurchaserCustomerName)) {
+        set(record, 'inboundOrders', 'supplierPurchaserCustomerName', inboundCounterparty(record));
+      }
+      if (!record.warehouseName) set(record, 'inboundOrders', 'warehouseName', record.warehouse || '中心仓');
+    });
+
+    (state.outboundOrders || []).forEach((record) => {
+      const order = (state.orders || []).find((item) => item.id === record.orderId);
+      (record.items || []).forEach((line) => {
+        const orderLine = order?.items?.find((item) => item.orderLineId === line.orderLineId) || {};
+        if (!(number(line.outboundQty) > 0)) {
+          set(line, 'outboundOrders', 'outboundQty', number(orderLine.shippedQty || orderLine.quantity || orderLine.orderQty));
+        }
+        if (!(number(line.unitPrice) > 0)) {
+          const product = findProduct(line);
+          set(line, 'outboundOrders', 'unitPrice', number(orderLine.unitPrice || product?.marketPrice));
+        }
+        set(line, 'outboundOrders', 'amount', Number((number(line.outboundQty) * number(line.unitPrice)).toFixed(2)));
+        normalizeLine(line, 'outboundOrders');
+      });
+      const customerName = !missing(record.supplierPurchaserCustomerName)
+        ? record.supplierPurchaserCustomerName
+        : (!missing(record.customerName) ? record.customerName : (order?.customerName || outboundCounterparty(record)));
+      set(record, 'outboundOrders', 'customerName', customerName);
+      set(record, 'outboundOrders', 'supplierPurchaserCustomerName', customerName);
+      set(record, 'outboundOrders', 'customerId', record.customerId || order?.customerId || '');
+      set(record, 'outboundOrders', 'canteen', record.canteen || order?.canteen || '');
+      set(record, 'outboundOrders', 'outboundAmt', Number(rules.totalAmount(record.items, ['outboundQty', 'actualQty', 'quantity']).toFixed(2)));
+      if (!record.warehouseName) set(record, 'outboundOrders', 'warehouseName', record.warehouse || '中心仓');
+    });
+
+    (state.processingOrders || []).forEach((record) => {
+      (record.materials || []).forEach((line) => normalizeLine(line, 'processingOrders'));
+      (record.outputs || []).forEach((line) => normalizeLine(line, 'processingOrders'));
+      set(record, 'processingOrders', 'processingDate', rules.normalizeDate(record.processingDate || record.createTime));
+    });
+
+    (state.returns || []).forEach((record) => {
+      const order = (state.orders || []).find((item) => item.orderNo === record.orderNo)
+        || (state.orders || []).find((item) => item.customerName === record.customerName && item.canteen === record.canteen);
+      if (order && record.orderNo !== order.orderNo) set(record, 'returns', 'orderNo', order.orderNo);
+      if ((!Array.isArray(record.items) || record.items.length === 0) && order) {
+        record.items = clone(order.items || []);
+        changed = true;
+      }
+      (record.items || []).forEach((line) => {
+        if (!line.productCode && !line.productId && !line.goodsCode) {
+          const product = findProduct(line);
+          if (product) {
+            line.productId = product.code || product.id;
+            line.productCode = product.code || product.id;
+            changed = true;
+          }
+        }
+        if (!line.quantity && line.applyQty) line.quantity = number(line.applyQty);
+        normalizeLine(line, 'returns');
+      });
+    });
+
+    (state.receiptChanges || []).forEach((record) => {
+      const order = (state.orders || []).find((item) => item.orderNo === record.orderNo)
+        || (state.orders || []).find((item) => item.customerName === record.customerName && item.canteen === record.canteen);
+      if (order && record.orderNo !== order.orderNo) set(record, 'receiptChanges', 'orderNo', order.orderNo);
+      if ((!Array.isArray(record.items) || record.items.length === 0) && order) {
+        record.items = clone(order.items || []);
+        changed = true;
+      }
+      (record.items || []).forEach((line) => normalizeLine(line, 'receiptChanges'));
+      const beforeAmount = rules.totalAmount(record.items, ['shippedQty', 'quantity']);
+      if (record.beforeAmount === undefined) set(record, 'receiptChanges', 'beforeAmount', beforeAmount);
+      if (record.afterAmount === undefined) set(record, 'receiptChanges', 'afterAmount', beforeAmount);
+      set(record, 'receiptChanges', 'differenceAmount', Number((number(record.afterAmount) - number(record.beforeAmount)).toFixed(2)));
+    });
+
+    const normalizeDocuments = (resource, records, field, dateField, codeGetter, copyToId = false) => {
+      const accepted = [];
+      const seen = new Set();
+      records.forEach((record) => {
+        const current = String(record[field] || '');
+        const isValid = rules.documentRegex(resource).test(current);
+        const isDuplicate = seen.has(current);
+        if (!isValid || isDuplicate) {
+          const generated = rules.documentNumber(resource, {
+            date: record[dateField] || record.createdAt || timestamp(),
+            businessCode: codeGetter(record),
+            records: accepted,
+            fields: [field]
+          });
+          set(record, resource, field, generated);
+          if (copyToId) {
+            set(record, resource, 'id', generated);
+            if (resource === 'outboundOrders') set(record, resource, 'outboundOrderId', generated);
+          }
+        }
+        seen.add(record[field]);
+        accepted.push(record);
+      });
+    };
+
+    normalizeDocuments('inboundOrders', state.inboundOrders || [], 'id', 'entryTime', (record) => record.customerCode || '03', true);
+    normalizeDocuments('outboundOrders', state.outboundOrders || [], 'id', 'outboundTime', (record) => record.customerCode || '03', true);
+    normalizeDocuments('processingOrders', state.processingOrders || [], 'id', 'processingDate', (record) => record.customerCode || '03', true);
+    normalizeDocuments('returns', state.returns || [], 'returnNo', 'createdAt', (record) => record.customerCode || '03');
+    normalizeDocuments('receiptChanges', state.receiptChanges || [], 'changeNo', 'createdAt', (record) => record.customerCode || '03');
+
+    state.dataContractVersion = schemaVersion;
+    state.lastMigration = {
+      version: schemaVersion,
+      migratedAt: timestamp(),
+      fixCount: fixes.length,
+      fixes: fixes.slice(0, 200)
+    };
+    return changed;
+  }
+
   function makeSortingTasks(orders) {
     const sourceItems = window.MockOperations?.sortingItems || [];
     return orders.flatMap((order) => order.items.map((line, index) => {
@@ -569,7 +937,27 @@
     shippingOrders.filter((shipping) => shipping.status === 'SHIPPED').forEach((shipping) => {
       const order = orders.find((item) => item.id === shipping.orderId);
       const outboundTime = order?.shippingAt || order?.createdAt || timestamp();
-      const outboundId = nextOutboundNumber(outboundOrders, { outboundTime });
+      const outboundId = nextOutboundNumber(outboundOrders, {
+        outboundTime,
+        customerCode: order?.customerCode || '03'
+      });
+      const items = (shipping.items || []).map((item) => {
+        const orderLine = order?.items?.find((line) => line.orderLineId === item.orderLineId) || {};
+        const quantity = number(item.actualQty || item.shippingQty || orderLine.shippedQty || orderLine.quantity || item.orderQty);
+        const unitPrice = number(item.unitPrice || orderLine.unitPrice);
+        return {
+          orderId: shipping.orderId,
+          orderLineId: item.orderLineId,
+          productId: item.productId,
+          productCode: item.productId,
+          productName: item.goodsName,
+          unit: item.unit,
+          outboundQty: quantity,
+          currentStock: 0,
+          unitPrice,
+          amount: quantity * unitPrice
+        };
+      });
       outboundOrders.push({
         id: outboundId,
         outboundOrderId: outboundId,
@@ -579,21 +967,16 @@
         warehouse: shipping.warehouse,
         warehouseName: shipping.warehouse,
         outboundType: '销售出库',
-        status: '待审核',
-        outboundTime,
+        customerId: order?.customerId || '',
+        customerName: order?.customerName || shipping.customerName || '',
+        supplierPurchaserCustomerName: order?.customerName || shipping.customerName || '',
+        canteen: order?.canteen || shipping.canteen || '',
+        customerCode: order?.customerCode || '03',
+        status: 'PENDING_AUDIT',
+        outboundTime: normalizeDateTime(outboundTime),
+        outboundAmt: window.BusinessRules.totalAmount(items, ['outboundQty']),
         creator: order?.creator || '管理员',
-        items: (shipping.items || []).map((item) => ({
-          orderId: shipping.orderId,
-          orderLineId: item.orderLineId,
-          productId: item.productId,
-          productCode: item.productId,
-          productName: item.goodsName,
-          unit: item.unit,
-          outboundQty: number(item.actualQty),
-          currentStock: 0,
-          unitPrice: number(item.unitPrice),
-          amount: number(item.actualQty) * number(item.unitPrice)
-        }))
+        items
       });
     });
     return outboundOrders;
@@ -754,6 +1137,9 @@
       version: schemaVersion,
       settings: { ...defaultSettings },
       products,
+      units: clone(window.MockUnitMeasurements || []),
+      goodsReviews: clone(window.MockGoodsReviews || []),
+      processingTemplates: clone(window.MockProcessingTemplates || []),
       customers,
       customerLocations: sourceLocations(rawOrders, customers),
       warehouses: sourceWarehouses(),
@@ -764,7 +1150,7 @@
         const material = products[index % products.length];
         const output = products[(index + 1) % products.length];
         return {
-          id: `JGD20260805${String(index + 1).padStart(5, '0')}`, processingDate: `2026-08-${String((index % 9) + 1).padStart(2, '0')}`,
+          id: `JGD2026080503${String(index + 1).padStart(5, '0')}`, customerCode: '03', processingDate: `2026-08-${String((index % 9) + 1).padStart(2, '0')}`,
           warehouse: index % 3 ? '中心仓' : '北区仓', status: index % 3 ? '已加工' : '草稿', operator: ['管理员', '杨师傅', '周师傅'][index % 3], remark: '日常净菜加工', costMode: 'auto',
           materials: [{ productCode: material.code, productName: material.name, unit: material.unit, stock: 100, avgPrice: number(material.marketPrice), consumeQty: 10 }],
           outputs: [{ productCode: output.code, productName: output.name, unit: output.unit, refCoefficient: 1, refQty: 10, actualQty: 9, costPrice: number(output.marketPrice).toFixed(2) }],
@@ -772,49 +1158,77 @@
         };
       }),
       shippingOrders,
+      shippingDifferences: padRecords(window.MockOperations?.shippingDifferences || [], 20, (index) => {
+        const task = sortingTasks[index % sortingTasks.length];
+        return {
+          id: `SHIP-DIFF-${String(index + 1).padStart(3, '0')}`,
+          orderNo: task.orderNo,
+          goodsName: task.goodsName,
+          warehouse: task.warehouse || '中心仓',
+          stockQty: Number(task.orderQty || 0) + 5,
+          sortingQty: Number(task.actualQty || 0),
+          differenceQty: Math.max(0, Number(task.orderQty || 0) - Number(task.actualQty || 0)),
+          status: index % 2 ? 'COMPLETED' : 'PENDING',
+          createdAt: '2026-08-05 10:00:00'
+        };
+      }),
       outboundOrders,
       inboundOrders: padRecords(inboundOrders, 20, (index) => {
         const product = products[index % products.length];
         return {
-          id: `RKD202608050300${String(index + 1).padStart(5, '0')}`, entryTime: '2026-08-05 09:00:00', supplierPurchaserCustomerName: ['上海绿源农产品有限公司', '北方粮油批发部', '联营水产合作社'][index % 3],
-          entryType: '采购入库', entryAmt: String((10 + index) * number(product.marketPrice)), warehouseName: index % 3 ? '中心仓' : '北区仓', relNo: `CGD20260805${String(index + 1).padStart(5, '0')}`, expectedDeliveryDate: '2026-08-05', status: index % 3 ? '已完成' : '待审核', purchaserLeaderName: ['杨', '周', '刘'][index % 3], creator: '管理员', remark: '采购到货验收入库', attachments: [], operationLogs: [{ action: '添加', operator: '管理员', desc: '管理员 添加入库单' }],
+          id: `RKD2026080503${String(index + 1).padStart(5, '0')}`, entryTime: '2026-08-05 09:00:00', supplierPurchaserCustomerName: ['上海绿源农产品有限公司', '北方粮油批发部', '联营水产合作社'][index % 3],
+          entryType: '采购入库', entryAmt: String((10 + index) * number(product.marketPrice)), warehouseName: index % 3 ? '中心仓' : '北区仓', relNo: `CGD20260805${String(index + 1).padStart(5, '0')}`, expectedDeliveryDate: '2026-08-05', status: index % 3 ? 'COMPLETED' : 'PENDING_AUDIT', purchaserLeaderName: ['杨', '周', '刘'][index % 3], creator: '管理员', remark: '采购到货验收入库', attachments: [], operationLogs: [{ action: '添加', operator: '管理员', desc: '管理员 添加入库单' }],
           items: [{ productCode: product.code, productName: product.name, unit: product.unit, expectedQty: 10 + index, actualQty: 10 + index, unitPrice: String(product.marketPrice), amount: String((10 + index) * number(product.marketPrice)) }]
         };
       }),
       inventoryLedger: makeLedger(products, orders),
       returns: padRecords(seededReturns, 20, (index) => {
         const order = orders[index % orders.length]; const line = order.items[0];
-        return { id: `RET-${String(index + 1).padStart(3, '0')}`, returnNo: `THD2026080503${String(index + 1).padStart(5, '0')}`, customerName: order.customerName, canteen: order.canteen, orderNo: order.orderNo, inboundNo: `RKD2026080503${String(index + 1).padStart(5, '0')}`, goodsName: line.goodsName, warehouse: order.warehouse, status: ['PENDING', 'APPROVED', 'CLOSED'][index % 3], creator: '管理员', createdAt: '2026-08-05 10:00:00', reason: ['商品破损', '数量多发', '质量不符合要求'][index % 3], refundAmount: number(line.unitPrice) * 2, items: [{ id: `RL-${index + 1}`, goodsName: line.goodsName, unit: line.unit, orderPrice: number(line.unitPrice), shippedQty: number(line.quantity), returnedQty: 0, applyQty: 2, applyPrice: number(line.unitPrice), applyAmount: number(line.unitPrice) * 2, damageQty: 1, remark: '按订单明细退货' }] };
+        return { id: `RET-${String(index + 1).padStart(3, '0')}`, returnNo: `THD2026080503${String(index + 1).padStart(5, '0')}`, customerName: order.customerName, canteen: order.canteen, orderNo: order.orderNo, inboundNo: `RKD2026080503${String(index + 1).padStart(5, '0')}`, goodsName: line.goodsName, warehouse: order.warehouse, status: ['PENDING_AUDIT', 'APPROVED', 'CLOSED'][index % 3], creator: '管理员', createdAt: '2026-08-05 10:00:00', reason: ['商品破损', '数量多发', '质量不符合要求'][index % 3], refundAmount: number(line.unitPrice) * 2, items: [{ id: `RL-${index + 1}`, goodsName: line.goodsName, unit: line.unit, orderPrice: number(line.unitPrice), shippedQty: number(line.quantity), returnedQty: 0, applyQty: 2, applyPrice: number(line.unitPrice), applyAmount: number(line.unitPrice) * 2, damageQty: 1, remark: '按订单明细退货' }] };
       }),
       tags: padRecords(window.MockOperations?.tags || [], 20, (index) => ({ id: `TAG-${String(index + 1).padStart(3, '0')}`, tagName: ['营养餐', '普通餐', '应急保供', '节日餐'][index % 4], status: 'ENABLE', createdAt: '2026-08-05 09:00:00' })),
-      receiptChanges: padRecords(window.MockOperations?.receiptChanges || [], 20, (index) => { const order = orders[index % orders.length]; return { id: `CHANGE-${String(index + 1).padStart(3, '0')}`, changeNo: `BG20260805${String(index + 1).padStart(5, '0')}`, status: '待审核', customerName: order.customerName, canteen: order.canteen, orderNo: order.orderNo, items: order.items, createdAt: '2026-08-05 11:00:00' }; }),
+      receiptChanges: padRecords(window.MockOperations?.receiptChanges || [], 20, (index) => { const order = orders[index % orders.length]; return { id: `CHANGE-${String(index + 1).padStart(3, '0')}`, changeNo: `BG2026080503${String(index + 1).padStart(5, '0')}`, status: 'PENDING_AUDIT', customerName: order.customerName, canteen: order.canteen, orderNo: order.orderNo, items: order.items, createdAt: '2026-08-05 11:00:00' }; }),
       sortingProgress: padRecords(window.MockOperations?.sortingProgress || [], 20, (index) => { const order = orders[index % orders.length]; return { id: `PROGRESS-${String(index + 1).padStart(3, '0')}`, customerName: order.customerName, canteen: order.canteen, sortedCount: index % 3, orderCount: order.items.length, progress: `${index % 3}/${order.items.length}`, status: index % 3 ? 'PARTIAL' : 'PENDING', warehouse: order.warehouse, expectedAt: order.expectedAt, route: order.route }; }),
       shortageItems: padRecords(window.MockOperations?.shortageItems || [], 20, (index) => { const task = sortingTasks[index % sortingTasks.length]; return { ...clone(task), id: `SHORTAGE-${String(index + 1).padStart(3, '0')}`, shortage: '是', status: 'SHORTAGE', shortageQty: 1 }; }),
       sorters: padRecords(window.MockOperations?.sorters || [], 20, (index) => ({ id: `SORTER-${String(index + 1).padStart(3, '0')}`, sorterName: ['陈分拣', '李分拣', '王分拣', '赵分拣'][index % 4], username: ['chenfenjian', 'lifenjian', 'wangfenjian', 'zhaofen'] [index % 4], phone: `1380000${String(index + 300).padStart(4, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', status: 'ENABLE' })),
-      qualityReports: padRecords(window.MockOperations?.qualityReports || [], 20, (index) => { const product = products[index % products.length]; return { id: `QUALITY-${String(index + 1).padStart(3, '0')}`, inboundNo: `RKD20260805${String(index + 1).padStart(5, '0')}`, goodsName: product.name, warehouse: index % 2 ? '中心仓' : '北区仓', status: index % 4 ? '合格' : '未上传' }; }),
-      inventoryCounts: padRecords(window.MockOperations?.inventoryCounts || [], 20, (index) => ({ id: `COUNT-DEMO-${String(index + 1).padStart(3, '0')}`, warehouse: '中心仓', countAt: '2026-08-04', status: '已完成' })),
-      inventoryLosses: padRecords(window.MockOperations?.inventoryLosses || [], 20, (index) => { const product = products[index % products.length]; return { id: `LOSS-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', status: '待审核', goodsName: product.name, productCode: product.code, quantity: 1, amount: number(product.marketPrice) }; }),
-      openingInventory: padRecords(window.MockOperations?.openingInventory || [], 20, (index) => { const product = products[index % products.length]; return { id: `OPENING-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', goodsName: product.name, goodsCode: product.code, openingQty: 100, openingPrice: number(product.marketPrice) }; })
+      qualityReports: padRecords(window.MockOperations?.qualityReports || [], 20, (index) => { const product = products[index % products.length]; return { id: `QUALITY-${String(index + 1).padStart(3, '0')}`, inboundNo: `RKD2026080503${String(index + 1).padStart(5, '0')}`, goodsName: product.name, warehouse: index % 2 ? '中心仓' : '北区仓', status: index % 4 ? 'PASSED' : 'NOT_UPLOADED' }; }),
+      inventoryCounts: padRecords(window.MockOperations?.inventoryCounts || [], 20, (index) => ({ id: `COUNT-DEMO-${String(index + 1).padStart(3, '0')}`, warehouse: '中心仓', countAt: '2026-08-04', status: 'COMPLETED' })),
+      inventoryLosses: padRecords(window.MockOperations?.inventoryLosses || [], 20, (index) => { const product = products[index % products.length]; return { id: `LOSS-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', status: 'PENDING_AUDIT', goodsName: product.name, productCode: product.code, quantity: 1, amount: number(product.marketPrice) }; }),
+      openingInventory: padRecords(window.MockOperations?.openingInventory || [], 20, (index) => { const product = products[index % products.length]; return { id: `OPENING-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', goodsName: product.name, goodsCode: product.code, openingQty: 100, openingPrice: number(product.marketPrice), openingAmount: 100 * number(product.marketPrice), status: 'COMPLETED' }; })
     };
   }
 
   function ensure() {
     if (state) return state;
-    clearLegacyBusinessStorage();
     const stored = window.AppStorage.read(storageKey, null);
-    const hasValidProducts = Array.isArray(stored?.products)
-      && stored.products.length > 0
-      && stored.products.every((product) => product && (product.code || product.id));
-    const hasValidOrders = Array.isArray(stored?.orders) && Array.isArray(stored?.sortingTasks);
-    if (stored && stored.version === schemaVersion && hasValidProducts && hasValidOrders) {
-      state = stored;
+    const previous = window.AppStorage.read(previousStorageKey, null);
+    const legacyUnits = window.AppStorage.read('procurement-unit-measurements-v1', null);
+    const legacyReviews = window.AppStorage.read('procurement-goods-reviews-v1', null);
+    const legacyTemplates = window.AppStorage.read('procurement-processing-templates', null);
+    clearLegacyBusinessStorage();
+    const source = stored || previous;
+    const hasValidProducts = Array.isArray(source?.products)
+      && source.products.length > 0
+      && source.products.every((product) => product && (product.code || product.id));
+    const hasValidOrders = Array.isArray(source?.orders) && Array.isArray(source?.sortingTasks);
+    if (source && hasValidProducts && hasValidOrders) {
+      state = clone(source);
+      if (!stored && previous && !window.AppStorage.read(backupStorageKey, null)) {
+        window.AppStorage.write(backupStorageKey, previous);
+      }
+      if (!Array.isArray(state.units) && Array.isArray(legacyUnits)) state.units = clone(legacyUnits);
+      if (!Array.isArray(state.goodsReviews) && Array.isArray(legacyReviews)) state.goodsReviews = clone(legacyReviews);
+      if (!Array.isArray(state.processingTemplates) && Array.isArray(legacyTemplates)) state.processingTemplates = clone(legacyTemplates);
       const migrated = migrateOutboundNumbers(state);
       const logsAdded = ensureDocumentOperationLogs(state);
       const receiptFieldsNormalized = normalizeReceiptAndSupplement(state);
       const dateTimesNormalized = normalizeStateDateTimes(state);
       const productMetadataNormalized = normalizeProductMetadata(state);
+      const orderNumbersNormalized = normalizeOrderNumbers(state);
+      const processingIdsNormalized = normalizeProcessingIds(state);
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
-      if (migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || processingOutputsNormalized) persist();
+      const contractsNormalized = normalizeStateContracts(state);
+      if (source.version !== schemaVersion || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized) persist();
     }
     else {
       state = buildSeed();
@@ -822,15 +1236,22 @@
       normalizeReceiptAndSupplement(state);
       normalizeStateDateTimes(state);
       normalizeProductMetadata(state);
+      normalizeOrderNumbers(state);
+      normalizeProcessingIds(state);
       normalizeProcessingOutputs(state);
-      window.AppStorage.write(storageKey, state);
+      normalizeStateContracts(state);
+      persist();
     }
     return state;
   }
 
   function persist() {
     state.version = schemaVersion;
-    window.AppStorage.write(storageKey, state);
+    if (!window.AppStorage.write(storageKey, state)) {
+      const error = new Error('本地数据保存失败，请检查浏览器存储空间');
+      error.code = 'STORAGE_WRITE_FAILED';
+      throw error;
+    }
   }
 
   function aggregateInventory(resource) {
@@ -912,10 +1333,26 @@
     },
     reset() {
       state = buildSeed();
+      normalizeStateContracts(state);
       persist();
       return clone(state);
     },
-    snapshot() { return clone(ensure()); }
+    snapshot() { return clone(ensure()); },
+    export() { return JSON.stringify(ensure(), null, 2); },
+    import(value) {
+      const parsed = typeof value === 'string' ? JSON.parse(value) : clone(value);
+      if (!parsed || !Array.isArray(parsed.products) || !Array.isArray(parsed.orders)) {
+        const error = new Error('导入数据格式不正确');
+        error.code = 'INVALID_IMPORT_DATA';
+        throw error;
+      }
+      state = parsed;
+      normalizeOrderNumbers(state);
+      normalizeProcessingIds(state);
+      normalizeStateContracts(state);
+      persist();
+      return clone(state);
+    }
   };
 })();
 
@@ -946,7 +1383,7 @@
           customerId,
           customerCode: data.customerCode || `CUS${String(state.customers.length + 1).padStart(3, '0')}`,
           status: data.status || 'ENABLE',
-          createdAt: data.createdAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
+          createdAt: window.BusinessRules.now(data.createdAt || new Date())
         };
         state.customers.unshift(customer);
         return customer;
@@ -969,7 +1406,7 @@
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
-  const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const now = () => window.BusinessRules.now();
 
   function nextOutboundNumber(records, record = {}) {
     const dateSource = record.outboundTime || record.shippingAt || record.createdAt || now();
@@ -982,6 +1419,24 @@
       candidate = `${prefix}${String(sequence).padStart(5, '0')}`;
     }
     return candidate;
+  }
+
+  function nextOrderNumber(state, data, createdAt) {
+    const customers = state.customers || [];
+    const customer = customers.find((item) => (
+      (data.customerId && (item.id === data.customerId || item.customerId === data.customerId))
+      || (data.customerName && item.customerName === data.customerName)
+    ));
+    const customerCode = window.BusinessRules.businessCode(
+      data.customerCode || customer?.customerCode || '03',
+      '03'
+    );
+    return window.BusinessRules.documentNumber('orders', {
+      date: createdAt || now(),
+      businessCode: customerCode,
+      records: state.orders,
+      fields: ['orderNo']
+    });
   }
 
   function appendLedger(state, entry) {
@@ -1180,6 +1635,11 @@
   function createShippingOrder(state, order) {
     const existing = state.shippingOrders.find((item) => item.orderId === order.id);
     if (existing) return existing;
+    const location = (state.customerLocations || []).find((item) => (
+      item.customerId === order.customerId && item.canteen === order.canteen
+    )) || (state.customerLocations || []).find((item) => (
+      item.customerName === order.customerName && item.canteen === order.canteen
+    ));
     const created = {
       id: `SHIP-${order.id}`,
       shippingOrderId: `SHIP-${order.id}`,
@@ -1188,10 +1648,10 @@
       customerId: order.customerId || '',
       customerName: order.customerName,
       canteen: order.canteen,
-      receiver: order.receiver || '',
-      phone: order.phone || '',
-      address: order.address || '',
-      route: order.route || '',
+      receiver: order.receiver || location?.receiver || '',
+      phone: order.phone || location?.phone || '',
+      address: order.address || location?.address || '',
+      route: order.route || location?.route || '',
       warehouse: order.warehouse || '中心仓',
       shippingAmount: 0,
       sortingStatus: 'PENDING',
@@ -1213,7 +1673,25 @@
     if (existing) return existing;
     const tasks = taskList(state, order.id);
     const outboundTime = order.shippingAt || now();
-    const outboundId = nextOutboundNumber(state.outboundOrders, { outboundTime });
+    const outboundId = nextOutboundNumber(state.outboundOrders, {
+      outboundTime,
+      customerCode: order.customerCode || '03'
+    });
+    const items = tasks.map((task) => {
+      const line = order.items.find((item) => item.orderLineId === task.orderLineId) || {};
+      return {
+        orderId: order.id,
+        orderLineId: task.orderLineId,
+        productId: task.productId,
+        productCode: task.productId,
+        productName: task.goodsName,
+        unit: task.unit,
+        outboundQty: number(task.actualQty),
+        currentStock: number(window.InventoryLedgerService.getBalance(task.productId, task.warehouse).currentStock),
+        unitPrice: number(line.unitPrice),
+        amount: number(task.actualQty) * number(line.unitPrice)
+      };
+    });
     const created = {
       id: outboundId,
       outboundOrderId: outboundId,
@@ -1223,26 +1701,17 @@
       warehouse: order.warehouse || '中心仓',
       warehouseName: order.warehouse || '中心仓',
       outboundType: '销售出库',
-      status,
+      customerId: order.customerId || '',
+      customerName: order.customerName || '',
+      supplierPurchaserCustomerName: order.customerName || '',
+      canteen: order.canteen || '',
+      customerCode: order.customerCode || '03',
+      status: window.BusinessRules.normalizeStatus('outboundOrders', status),
       outboundTime,
-      outboundAmt: tasks.reduce((sum, task) => sum + number(task.actualQty) * number(order.items.find((line) => line.orderLineId === task.orderLineId)?.unitPrice), 0).toFixed(2),
+      outboundAmt: window.BusinessRules.totalAmount(items, ['outboundQty']),
       creator: order.creator || '管理员',
       operationLogs: [{ action: '创建', operator: order.creator || '系统', createdAt: outboundTime, desc: `${order.creator || '系统'} 创建出库单` }],
-      items: tasks.map((task) => {
-        const line = order.items.find((item) => item.orderLineId === task.orderLineId) || {};
-        return {
-          orderId: order.id,
-          orderLineId: task.orderLineId,
-          productId: task.productId,
-          productCode: task.productId,
-          productName: task.goodsName,
-          unit: task.unit,
-          outboundQty: number(task.actualQty),
-          currentStock: number(window.InventoryLedgerService.getBalance(task.productId, task.warehouse).currentStock),
-          unitPrice: number(line.unitPrice),
-          amount: number(task.actualQty) * number(line.unitPrice)
-        };
-      })
+      items
     };
     state.outboundOrders.unshift(created);
     return created;
@@ -1267,7 +1736,7 @@
 
   function completeOutbound(outbound) {
     if (outbound.completedAt) return outbound;
-    outbound.status = '已完成';
+    outbound.status = 'COMPLETED';
     outbound.auditAt = now();
     outbound.completedAt = now();
     (outbound.items || []).forEach((item) => {
@@ -1339,9 +1808,19 @@
         const sourceType = data.sourceType || (data.source === '客户下单' ? 'CUSTOMER' : 'ENTERPRISE');
         const orderId = data.orderId || `ORD-${Date.now()}`;
         const settings = state.settings;
-        const status = sourceType === 'CUSTOMER'
+        const requestedStatus = data.status === 'DRAFT' ? 'DRAFT' : null;
+        const status = requestedStatus || (sourceType === 'CUSTOMER'
           ? 'PENDING_CONFIRM'
-          : settings.enterpriseOrderAuditEnabled ? 'PENDING_AUDIT' : 'READY_FOR_SHIPPING';
+          : settings.enterpriseOrderAuditEnabled ? 'PENDING_AUDIT' : 'READY_FOR_SHIPPING');
+        const createdAt = data.createdAt || now();
+        const customer = (state.customers || []).find((item) => (
+          (data.customerId && (item.id === data.customerId || item.customerId === data.customerId))
+          || (data.customerName && item.customerName === data.customerName)
+        ));
+        const customerCode = window.BusinessRules.businessCode(
+          data.customerCode || customer?.customerCode || '03',
+          '03'
+        );
         const items = (data.items || []).map((item, index) => ({
           ...clone(item),
           id: `${orderId}-LINE-${String(index + 1).padStart(3, '0')}`,
@@ -1357,6 +1836,8 @@
           ...clone(data),
           id: orderId,
           orderId,
+          orderNo: data.orderNo || nextOrderNumber(state, data, createdAt),
+          customerCode,
           sourceType,
           status,
           items,
@@ -1365,8 +1846,8 @@
           receiptStatus: '未收货',
           receivedAt: '',
           supplement: '否',
-          createdAt: data.createdAt || now(),
-          createTime: data.createdAt || now(),
+          createdAt,
+          createTime: createdAt,
           creator: data.creator || '管理员',
           operationLogs: createOrderLogs(data, data.createdAt || now(), data.creator || '管理员'),
           updatedAt: now()
@@ -1502,7 +1983,7 @@
           order.shippingAt = now();
           appendOperationLog(shipping, '完成发货', order.creator || '当前用户');
           appendOperationLog(order, '完成发货', order.creator || '当前用户');
-          const outboundStatus = state.settings.outboundAuditEnabled ? '待审核' : '已完成';
+          const outboundStatus = state.settings.outboundAuditEnabled ? 'PENDING_AUDIT' : 'COMPLETED';
           const outbound = createOutbound(state, order, outboundStatus);
           if (!state.settings.outboundAuditEnabled) completeOutbound(outbound);
           return shipping;

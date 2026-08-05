@@ -1,9 +1,9 @@
 (function () {
-  const storagePrefix = 'procurement-operations-v1-';
   const centralResources = new Set([
     'orders', 'orderLines', 'sortingItems', 'sortingProgress', 'shippingOrders', 'outboundOrders',
     'inventoryBalance', 'inventoryDetails', 'inventoryCounts', 'inventoryLosses', 'openingInventory',
-    'returns', 'tags', 'receiptChanges', 'shortageItems', 'sorters', 'warehouses', 'qualityReports'
+    'returns', 'tags', 'receiptChanges', 'shortageItems', 'sorters', 'warehouses', 'qualityReports',
+    'shippingDifferences'
   ]);
   const legacyOrderNumbers = {
     XS202607300001: { orderNo: 'DD202607300100001', orderId: 'ORD-20260730-001' },
@@ -24,10 +24,8 @@
   }
 
   function assertResource(resource) {
-    if (centralResources.has(resource) && window.DemoStore) return;
-    if (!Object.prototype.hasOwnProperty.call(window.MockOperations || {}, resource)) {
-      throw error('RESOURCE_NOT_FOUND', '未找到业务数据');
-    }
+    if (!window.DemoStore) throw error('STORE_NOT_READY', '统一业务数据源未加载');
+    if (!centralResources.has(resource)) throw error('RESOURCE_NOT_FOUND', '未找到业务数据');
   }
 
   function normalizeOrderNumbers(resource, records) {
@@ -44,20 +42,12 @@
 
   function load(resource) {
     assertResource(resource);
-    if (centralResources.has(resource) && window.DemoStore) return window.DemoStore.get(resource);
-    const fallback = window.MockOperations[resource] || [];
-    const records = clone(window.AppStorage?.read(`${storagePrefix}${resource}`, fallback) || fallback);
-    return normalizeOrderNumbers(resource, records);
+    return normalizeOrderNumbers(resource, window.DemoStore.get(resource));
   }
 
   function save(resource, items) {
-    if (centralResources.has(resource) && window.DemoStore) {
-      window.DemoStore.replace(resource, items);
-      return;
-    }
-    if (!window.AppStorage?.write(`${storagePrefix}${resource}`, items)) {
-      throw error('STORAGE_WRITE_FAILED', '本地数据保存失败');
-    }
+    assertResource(resource);
+    window.DemoStore.replace(resource, items);
   }
 
   function syncOrderToSortingItems(order) {
@@ -96,7 +86,7 @@
     return String(value ?? '').trim().toLocaleLowerCase();
   }
 
-  function matches(item, conditions) {
+  function matches(item, conditions, resource) {
     return Object.entries(conditions || {}).every(([key, value]) => {
       if (value === '' || value == null) return true;
       if (key === 'keyword') {
@@ -106,6 +96,11 @@
       if (key === 'dateRange' && Array.isArray(value) && value.length === 2) {
         const source = item.createdAt || item.expectedAt || item.occurredAt || item.inboundAt || item.countAt || '';
         return (!value[0] || source >= value[0]) && (!value[1] || source <= `${value[1]} 23:59:59`);
+      }
+      if (key === 'status') {
+        const expected = Array.isArray(value) ? value : [value];
+        const actualStatus = window.BusinessRules.normalizeStatus(resource, item.status);
+        return expected.some((candidate) => window.BusinessRules.normalizeStatus(resource, candidate) === actualStatus);
       }
       if (Array.isArray(value)) return value.includes(item[key]);
       return normalize(item[key]).includes(normalize(value));
@@ -246,7 +241,7 @@
       const pageSize = Math.max(1, Number(query.pageSize) || 20);
       const conditions = query.condition || {};
       const filtered = load(resource)
-        .filter((item) => matches(item, conditions))
+        .filter((item) => matches(item, conditions, resource))
         .sort((a, b) => String(b.createdAt || b.occurredAt || b.id).localeCompare(String(a.createdAt || a.occurredAt || a.id)));
       const start = (page - 1) * pageSize;
       return {
@@ -265,20 +260,31 @@
       if (resource === 'orders' && window.OrderFlowService) return window.OrderFlowService.createOrder(data);
       const items = load(resource);
       validate(resource, data);
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const now = window.BusinessRules.now();
       const created = {
         id: nextId(resource, items),
-        status: data.status || 'PENDING',
+        status: window.BusinessRules.normalizeStatus(resource, data.status || 'PENDING'),
         createdAt: now,
         ...clone(data)
       };
+      created.status = window.BusinessRules.normalizeStatus(resource, created.status);
       if (resource === 'orders') created.orderNo ||= nextOrderNumber(items, created.customerName);
       if (resource === 'returns') {
-        const datePart = now.slice(0, 10).replace(/-/g, '');
-        const sequence = String(items.filter((item) => String(item.returnNo || '').startsWith(`THD${datePart}`)).length + 1).padStart(5, '0');
-        created.returnNo ||= `THD${datePart}${sequence}`;
+        created.returnNo ||= window.BusinessRules.documentNumber('returns', {
+          date: now,
+          businessCode: created.customerCode || '03',
+          records: items,
+          fields: ['returnNo']
+        });
       }
-      if (resource === 'receiptChanges') created.changeNo ||= `BG${Date.now()}`;
+      if (resource === 'receiptChanges') {
+        created.changeNo ||= window.BusinessRules.documentNumber('receiptChanges', {
+          date: now,
+          businessCode: created.customerCode || '03',
+          records: items,
+          fields: ['changeNo']
+        });
+      }
       if (resource === 'receiptChanges') {
         created.beforeAmount = Number((created.items || []).reduce((sum, item) => sum + Number(item.shippingAmount || 0), 0).toFixed(2));
         created.afterAmount = Number((created.items || []).reduce((sum, item) => sum + Number(item.afterAmount || 0), 0).toFixed(2));
@@ -287,8 +293,22 @@
       if (resource === 'returns') {
         created.refundAmount = Number((created.items || []).reduce((sum, item) => sum + Number(item.applyAmount || 0), 0).toFixed(2));
       }
-      if (resource === 'inventoryCounts') created.countNo ||= `PD${Date.now()}`;
-      if (resource === 'inventoryLosses') created.lossNo ||= `SY${Date.now()}`;
+      if (resource === 'inventoryCounts') {
+        created.countNo ||= window.BusinessRules.documentNumber('inventoryCounts', {
+          date: created.countAt || now,
+          businessCode: created.warehouseCode || '03',
+          records: items,
+          fields: ['countNo']
+        });
+      }
+      if (resource === 'inventoryLosses') {
+        created.lossNo ||= window.BusinessRules.documentNumber('inventoryLosses', {
+          date: now,
+          businessCode: created.warehouseCode || '03',
+          records: items,
+          fields: ['lossNo']
+        });
+      }
       if (resource === 'openingInventory') {
         created.openingAmount = Number(created.openingQty || 0) * Number(created.openingPrice || 0);
       }
@@ -307,7 +327,12 @@
       const index = items.findIndex((item) => item.id === id);
       if (index < 0) throw error('RECORD_NOT_FOUND', '记录不存在或已删除');
       validate(resource, { ...items[index], ...data }, id);
-      items[index] = { ...items[index], ...clone(data), updatedAt: new Date().toISOString() };
+      items[index] = {
+        ...items[index],
+        ...clone(data),
+        status: window.BusinessRules.normalizeStatus(resource, data.status || items[index].status),
+        updatedAt: window.BusinessRules.now()
+      };
       if (resource === 'openingInventory') {
         items[index].openingAmount = Number(items[index].openingQty || 0) * Number(items[index].openingPrice || 0);
       }
@@ -351,7 +376,7 @@
         item.actualQty = Number(payload.actualQty ?? item.orderQty ?? item.actualQty ?? 0);
         item.progress = `${item.actualQty}/${item.orderQty}`;
         item.sorter ||= '当前用户';
-        item.sortingAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        item.sortingAt = window.BusinessRules.now();
         item.shortage = '否';
       }
       if (action === 'resetSort') {
@@ -371,7 +396,7 @@
         item.purchaseOrder = payload.purchaseOrder || `CG${Date.now()}`;
       }
       if (action === 'approve') {
-        item.auditAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        item.auditAt = window.BusinessRules.now();
         item.auditor = '当前用户';
       }
       if (payload.auditOpinion) item.auditOpinion = payload.auditOpinion;

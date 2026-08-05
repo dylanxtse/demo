@@ -2,9 +2,9 @@
   const backIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/><path d="M19 12H9"/></svg>';
   const escapeHtml = (value) => window.DomUtils.escapeHtml(value);
   const getStatusClass = (status) => {
-    if (status === '已完成') return 'online';
-    if (status === '待审核' || status === '待出库') return 'draft';
-    if (status === '已驳回') return 'cancelled';
+    if (status === 'COMPLETED') return 'online';
+    if (status === 'PENDING_AUDIT' || status === 'PENDING') return 'draft';
+    if (status === 'REJECTED') return 'cancelled';
     return 'offline';
   };
   const params = new URLSearchParams(window.location.search);
@@ -70,7 +70,7 @@
         <h1>出库单详情</h1>
         <div class="detail-header-status">
           <span class="detail-header-status-label">单据状态</span>
-          <span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(order.status)}</span>
+          <span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(window.BusinessRules.statusLabel('outboundOrders', order.status))}</span>
         </div>
       </div>
       <div class="processing-detail-page-body">

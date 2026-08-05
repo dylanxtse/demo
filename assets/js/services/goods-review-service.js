@@ -1,5 +1,4 @@
 (function () {
-  const storageKey = 'procurement-goods-reviews-v1';
   const statusNames = {
     PENDING: '待审核',
     APPROVED: '已通过',
@@ -17,21 +16,19 @@
   }
 
   function loadReviews() {
-    const fallback = window.MockGoodsReviews || [];
-    return clone(window.AppStorage?.read(storageKey, fallback) || fallback);
+    if (!window.DemoStore) throw new Error('统一数据仓库未加载');
+    return clone(window.DemoStore.get('goodsReviews') || []);
   }
 
   function saveReviews(items) {
-    if (!window.AppStorage?.write(storageKey, items)) {
-      throw serviceError('STORAGE_WRITE_FAILED', '本地数据保存失败');
-    }
+    window.DemoStore.replace('goodsReviews', items);
   }
 
   function buildRows() {
     const products = window.ProductService?.getList() || [];
     const reviews = loadReviews();
     const reviewByCode = new Map(reviews.map((review) => [review.productCode, review]));
-    const now = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+    const now = window.BusinessRules.now();
 
     let changed = false;
     products.forEach((product, index) => {
@@ -63,7 +60,7 @@
   }
 
   function nowText() {
-    return new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+    return window.BusinessRules.now();
   }
 
   window.GoodsReviewService = {
@@ -126,7 +123,7 @@
       const row = await this.get(id);
       if (!row) throw serviceError('REVIEW_NOT_FOUND', '未找到商品审核记录');
       if (row.auditStatus === 'PENDING') throw serviceError('REVIEW_PENDING', '商品审核通过后才能上架');
-      const updated = window.ProductService?.update(row.code, { status: '已上架' });
+      const updated = window.ProductService?.update(row.code, { status: 'ENABLE' });
       if (!updated) throw serviceError('PRODUCT_NOT_FOUND', '未找到商品');
       return clone(updated);
     },

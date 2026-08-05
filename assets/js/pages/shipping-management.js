@@ -31,7 +31,7 @@
           { key: 'route', label: '线路' },
           { key: 'warehouse', label: '仓库' },
           { key: 'shippingAmount', label: '发货金额', format: 'money' },
-          { key: 'sortingStatus', label: '分拣状态' },
+          { key: 'sortingStatus', label: '分拣状态', render: (item) => window.DomUtils.escapeHtml(window.BusinessRules.statusLabel('sortingTasks', item.sortingStatus)) },
           { key: 'status', label: '发货状态', format: 'status' },
           { key: 'printed', label: '是否打印' },
           { key: 'expectedAt', label: '期望送达时间' },

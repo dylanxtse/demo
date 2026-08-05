@@ -1,7 +1,7 @@
 (function () {
   const backIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/><path d="M19 12H9"/></svg>';
   const escapeHtml = (value) => window.DomUtils.escapeHtml(value);
-  const getStatusClass = (status) => status === '已完成' ? 'online' : (status === '待审核' ? 'draft' : 'offline');
+  const getStatusClass = (status) => status === 'COMPLETED' ? 'online' : (status === 'PENDING_AUDIT' ? 'draft' : 'offline');
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const returnTo = ['processing-record.html', 'outbound.html', 'inbound.html'].includes(params.get('returnTo'))
@@ -66,7 +66,7 @@
         <h1>入库单详情</h1>
         <div class="detail-header-status">
           <span class="detail-header-status-label">单据状态</span>
-          <span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(order.status)}</span>
+          <span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(window.BusinessRules.statusLabel('inboundOrders', order.status))}</span>
         </div>
       </div>
       <div class="processing-detail-page-body">

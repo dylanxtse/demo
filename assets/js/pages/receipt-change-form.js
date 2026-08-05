@@ -162,7 +162,7 @@
       attachment,
       shippingAt: record?.shippingAt || '',
       creator: record?.creator || '当前用户',
-      status: record?.status || 'PENDING',
+      status: record?.status || 'PENDING_AUDIT',
       auditAt: record?.auditAt || '',
       auditor: record?.auditor || ''
     };

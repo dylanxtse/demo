@@ -3,11 +3,11 @@
   const escapeHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   const money = (value) => Number(value || 0).toFixed(2);
 
-  const statusMap = { PENDING: '待审核', APPROVED: '已审核', REJECTED: '已驳回', CLOSED: '已关闭' };
+  const statusMap = { PENDING_AUDIT: '待审核', APPROVED: '已审核', REJECTED: '已驳回', CLOSED: '已关闭' };
 
   const getStatusClass = (status) => {
     if (status === 'CLOSED' || status === 'APPROVED') return 'online';
-    if (status === 'PENDING') return 'draft';
+    if (status === 'PENDING_AUDIT') return 'draft';
     if (status === 'REJECTED') return 'cancelled';
     return 'offline';
   };

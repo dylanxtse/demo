@@ -158,7 +158,7 @@
       refundAmount,
       warehouse: record?.warehouse || '中心仓',
       creator: record?.creator || '当前用户',
-      status: record?.status || 'PENDING'
+      status: record?.status || 'PENDING_AUDIT'
     };
   }
 

@@ -7,8 +7,6 @@
   const warehouses = (window.DemoStore?.get('warehouses') || []).map((warehouse) => warehouse.warehouseName || warehouse.name).filter(Boolean);
   const defaultWarehouse = warehouses[0] || '';
   const customers = ['全部', ...(window.MasterDataService?.listCustomers({ status: 'ENABLE' }) || []).map((customer) => customer.customerName)];
-  const sortingStorageKey = 'procurement-operations-v1-sortingItems';
-  const ordersStorageKey = 'procurement-operations-v1-orders';
 
   function getLocalDateString(offsetDays = 0) {
     const date = new Date();
@@ -21,52 +19,14 @@
   }
 
   function getSortingRecords() {
-    if (window.OrderFlowService?.getProcessingDemand) {
-      return window.OrderFlowService.getProcessingDemand().map((record) => ({
-        ...record,
-        customer: record.customerName,
-        productCode: record.productId || record.goodsCode,
-        orderSortingQty: Number(record.actualQty || 0),
-        sortingCompleted: true
-      }));
-    }
-    const fallback = window.MockOperations?.sortingItems || [];
-    const sortingRecords = window.AppStorage?.read(sortingStorageKey, fallback) || fallback;
-    const ordersFallback = window.MockOperations?.orders || [];
-    const orders = window.AppStorage?.read(ordersStorageKey, ordersFallback) || ordersFallback;
-    const knownKeys = new Set(sortingRecords.map((record) => `${record.orderNo}|${record.goodsCode || record.productCode}`));
-    const derivedRecords = [];
-
-    orders.forEach((order) => {
-      if (['CLOSED', 'REJECTED'].includes(order.status)) return;
-      (order.items || []).forEach((item, index) => {
-        const goodsCode = item.goodsCode || item.productCode || item.goodsId || '';
-        const key = `${order.orderNo}|${goodsCode}`;
-        if (!goodsCode || knownKeys.has(key)) return;
-        const product = findProduct(goodsCode);
-        const isNetVegetable = item.isNetVegetable === true || product?.isNetVegetable === true;
-        if (!isNetVegetable) return;
-        derivedRecords.push({
-          id: `SORT-ORDER-${order.id || order.orderNo}-${index}`,
-          orderId: order.id || '',
-          goodsCode,
-          isNetVegetable: true,
-          goodsName: item.goodsName || product?.name || '',
-          customerName: order.customerName || '',
-          canteen: order.canteen || '',
-          orderQty: Number(item.quantity || 0),
-          actualQty: 0,
-          unit: item.unit || product?.unit || '',
-          orderNo: order.orderNo || '',
-          status: 'PENDING',
-          shortage: '否',
-          expectedAt: order.expectedAt || ''
-        });
-        knownKeys.add(key);
-      });
-    });
-
-    return [...sortingRecords, ...derivedRecords];
+    if (!window.OrderFlowService?.getProcessingDemand) throw new Error('统一业务流程数据源未加载');
+    return window.OrderFlowService.getProcessingDemand().map((record) => ({
+      ...record,
+      customer: record.customerName,
+      productCode: record.productId || record.goodsCode,
+      orderSortingQty: Number(record.actualQty || 0),
+      sortingCompleted: true
+    }));
   }
 
   function getCanteenOptions() {
@@ -130,7 +90,7 @@
     const endDate = state.expectedDeliveryEnd;
     return (window.ProcessingService?.getList?.() || [])
       .filter((order) => {
-        if (!['已完成', '已加工'].includes(order.status)) return false;
+        if (order.status !== 'COMPLETED') return false;
         const orderStart = String(order.expectedDeliveryStart || '').slice(0, 10);
         const orderEnd = String(order.expectedDeliveryEnd || '').slice(0, 10);
         if (!orderStart || !orderEnd || orderEnd < startDate || orderStart > endDate) return false;
@@ -1685,7 +1645,7 @@
       brand: '--',
       spec: '--',
       marketPrice: '',
-      status: '已上架'
+      status: 'ENABLE'
     };
     state.products.push(product);
     return product;

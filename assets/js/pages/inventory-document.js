@@ -47,8 +47,8 @@
   const root = window.AppShell.mount({ title: entityName, content });
 
   const defaults = type === 'count'
-    ? { warehouse: '中心仓', countAt: new Date().toISOString().slice(0, 16), counter: '当前用户', creator: '当前用户', status: 'PENDING', remark: '', items: [] }
-    : { warehouse: '中心仓', type: '盘损', relationNo: '', creator: '当前用户', status: 'PENDING', remark: '', items: [] };
+    ? { warehouse: '中心仓', countAt: window.BusinessRules.now().slice(0, 16), counter: '当前用户', creator: '当前用户', status: 'PENDING_AUDIT', remark: '', items: [] }
+    : { warehouse: '中心仓', type: '盘损', relationNo: '', creator: '当前用户', status: 'PENDING_AUDIT', remark: '', items: [] };
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -117,7 +117,7 @@
   }
 
   function render() {
-    const statusMap = { PENDING: '待审核', APPROVED: '已审核', CLOSED: '已关闭' };
+    const statusMap = { PENDING_AUDIT: '待审核', APPROVED: '已审核', COMPLETED: '已完成', CLOSED: '已关闭' };
     root.querySelector('#documentStatus').innerHTML = `<span class="operation-status">${statusMap[record.status] || record.status}</span>`;
     root.querySelector('#basicFields').innerHTML = type === 'count'
       ? field('盘点单号', 'countNo', mode === 'copy' || mode === 'add' ? '保存后自动生成' : record.countNo) + field('盘点时间', 'countAt', String(record.countAt || '').replace(' ', 'T'), 'datetime-local') + field('仓库', 'warehouse', record.warehouse, 'select', ['中心仓', '北区仓', '临时仓']) + field('盘点人', 'counter', record.counter) + field('添加人', 'creator', record.creator)
@@ -146,7 +146,7 @@
       delete payload.countNo;
       delete payload.lossNo;
       delete payload.createdAt;
-      payload.status = 'PENDING';
+      payload.status = 'PENDING_AUDIT';
       saved = await service.create(resource, payload);
     }
     if (submit) await service.transition(resource, saved.id, 'approve');
@@ -191,7 +191,7 @@
     if (mode === 'copy') {
       delete record.id;
       delete record.countNo;
-      record.status = 'PENDING';
+      record.status = 'PENDING_AUDIT';
     }
     render();
   }

@@ -187,15 +187,15 @@
   }
 
   function getStatusClass(status) {
-    if (status === '待出库' || status === '待审核') return 'pending';
-    if (status === '已完成') return 'completed';
-    if (status === '已驳回') return 'rejected';
-    if (status === '已关闭') return 'closed';
+    if (status === 'PENDING' || status === 'PENDING_AUDIT') return 'pending';
+    if (status === 'COMPLETED') return 'completed';
+    if (status === 'REJECTED') return 'rejected';
+    if (status === 'CLOSED') return 'closed';
     return 'offline';
   }
 
   function isActionable(status) {
-    return status === '待出库' || status === '待审核';
+    return status === 'PENDING' || status === 'PENDING_AUDIT';
   }
 
   function loadOrders() {
@@ -221,6 +221,7 @@
     } else {
       tbody.innerHTML = pageOrders.map((order, index) => {
         const statusClass = getStatusClass(order.status);
+        const statusLabel = window.BusinessRules.statusLabel('outboundOrders', order.status);
         const checked = state.selectedIds.has(order.id) ? 'checked' : '';
         const checkedAttr = checked ? 'true' : 'false';
         const actionable = isActionable(order.status);
@@ -237,7 +238,7 @@
             <td>${escapeHtml(order.warehouseName)}</td>
             <td>${escapeHtml(order.supplierPurchaserCustomerName)}</td>
             <td>${relNoCell}</td>
-            <td><span class="status-tag ${statusClass}">${escapeHtml(order.status)}</span></td>
+            <td><span class="status-tag ${statusClass}">${escapeHtml(statusLabel)}</span></td>
             <td>${escapeHtml(order.creator)}</td>
             <td class="action-cell">
               <button class="btn-text ${!actionable ? 'disabled' : ''}" type="button" data-row-action="audit" data-id="${escapeHtml(order.id)}" ${!actionable ? 'disabled' : ''}>审核</button>
@@ -349,7 +350,7 @@
       // 出库类型
       if (type !== '全部' && order.outboundType !== type) return false;
       // 单据状态
-      if (status !== '全部' && order.status !== status) return false;
+      if (status !== '全部' && window.BusinessRules.statusLabel('outboundOrders', order.status) !== status) return false;
       // 出库单号
       if (orderNo && !(order.id || '').toLowerCase().includes(orderNo)) return false;
       // 仓库
@@ -777,6 +778,7 @@
     let warehouseVal = '';
     let dateVal = '';
     let remarkVal = '';
+    let counterpartyVal = '';
 
     if (isEdit && state.editId) {
       const order = window.OutboundService.getDetail(state.editId);
@@ -784,6 +786,7 @@
         warehouseVal = order.warehouseName || '';
         dateVal = (order.outboundTime || '').replace(' ', 'T').slice(0, 16);
         remarkVal = order.remark || '';
+        counterpartyVal = order.supplierPurchaserCustomerName || order.customerName || '';
         state.formItems = (order.items || []).map((item) => ({
           productCode: item.productCode || '',
           productName: item.productName || '',
@@ -830,6 +833,10 @@
               <div class="filter-group">
                 <label class="filter-label required" for="obFormDate">出库日期</label>
                 <input class="filter-input" id="obFormDate" type="datetime-local" value="${escapeHtml(dateVal)}">
+              </div>
+              <div class="filter-group">
+                <label class="filter-label required" for="obFormCounterparty">往来单位</label>
+                <input class="filter-input" id="obFormCounterparty" type="text" maxlength="60" placeholder="请输入供应商/采购员/客户" value="${escapeHtml(counterpartyVal)}">
               </div>
             </div>
           </div>
@@ -983,6 +990,7 @@
   function collectFormData(targetStatus) {
     const warehouse = document.getElementById('obFormWarehouse').value;
     const date = document.getElementById('obFormDate').value;
+    const counterparty = document.getElementById('obFormCounterparty').value.trim();
     const remark = document.getElementById('obFormRemark').value.trim();
     const original = state.formMode === 'edit' ? state.orders.find((o) => o.id === state.editId) : null;
 
@@ -1012,7 +1020,7 @@
       outboundTime: date ? date.replace('T', ' ') + ':00' : '',
       outboundType: original?.outboundType || '销售出库',
       outboundAmt: totalAmount.toFixed(2),
-      supplierPurchaserCustomerName: original?.supplierPurchaserCustomerName || '--',
+      supplierPurchaserCustomerName: counterparty || original?.supplierPurchaserCustomerName || '',
       relNo: original?.relNo || '--',
       status: targetStatus,
       remark: remark,
@@ -1023,6 +1031,7 @@
   function validateForm(data) {
     if (!data.warehouseName) return '请选择仓库';
     if (!data.outboundTime) return '请选择出库日期';
+    if (window.BusinessRules.isMissing(data.supplierPurchaserCustomerName)) return '请输入供应商/采购员/客户';
     if (!data.items || data.items.length === 0) return '请至少添加一条出库明细';
     for (let i = 0; i < data.items.length; i++) {
       const item = data.items[i];

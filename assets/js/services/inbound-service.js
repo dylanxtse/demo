@@ -1,49 +1,49 @@
 (function () {
-  const storageKey = 'procurement-inbound-orders';
-  const dataVersion = 2;
-  const versionKey = 'procurement-inbound-orders-version';
-
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
 
   function load() {
-    if (window.DemoStore) return window.DemoStore.get('inboundOrders');
-    let useMock = false;
-    try {
-      const cachedVersion = window.localStorage.getItem(versionKey);
-      if (cachedVersion !== String(dataVersion)) {
-        useMock = true;
-        window.localStorage.setItem(versionKey, String(dataVersion));
-        window.localStorage.removeItem(storageKey);
-      }
-    } catch {
-      useMock = true;
-    }
-
-    const orders = (useMock || !window.AppStorage)
-      ? window.MockInboundOrders
-      : (window.AppStorage.read(storageKey, window.MockInboundOrders) || window.MockInboundOrders);
-    return clone(orders);
+    if (!window.DemoStore) throw new Error('统一数据仓库未加载');
+    return window.DemoStore.get('inboundOrders');
   }
 
   function save(orders) {
-    if (window.DemoStore) {
-      window.DemoStore.replace('inboundOrders', orders);
-      return;
-    }
-    if (window.AppStorage) {
-      window.AppStorage.write(storageKey, orders);
-      try { window.localStorage.setItem(versionKey, String(dataVersion)); } catch {}
-    }
+    window.DemoStore.replace('inboundOrders', orders);
   }
 
-  function generateId() {
-    const now = new Date();
-    const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const orders = load();
-    const count = orders.filter((order) => order.id.startsWith(`RKD${datePart}`)).length + 1;
-    return `RKD${datePart}03${String(count).padStart(5, '0')}`;
+  function generateId(data, orders) {
+    return window.BusinessRules.documentNumber('inboundOrders', {
+      date: data.entryTime || window.BusinessRules.now(),
+      businessCode: data.customerCode || data.warehouseCode || '03',
+      records: orders,
+      fields: ['id']
+    });
+  }
+
+  function normalize(data, current = {}) {
+    const items = clone(data.items || current.items || []).map((item) => {
+      const quantity = Number(item.actualQty ?? item.entryQty ?? item.expectedQty ?? 0);
+      const unitPrice = Number(item.unitPrice || 0);
+      return {
+        ...item,
+        productId: item.productId || item.productCode || item.goodsCode || '',
+        productCode: item.productCode || item.productId || item.goodsCode || '',
+        actualQty: quantity,
+        amount: Number((quantity * unitPrice).toFixed(2))
+      };
+    });
+    const counterparty = data.supplierPurchaserCustomerName || current.supplierPurchaserCustomerName || data.supplierName || '';
+    return {
+      ...current,
+      ...clone(data),
+      items,
+      entryTime: window.BusinessRules.normalizeDateTime(data.entryTime || current.entryTime || window.BusinessRules.now()),
+      supplierPurchaserCustomerName: counterparty === '--' ? '' : String(counterparty).trim(),
+      warehouseName: data.warehouseName || current.warehouseName || data.warehouse || '中心仓',
+      entryAmt: window.BusinessRules.totalAmount(items, ['actualQty']),
+      status: window.BusinessRules.normalizeStatus('inboundOrders', data.status || current.status || 'PENDING_AUDIT')
+    };
   }
 
   window.InboundService = {
@@ -55,14 +55,14 @@
     },
     create(data) {
       const orders = load();
-      const now = new Date();
-      const created = {
+      const created = normalize({
         ...data,
-        id: generateId(),
-        status: data.status || '待审核',
+        entryTime: data.entryTime || window.BusinessRules.now(),
+        status: data.status || 'PENDING_AUDIT',
         creator: data.creator || '杨',
-        entryTime: now.toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
-      };
+      });
+      created.id = generateId(created, orders);
+      window.BusinessRules.assertValid('inboundOrders', created);
       orders.unshift(created);
       save(orders);
       return clone(created);
@@ -71,7 +71,9 @@
       const orders = load();
       const index = orders.findIndex((order) => order.id === id);
       if (index < 0) return null;
-      orders[index] = { ...orders[index], ...data, id: orders[index].id };
+      orders[index] = normalize(data, orders[index]);
+      orders[index].id = id;
+      window.BusinessRules.assertValid('inboundOrders', orders[index]);
       save(orders);
       return clone(orders[index]);
     },
@@ -84,8 +86,8 @@
     audit(id) {
       const current = this.getDetail(id);
       if (!current) return null;
-      const updated = this.update(id, { status: '已完成' });
-      if (updated && current.status !== '已完成' && window.InventoryLedgerService) {
+      const updated = this.update(id, { status: 'COMPLETED' });
+      if (updated && current.status !== 'COMPLETED' && window.InventoryLedgerService) {
         (updated.items || []).forEach((item) => {
           const qty = Number(item.actualQty || item.entryQty || item.expectedQty || 0);
           if (qty <= 0) return;
@@ -104,7 +106,7 @@
       return updated;
     },
     close(id) {
-      return this.update(id, { status: '已关闭' });
+      return this.update(id, { status: 'CLOSED' });
     },
     getProducts() {
       return window.ProductService ? window.ProductService.getList() : [];

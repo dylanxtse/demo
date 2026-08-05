@@ -1,21 +1,15 @@
 (function () {
-  const storageKey = 'procurement-unit-measurements-v1';
-
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
 
   function load() {
-    const fallback = window.MockUnitMeasurements || [];
-    return clone(window.AppStorage?.read(storageKey, fallback) || fallback);
+    if (!window.DemoStore) throw new Error('统一数据仓库未加载');
+    return clone(window.DemoStore.get('units') || []);
   }
 
   function save(items) {
-    if (!window.AppStorage?.write(storageKey, items)) {
-      const error = new Error('本地数据保存失败');
-      error.code = 'STORAGE_WRITE_FAILED';
-      throw error;
-    }
+    window.DemoStore.replace('units', items);
   }
 
   function serviceError(code, message, detail) {

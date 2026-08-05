@@ -5,7 +5,7 @@
   const recordId = params.get('id') || '';
 
   // 商品目录：从统一演示数据仓库读取已上架商品
-  const allProducts = (window.DemoStore?.get('products') || window.MockProducts || []).filter((p) => p.status === '已上架');
+  const allProducts = (window.DemoStore?.get('products') || []).filter((product) => product.status === 'ENABLE');
   const catalog = allProducts.map((p) => ({
     id: p.code,
     goodsName: `${p.name}（${p.unit}/${p.brand}/${p.spec}）`,
