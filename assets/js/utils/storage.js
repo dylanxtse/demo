@@ -718,6 +718,19 @@
       }
     });
 
+    (state.sortingProgress || []).forEach((progress) => {
+      const location = (state.customerLocations || []).find((item) => (
+        item.customerId === progress.customerId && item.canteen === progress.canteen
+      )) || (state.customerLocations || []).find((item) => (
+        item.customerName === progress.customerName && item.canteen === progress.canteen
+      ));
+      if (!location) return;
+      set(progress, 'sortingProgress', 'receiver', progress.receiver || progress.consignee || location.receiver);
+      set(progress, 'sortingProgress', 'phone', progress.phone || progress.consigneePhone || location.phone);
+      set(progress, 'sortingProgress', 'address', progress.address || progress.consigneeAddress || location.address);
+      set(progress, 'sortingProgress', 'route', progress.route || location.route);
+    });
+
     (state.orders || []).forEach((order) => {
       (order.items || []).forEach((line) => normalizeLine(line, 'orders'));
       order.orderLines = order.items;
@@ -1554,6 +1567,9 @@
         customerId: order.customerId || '',
         customerName: order.customerName,
         canteen: order.canteen,
+        receiver: order.receiver || '',
+        phone: order.phone || '',
+        address: order.address || '',
         route: order.route || '',
         expectedAt: order.expectedAt || '',
         sortedCount: 0,
@@ -1563,6 +1579,15 @@
       };
       state.sortingProgress.unshift(progress);
     }
+    const location = (state.customerLocations || []).find((item) => (
+      item.customerId === order.customerId && item.canteen === order.canteen
+    )) || (state.customerLocations || []).find((item) => (
+      item.customerName === order.customerName && item.canteen === order.canteen
+    ));
+    progress.receiver = order.receiver || progress.receiver || location?.receiver || '';
+    progress.phone = order.phone || progress.phone || location?.phone || '';
+    progress.address = order.address || progress.address || location?.address || '';
+    progress.route = order.route || progress.route || location?.route || '';
     const sortedCount = tasks.filter((task) => task.sortingCompleted).length;
     progress.sortedCount = sortedCount;
     progress.orderCount = tasks.length;

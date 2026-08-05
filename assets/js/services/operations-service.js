@@ -40,9 +40,30 @@
     });
   }
 
+  function enrichSortingItems(records) {
+    const orders = window.DemoStore.get('orders') || [];
+    const shippingOrders = window.DemoStore.get('shippingOrders') || [];
+    const balances = window.DemoStore.get('inventoryBalance') || [];
+    return records.map((item) => {
+      const order = orders.find((record) => record.id === item.orderId || record.orderNo === item.orderNo);
+      const shipping = shippingOrders.find((record) => record.orderId === item.orderId || record.orderNo === item.orderNo);
+      const orderStatus = window.BusinessRules.normalizeStatus('orders', order?.status || '');
+      const shippingStatus = window.BusinessRules.normalizeStatus('shippingOrders', shipping?.status || '');
+      const productId = item.productId || item.goodsCode || item.productCode;
+      const warehouseRows = balances.filter((row) => row.productId === productId && (!item.warehouse || row.warehouse === item.warehouse));
+      const matchedRows = warehouseRows.length ? warehouseRows : balances.filter((row) => row.productId === productId);
+      return {
+        ...item,
+        shipped: orderStatus === 'SHIPPED' || shippingStatus === 'SHIPPED' ? '是' : '否',
+        stock: matchedRows.reduce((total, row) => total + Number(row.currentStock || 0), 0)
+      };
+    });
+  }
+
   function load(resource) {
     assertResource(resource);
-    return normalizeOrderNumbers(resource, window.DemoStore.get(resource));
+    const records = normalizeOrderNumbers(resource, window.DemoStore.get(resource));
+    return resource === 'sortingItems' ? enrichSortingItems(records) : records;
   }
 
   function save(resource, items) {

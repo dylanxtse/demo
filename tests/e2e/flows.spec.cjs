@@ -193,7 +193,7 @@ test('分拣列表的发货状态和库存来自关联业务数据', async ({ pa
   const cells = await row.locator('td').allTextContents();
   expect(cells.join('')).not.toContain('--');
   expect(cells.join('')).toContain(sample.orderStatus === 'SHIPPED' ? '是' : '否');
-  expect(cells.join('')).toContain(String(sample.stock));
+  expect(cells.join('')).toContain(String(sample.stock || 0));
 });
 
 test('种子加工单不再伪造草稿状态', async ({ page }) => {
