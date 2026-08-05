@@ -380,11 +380,16 @@
 
   function normalizeProductMetadata(state) {
     const seededNetVegetables = new Set(['SP0300039', 'SP0300020', 'SP0300019', 'SP0300034']);
+    const shouldNormalizeSeedNetVegetables = state.productSeedRevision !== 'products-v4';
     let changed = false;
     (state.products || []).forEach((product, index) => {
       const productCode = product.code || product.productId;
       const isSeededNetVegetable = seededNetVegetables.has(productCode);
       const sourceProduct = window.MockProducts?.find((item) => (item.code || item.id) === productCode);
+      if (shouldNormalizeSeedNetVegetables && sourceProduct && product.isNetVegetable !== sourceProduct.isNetVegetable) {
+        product.isNetVegetable = sourceProduct.isNetVegetable === true;
+        changed = true;
+      }
       if (!product.source) {
         product.source = '平台添加';
         changed = true;
@@ -414,8 +419,8 @@
         changed = true;
       }
     });
-    if (state.productSeedRevision !== 'products-v3') {
-      state.productSeedRevision = 'products-v3';
+    if (state.productSeedRevision !== 'products-v4') {
+      state.productSeedRevision = 'products-v4';
       changed = true;
     }
     return changed;
