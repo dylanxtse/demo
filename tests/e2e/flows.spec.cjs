@@ -177,3 +177,30 @@ test('入库、出库和加工记录新增后刷新仍可见', async ({ page }) 
   await page.goto('/processing-record.html', { waitUntil: 'networkidle' });
   await expect(page.getByText(processing.id, { exact: true }).first()).toBeVisible();
 });
+
+test('分拣列表的发货状态和库存来自关联业务数据', async ({ page }) => {
+  await page.goto('/sorting-management.html', { waitUntil: 'networkidle' });
+  const sample = await page.evaluate(() => {
+    const item = window.DemoStore.get('sortingItems')[0];
+    const order = window.DemoStore.get('orders').find((record) => record.id === item.orderId);
+    const balance = window.DemoStore.get('inventoryBalance').find((record) => (
+      record.productId === item.productId && record.warehouse === item.warehouse
+    ));
+    return { orderStatus: order?.status, productId: item.productId, stock: balance?.currentStock };
+  });
+  const row = page.locator('#recordBody tr').first();
+  await expect(row).toBeVisible();
+  const cells = await row.locator('td').allTextContents();
+  expect(cells.join('')).not.toContain('--');
+  expect(cells.join('')).toContain(sample.orderStatus === 'SHIPPED' ? '是' : '否');
+  expect(cells.join('')).toContain(String(sample.stock));
+});
+
+test('种子加工单不再伪造草稿状态', async ({ page }) => {
+  await page.goto('/processing-record.html', { waitUntil: 'networkidle' });
+  const seedDrafts = await page.evaluate(() => window.ProcessingService.getList().filter((record) => (
+    record.id === 'JGD20260726003' || String(record.id).startsWith('JGD20260805')
+  )).filter((record) => record.status === 'DRAFT'));
+  expect(seedDrafts).toEqual([]);
+  await expect(page.locator('body')).not.toContainText('草稿');
+});

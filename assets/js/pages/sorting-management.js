@@ -33,6 +33,23 @@
     return item.shortage === '是';
   }
 
+  function renderShipped(item) {
+    const order = window.DemoStore?.get('orders')?.find((record) => record.id === item.orderId);
+    const shipping = window.DemoStore?.get('shippingOrders')?.find((record) => record.orderId === item.orderId);
+    const orderStatus = window.BusinessRules?.normalizeStatus('orders', order?.status || '') || order?.status;
+    const shippingStatus = window.BusinessRules?.normalizeStatus('shippingOrders', shipping?.status || '') || shipping?.status;
+    return orderStatus === 'SHIPPED' || shippingStatus === 'SHIPPED' ? '是' : '否';
+  }
+
+  function renderStock(item) {
+    const productId = item.productId || item.goodsCode || item.productCode;
+    const rows = window.DemoStore?.get('inventoryBalance') || [];
+    const warehouseRows = rows.filter((row) => row.productId === productId && (!item.warehouse || row.warehouse === item.warehouse));
+    const matchedRows = warehouseRows.length ? warehouseRows : rows.filter((row) => row.productId === productId);
+    const currentStock = matchedRows.reduce((total, row) => total + Number(row.currentStock || 0), 0);
+    return Number.isFinite(currentStock) ? String(currentStock) : '0';
+  }
+
   function renderStatus(item) {
     const status = window.RecordPageConfig.statusMap[item.status] || [item.status || '--', ''];
     let html = `<span class="operation-status ${status[1]}">${escapeHtml(status[0])}</span>`;
@@ -52,9 +69,9 @@
     { key: 'actualQty', label: '实际数量', editableNumber: true, blankZero: true, placeholder: '请输入' },
     { key: 'unit', label: '计量单位' },
     { key: 'route', label: '线路' },
-    { key: 'shipped', label: '是否发货' },
+    { key: 'shipped', label: '是否发货', render: renderShipped },
     { key: 'progress', label: '分拣进度', render: renderProgress },
-    { key: 'stock', label: '库存' },
+    { key: 'stock', label: '库存', render: renderStock },
     { key: 'status', label: '分拣状态', render: renderStatus },
     { key: 'sorter', label: '分拣员' },
     { key: 'sortingAt', label: '分拣时间' }

@@ -693,6 +693,15 @@
       set(record, resource, 'status', rules.normalizeStatus(resource, record.status));
     }));
 
+    // 只有用户明确暂存的加工单才能是草稿；历史演示种子中的草稿不代表真实业务状态。
+    const seedProcessingDraft = (record) => (
+      record.status === 'DRAFT'
+      && (record.id === 'JGD20260726003' || String(record.id || '').startsWith('JGD20260805'))
+    );
+    (state.processingOrders || []).forEach((record) => {
+      if (seedProcessingDraft(record)) set(record, 'processingOrders', 'status', 'COMPLETED');
+    });
+
     const contactNames = ['王老师', '李老师', '周老师', '赵老师', '孙老师', '刘主任'];
     (state.customerLocations || []).forEach((location, index) => {
       if (missing(location.receiver)) {
@@ -1151,7 +1160,7 @@
         const output = products[(index + 1) % products.length];
         return {
           id: `JGD2026080503${String(index + 1).padStart(5, '0')}`, customerCode: '03', processingDate: `2026-08-${String((index % 9) + 1).padStart(2, '0')}`,
-          warehouse: index % 3 ? '中心仓' : '北区仓', status: index % 3 ? '已加工' : '草稿', operator: ['管理员', '杨师傅', '周师傅'][index % 3], remark: '日常净菜加工', costMode: 'auto',
+          warehouse: index % 3 ? '中心仓' : '北区仓', status: '已加工', operator: ['管理员', '杨师傅', '周师傅'][index % 3], remark: '日常净菜加工', costMode: 'auto',
           materials: [{ productCode: material.code, productName: material.name, unit: material.unit, stock: 100, avgPrice: number(material.marketPrice), consumeQty: 10 }],
           outputs: [{ productCode: output.code, productName: output.name, unit: output.unit, refCoefficient: 1, refQty: 10, actualQty: 9, costPrice: number(output.marketPrice).toFixed(2) }],
           createTime: `2026-08-${String((index % 9) + 1).padStart(2, '0')} 09:00:00`, attachments: [], operationLogs: [{ action: '创建', desc: `管理员 创建加工单 ${index + 1}` }]

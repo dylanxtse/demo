@@ -920,7 +920,7 @@
       id: 'JGD20260726003',
       processingDate: '2026-07-26',
       warehouse: '分仓库A',
-      status: '草稿',
+      status: '已加工',
       operator: '管理员',
       remark: '待确认成品获得量',
       costMode: 'auto',
