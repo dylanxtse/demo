@@ -875,7 +875,7 @@
 (function () {
   window.MockProcessingOrders = [
     {
-      id: 'JG20260728001',
+      id: 'JGD20260728001',
       processingDate: '2026-07-28',
       warehouse: '主仓库',
       status: '已加工',
@@ -902,7 +902,7 @@
       ]
     },
     {
-      id: 'JG20260727002',
+      id: 'JGD20260727002',
       processingDate: '2026-07-27',
       warehouse: '主仓库',
       status: '已加工',
@@ -913,7 +913,9 @@
         { productCode: 'SP0300025', productName: '大米', unit: 'KG', stock: 200, avgPrice: 19.00, consumeQty: 30 }
       ],
       outputs: [
-        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', refCoefficient: 1.0, refQty: 30, actualQty: 30, costPrice: 19.00 }
+        { productCode: 'SP0300024', productName: '三元牛奶', unit: '瓶', refCoefficient: 1.0, refQty: 30, actualQty: 30, costPrice: 19.00 },
+        { productCode: 'SP0300034', productName: '黑大米', unit: '斤', refCoefficient: 0.8, refQty: 24, actualQty: 23, costPrice: 15.20 },
+        { productCode: 'SP0300025', productName: '大米', unit: 'KG', refCoefficient: 0.5, refQty: 15, actualQty: 15, costPrice: 9.50 }
       ],
       createTime: '2026-07-27 14:20:00',
       attachments: [],
@@ -925,7 +927,7 @@
       ]
     },
     {
-      id: 'JG20260726003',
+      id: 'JGD20260726003',
       processingDate: '2026-07-26',
       warehouse: '分仓库A',
       status: '草稿',
@@ -936,7 +938,9 @@
         { productCode: 'SP0300014', productName: '苹果', unit: '斤', stock: 80, avgPrice: 23.00, consumeQty: 20 }
       ],
       outputs: [
-        { productCode: 'SP0300015', productName: '香蕉', unit: '斤', refCoefficient: 1.0, refQty: 20, actualQty: 20, costPrice: 23.00 }
+        { productCode: 'SP0300015', productName: '香蕉', unit: '斤', refCoefficient: 1.0, refQty: 20, actualQty: 20, costPrice: 23.00 },
+        { productCode: 'SP0300014', productName: '苹果', unit: '斤', refCoefficient: 0.7, refQty: 14, actualQty: 13, costPrice: 23.00 },
+        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.4, refQty: 8, actualQty: 8, costPrice: 20.00 }
       ],
       createTime: '2026-07-26 16:45:00',
       attachments: [
@@ -947,7 +951,7 @@
       ]
     },
     {
-      id: 'JG20260725004',
+      id: 'JGD20260725004',
       processingDate: '2026-07-25',
       warehouse: '主仓库',
       status: '已作废',
@@ -958,7 +962,9 @@
         { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', stock: 15, avgPrice: 15.00, consumeQty: 10 }
       ],
       outputs: [
-        { productCode: 'SP0300031', productName: '鲫鱼', unit: 'L', refCoefficient: 1.0, refQty: 10, actualQty: 10, costPrice: 15.00 }
+        { productCode: 'SP0300031', productName: '鲫鱼', unit: 'L', refCoefficient: 1.0, refQty: 10, actualQty: 10, costPrice: 15.00 },
+        { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', refCoefficient: 0.6, refQty: 6, actualQty: 6, costPrice: 15.00 },
+        { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', refCoefficient: 0.3, refQty: 3, actualQty: 3, costPrice: 22.00 }
       ],
       createTime: '2026-07-25 10:00:00',
       attachments: [],
@@ -968,7 +974,7 @@
       ]
     },
     {
-      id: 'JG20260724005',
+      id: 'JGD20260724005',
       processingDate: '2026-07-24',
       warehouse: '主仓库',
       status: '已加工',
