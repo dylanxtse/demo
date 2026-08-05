@@ -8,6 +8,7 @@
   }
 
   function load() {
+    if (window.DemoStore) return window.DemoStore.get('outboundOrders');
     let useMock = false;
     try {
       const cachedVersion = window.localStorage.getItem(versionKey);
@@ -27,6 +28,10 @@
   }
 
   function save(orders) {
+    if (window.DemoStore) {
+      window.DemoStore.replace('outboundOrders', orders);
+      return;
+    }
     if (window.AppStorage) {
       window.AppStorage.write(storageKey, orders);
       try { window.localStorage.setItem(versionKey, String(dataVersion)); } catch {}
@@ -77,7 +82,29 @@
       return filtered.length < orders.length;
     },
     audit(id) {
-      return this.update(id, { status: '已完成' });
+      const current = this.getDetail(id);
+      if (!current) return null;
+      if (current.orderId && window.OrderFlowService) {
+        return window.OrderFlowService.transition('outboundOrders', id, 'complete');
+      }
+      const updated = this.update(id, { status: '已完成', auditAt: new Date().toISOString().slice(0, 19).replace('T', ' ') });
+      if (updated && current.status !== '已完成' && window.InventoryLedgerService) {
+        (updated.items || []).forEach((item) => {
+          const qty = Number(item.outboundQty || item.quantity || 0);
+          if (qty <= 0) return;
+          window.InventoryLedgerService.outbound({
+            productId: item.productId || item.productCode,
+            warehouse: updated.warehouseName || updated.warehouse,
+            qty,
+            unit: item.unit,
+            unitPrice: item.unitPrice,
+            orderId: updated.orderId || '',
+            orderLineId: item.orderLineId || '',
+            remark: `出库单 ${updated.id}`
+          });
+        });
+      }
+      return updated;
     },
     close(id) {
       return this.update(id, { status: '已关闭' });

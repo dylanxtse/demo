@@ -496,8 +496,10 @@
   background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 8px center;
   appearance: none;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--text-tertiary);
 }
+
+.order-form-field .filter-select.has-value { color: var(--text-primary); }
 
 .order-form-field .filter-select:focus {
   border-color: var(--primary);

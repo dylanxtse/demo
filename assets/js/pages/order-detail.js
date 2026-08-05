@@ -4,7 +4,7 @@
   const money = (value) => Number(value || 0).toFixed(2);
   const productIsNetVegetable = (line) => {
     const code = line.goodsCode || line.goodsId;
-    const catalogProduct = (window.MockProducts || []).find((product) => product.code === code);
+    const catalogProduct = (window.DemoStore?.get('products') || window.MockProducts || []).find((product) => product.code === code || product.id === code);
     if (catalogProduct) return Boolean(catalogProduct.isNetVegetable);
     return Boolean(line.isNetVegetable);
   };
@@ -18,16 +18,21 @@
   const statusMap = {
     DRAFT: '暂存',
     PENDING: '待审核',
+    PENDING_CONFIRM: '待确认',
+    PENDING_AUDIT: '待审核',
+    READY_FOR_SORTING: '待分拣',
+    READY_FOR_SHIPPING: '待发货',
     REJECTED: '已驳回',
     APPROVED: '已审核',
     CONFIRMED: '已确认',
     COMPLETED: '已完成',
+    SHIPPED: '已发货',
     CLOSED: '已关闭'
   };
 
   const getStatusClass = (status) => {
-    if (status === 'COMPLETED') return 'online';
-    if (status === 'PENDING' || status === 'DRAFT') return 'draft';
+    if (status === 'COMPLETED' || status === 'SHIPPED') return 'online';
+    if (['PENDING', 'PENDING_CONFIRM', 'PENDING_AUDIT', 'READY_FOR_SHIPPING', 'DRAFT'].includes(status)) return 'draft';
     if (status === 'REJECTED') return 'cancelled';
     return 'offline';
   };
@@ -180,7 +185,7 @@
       const matched = result.items[0];
       if (matched) return matched;
     }
-    return (window.MockOperations?.orders || []).find((order) => order.id === id || (orderNo && order.orderNo === orderNo)) || null;
+    return (window.DemoStore?.get('orders') || window.MockOperations?.orders || []).find((order) => order.id === id || (orderNo && order.orderNo === orderNo)) || null;
   }
 
   loadOrder().then((order) => {

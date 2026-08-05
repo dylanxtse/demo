@@ -152,8 +152,15 @@
   function updateMultiUnitVisibility() {
     const multiUnitSwitch = document.getElementById('multiUnit');
     const settings = document.querySelector('.multi-unit-settings');
-    if (!multiUnitSwitch || !settings) return;
-    settings.classList.toggle('is-hidden', !multiUnitSwitch.checked);
+    const heading = document.querySelector('.multi-unit-heading');
+    const area = document.querySelector('.multi-unit-area');
+    if (!multiUnitSwitch || !settings || !heading || !area) return;
+    const isVisible = multiUnitSwitch.checked;
+    area.classList.toggle('is-active', isVisible);
+    settings.classList.toggle('is-hidden', !isVisible);
+    settings.setAttribute('aria-hidden', String(!isVisible));
+    heading.classList.toggle('is-hidden', !isVisible);
+    heading.setAttribute('aria-hidden', String(!isVisible));
   }
 
   function updateProcurementFieldsVisibility() {

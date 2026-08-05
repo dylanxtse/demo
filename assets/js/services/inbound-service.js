@@ -8,6 +8,7 @@
   }
 
   function load() {
+    if (window.DemoStore) return window.DemoStore.get('inboundOrders');
     let useMock = false;
     try {
       const cachedVersion = window.localStorage.getItem(versionKey);
@@ -27,6 +28,10 @@
   }
 
   function save(orders) {
+    if (window.DemoStore) {
+      window.DemoStore.replace('inboundOrders', orders);
+      return;
+    }
     if (window.AppStorage) {
       window.AppStorage.write(storageKey, orders);
       try { window.localStorage.setItem(versionKey, String(dataVersion)); } catch {}
@@ -77,7 +82,26 @@
       return filtered.length < orders.length;
     },
     audit(id) {
-      return this.update(id, { status: '已完成' });
+      const current = this.getDetail(id);
+      if (!current) return null;
+      const updated = this.update(id, { status: '已完成' });
+      if (updated && current.status !== '已完成' && window.InventoryLedgerService) {
+        (updated.items || []).forEach((item) => {
+          const qty = Number(item.actualQty || item.entryQty || item.expectedQty || 0);
+          if (qty <= 0) return;
+          window.InventoryLedgerService.inbound({
+            productId: item.productId || item.productCode,
+            warehouse: updated.warehouseName || updated.warehouse,
+            qty,
+            unit: item.unit,
+            unitPrice: item.unitPrice,
+            orderId: updated.orderId || '',
+            orderLineId: item.orderLineId || '',
+            remark: `入库单 ${updated.id}`
+          });
+        });
+      }
+      return updated;
     },
     close(id) {
       return this.update(id, { status: '已关闭' });

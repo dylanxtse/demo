@@ -37,7 +37,7 @@
                 </div>
                 <div class="filter-group">
                   <label class="filter-label" for="purchaseTypeFilter">采购类型</label>
-                  <select class="filter-select" id="purchaseTypeFilter"><option>全部</option><option>供应商送货</option><option>市场自采</option></select>
+                  <select class="filter-select" id="purchaseTypeFilter"><option>全部</option><option>供应商送货</option><option>市场自采</option><option>企业自加工</option></select>
                 </div>
                 <div class="filter-group">
                   <label class="filter-label" for="sourceFilter">商品来源</label>
@@ -216,6 +216,7 @@
     state.visibleProducts = products;
     document.getElementById('tableBody').innerHTML = products.map((product) => {
       const safe = Object.fromEntries(Object.entries(product).map(([key, value]) => [key, window.DomUtils.escapeHtml(value)]));
+      const purchaseType = window.DomUtils.escapeHtml(product.purchaseType);
       const shelfLife = product.shelfLife === false || product.shelfLife == null || product.shelfLife === ''
         ? '--'
         : window.DomUtils.escapeHtml(product.shelfLife);
@@ -238,7 +239,7 @@
           <td>${safe.alias || '--'}</td>
           <td>${safe.origin || '--'}</td>
           <td>${shelfLife}</td>
-          <td>${safe.purchaseType}</td>
+          <td>${purchaseType}</td>
           <td>${safe.source}</td>
           <td>${safe.addTime}</td>
           <td class="action-cell">

@@ -125,7 +125,7 @@
             <span class="field-error"></span>
           </div>
 
-          <div class="form-field standalone-switch-field">
+          <div class="form-field standalone-switch-field net-vegetable-switch-field">
             <label class="field-label" for="isNetVegetable">是否净菜</label>
             <label class="switch-control">
               <input class="switch-input" id="isNetVegetable" name="isNetVegetable" type="checkbox">
@@ -134,7 +134,7 @@
             <span class="field-error"></span>
           </div>
 
-          <div class="procurement-row">
+          <div class="procurement-row net-vegetable-procurement-row">
           <div class="form-field" role="group" aria-labelledby="purchaseTypeLabel">
             <span class="field-label required" id="purchaseTypeLabel">采购类型</span>
             <div class="radio-group">
@@ -162,6 +162,7 @@
           </div>
           </div>
 
+          <div class="multi-unit-area">
           <div class="multi-unit-row">
           <div class="form-field">
             <label class="field-label" for="multiUnit">启用多单位</label>
@@ -171,28 +172,43 @@
             </label>
             <span class="field-error"></span>
           </div>
+          <h2 class="multi-unit-title multi-unit-heading">单位设置</h2>
+          </div>
 
           <section class="multi-unit-settings is-hidden" aria-label="多单位设置">
-            <h2 class="multi-unit-title multi-unit-heading">单位设置</h2>
             <div class="multi-unit-setting-row multi-unit-setting-row-first">
-              <label class="multi-unit-label required" for="multiUnitName1">辅助单位1:</label>
-              <select class="form-control multi-unit-select" id="multiUnitName1" name="multiUnitName1">
-                <option value="" selected disabled hidden>请选择</option><option>斤</option><option>瓶</option><option>KG</option><option>L</option>
-              </select>
-              <span class="multi-unit-equals">=</span>
-              <div class="multi-unit-rate-control"><input class="form-control" id="multiUnitRate1" name="multiUnitRate1" type="number" min="0.01" step="0.01" placeholder="请输入"><span class="multi-unit-base" id="multiUnitBase1">--</span></div>
-              <label class="multi-unit-price-label required" for="multiUnitPrice1">市场价1</label>
-              <input class="form-control multi-unit-price" id="multiUnitPrice1" name="multiUnitPrice1" inputmode="decimal" placeholder="请输入">
+              <div class="multi-unit-primary-group">
+                <label class="multi-unit-label required" for="multiUnitName1">辅助单位1:</label>
+                <div class="multi-unit-control-group">
+                  <select class="form-control multi-unit-select" id="multiUnitName1" name="multiUnitName1">
+                    <option value="" selected disabled hidden>请选择</option><option>斤</option><option>瓶</option><option>KG</option><option>L</option>
+                  </select>
+                  <span class="multi-unit-equals">=</span>
+                  <div class="multi-unit-rate-control"><input class="form-control" id="multiUnitRate1" name="multiUnitRate1" type="number" min="0.01" step="0.01" placeholder="请输入"></div>
+                  <span class="multi-unit-base" id="multiUnitBase1">--</span>
+                </div>
+              </div>
+              <div class="multi-unit-price-group">
+                <label class="multi-unit-price-label required" for="multiUnitPrice1">市场价1</label>
+                <input class="form-control multi-unit-price" id="multiUnitPrice1" name="multiUnitPrice1" inputmode="decimal" placeholder="请输入">
+              </div>
             </div>
             <div class="multi-unit-setting-row multi-unit-setting-row-second">
-              <label class="multi-unit-label" for="multiUnitName2">辅助单位2:</label>
-              <select class="form-control multi-unit-select" id="multiUnitName2" name="multiUnitName2">
-                <option value="" selected disabled hidden>请选择</option><option>斤</option><option>瓶</option><option>KG</option><option>L</option>
-              </select>
-              <span class="multi-unit-equals">=</span>
-              <div class="multi-unit-rate-control"><input class="form-control" id="multiUnitRate2" name="multiUnitRate2" type="number" min="0.01" step="0.01" placeholder="请输入"><span class="multi-unit-base" id="multiUnitBase2">--</span></div>
-              <label class="multi-unit-price-label" for="multiUnitPrice2">市场价2</label>
-              <input class="form-control multi-unit-price" id="multiUnitPrice2" name="multiUnitPrice2" inputmode="decimal" placeholder="请输入">
+              <div class="multi-unit-primary-group">
+                <label class="multi-unit-label" for="multiUnitName2">辅助单位2:</label>
+                <div class="multi-unit-control-group">
+                  <select class="form-control multi-unit-select" id="multiUnitName2" name="multiUnitName2">
+                    <option value="" selected disabled hidden>请选择</option><option>斤</option><option>瓶</option><option>KG</option><option>L</option>
+                  </select>
+                  <span class="multi-unit-equals">=</span>
+                  <div class="multi-unit-rate-control"><input class="form-control" id="multiUnitRate2" name="multiUnitRate2" type="number" min="0.01" step="0.01" placeholder="请输入"></div>
+                  <span class="multi-unit-base" id="multiUnitBase2">--</span>
+                </div>
+              </div>
+              <div class="multi-unit-price-group">
+                <label class="multi-unit-price-label" for="multiUnitPrice2">市场价2</label>
+                <input class="form-control multi-unit-price" id="multiUnitPrice2" name="multiUnitPrice2" inputmode="decimal" placeholder="请输入">
+              </div>
             </div>
           </section>
           </div>
@@ -223,7 +239,7 @@
             </div>
           </div>
 
-          <div class="form-field standalone-switch-field">
+          <div class="form-field standalone-switch-field shelf-life-switch-field">
             <label class="field-label" for="shelfLife">设置保质期</label>
             <label class="switch-control">
               <input class="switch-input" id="shelfLife" name="shelfLife" type="checkbox">
@@ -303,9 +319,9 @@
   <script src="./assets/js/components/app-shell.js"></script>
   <script src="./assets/js/components/number-stepper.js"></script>
   <script src="./assets/js/utils/dom.js"></script>
-  <script src="./assets/js/utils/storage.js"></script>
+  <script src="./assets/js/utils/storage.js"></script><script src="./assets/js/data/mock-dataset.js"></script>
   <script src="./assets/js/utils/validator.js"></script>
-  <script src="./assets/js/data/mock-products.js"></script>
+
   <script src="./assets/js/services/product-service.js"></script>
   <script src="./assets/js/pages/product-form.js"></script>
 </body>

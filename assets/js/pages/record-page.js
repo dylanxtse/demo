@@ -2,6 +2,10 @@
   const service = window.OperationsService;
   const defaultStatusMap = {
     PENDING: ['待审核', 'warning'],
+    PENDING_CONFIRM: ['待确认', 'warning'],
+    PENDING_AUDIT: ['待审核', 'warning'],
+    READY_FOR_SORTING: ['待分拣', 'info'],
+    READY_FOR_SHIPPING: ['待发货', 'warning'],
     APPROVED: ['已审核', 'success'],
     CONFIRMED: ['已确认', 'success'],
     COMPLETED: ['已完成', 'success'],

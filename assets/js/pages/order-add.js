@@ -4,8 +4,8 @@
   const mode = params.get('mode') || 'add';
   const recordId = params.get('id') || '';
 
-  // 商品目录：从 mock-products.js 读取已上架商品
-  const allProducts = (window.MockProducts || []).filter((p) => p.status === '已上架');
+  // 商品目录：从统一演示数据仓库读取已上架商品
+  const allProducts = (window.DemoStore?.get('products') || window.MockProducts || []).filter((p) => p.status === '已上架');
   const catalog = allProducts.map((p) => ({
     id: p.code,
     goodsName: `${p.name}（${p.unit}/${p.brand}/${p.spec}）`,
@@ -19,12 +19,6 @@
     marketPrice: Number(p.marketPrice || 0)
   }));
 
-  const canteens = {
-    第一实验学校: ['第一食堂', '第二食堂'],
-    阳光幼儿园: ['园区食堂'],
-    育才中学: ['高中部食堂', '初中部食堂'],
-    机关第二食堂: ['二号食堂']
-  };
   const modeTitles = { add: '添加订单', edit: '编辑订单', audit: '审核订单', confirm: '确认供货', copy: '复制订单' };
   const readonlyMode = mode === 'audit' || mode === 'confirm';
   let currentRecord = null;
@@ -43,8 +37,16 @@
   // 日期选择器（与订单列表页一致：readonly text + placeholder + DatePicker 组件）
   const expectedAtPicker = window.DatePicker?.mount({
     input: '#expectedAt',
-    panelId: 'orderAddExpectedAtPickerPanel'
+    panelId: 'orderAddExpectedAtPickerPanel',
+    withTime: true
   });
+
+  function normalizeExpectedAt(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const parts = text.split(/\s+/);
+    return `${parts[0]} ${parts[1] ? `${parts[1]}:00`.slice(0, 8) : '08:00:00'}`;
+  }
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -72,8 +74,26 @@
 
   function refreshCanteens(selected) {
     const customer = form.elements.customerName.value;
-    const options = canteens[customer] || [];
-    form.elements.canteen.innerHTML = `<option value="">请选择食堂</option>${options.map((name) => `<option ${name === selected ? 'selected' : ''}>${name}</option>`).join('')}`;
+    const options = (window.MasterDataService?.listCustomers({ customerName: customer }) || [])
+      .flatMap((item) => window.MasterDataService.getLocations(item.id).map((location) => location.canteen));
+    form.elements.canteen.innerHTML = `<option value="" ${selected ? '' : 'selected'} disabled hidden>请选择</option>${options.map((name) => `<option ${name === selected ? 'selected' : ''}>${name}</option>`).join('')}`;
+    form.elements.canteen.classList.toggle('has-value', Boolean(form.elements.canteen.value));
+  }
+
+  function populateCustomers(selected) {
+    const customers = window.MasterDataService?.listCustomers({ status: 'ENABLE' }) || [];
+    form.elements.customerName.innerHTML = `<option value="" ${selected ? '' : 'selected'} disabled hidden>请选择</option>${customers.map((customer) => `<option value="${escapeHtml(customer.customerName)}" ${customer.customerName === selected ? 'selected' : ''}>${escapeHtml(customer.customerName)}</option>`).join('')}`;
+    form.elements.customerName.classList.toggle('has-value', Boolean(form.elements.customerName.value));
+  }
+
+  function selectedCustomer() {
+    return window.MasterDataService?.listCustomers({ customerName: form.elements.customerName.value })?.[0] || null;
+  }
+
+  function selectedLocation() {
+    const customer = selectedCustomer();
+    return (customer ? window.MasterDataService.getLocations(customer.id) : [])
+      .find((location) => location.canteen === form.elements.canteen.value) || null;
   }
 
   function createEmptyGoodsItem() {
@@ -184,10 +204,13 @@
   }
 
   function readData(statusValue) {
+    const customer = selectedCustomer();
+    const location = selectedLocation();
     return {
+      customerId: customer?.id || currentRecord?.customerId || '',
       customerName: form.elements.customerName.value,
       canteen: form.elements.canteen.value,
-      expectedAt: form.elements.expectedAt.value,
+      expectedAt: normalizeExpectedAt(form.elements.expectedAt.value),
       orderTag: form.elements.orderTag.value,
       remark: form.elements.remark.value.trim(),
       items: goodsItems.filter((item) => item.goodsId).map((item) => ({
@@ -206,13 +229,19 @@
       orderAmount: Number(goodsItems.filter((item) => item.goodsId).reduce((sum, item) => sum + item.quantity * item.unitPrice, 0).toFixed(2)),
       productCount: goodsItems.filter((item) => item.goodsId).length,
       status: statusValue,
-      customerType: currentRecord?.customerType || '--',
-      warehouse: currentRecord?.warehouse || '--',
+      sourceType: 'ENTERPRISE',
+      customerType: customer?.type || currentRecord?.customerType || '--',
+      warehouse: currentRecord?.warehouse && currentRecord.warehouse !== '--' ? currentRecord.warehouse : '中心仓',
       supplement: currentRecord?.supplement || '否',
-      route: currentRecord?.route || '--',
+      route: location?.route || currentRecord?.route || '--',
+      receiver: location?.receiver || currentRecord?.receiver || '',
+      phone: location?.phone || currentRecord?.phone || '',
+      address: location?.address || currentRecord?.address || '',
       source: currentRecord?.source || '平台添加',
       creator: currentRecord?.creator || '当前用户',
-      receiptStatus: currentRecord?.receiptStatus || '待收货',
+      receiptStatus: '未收货',
+      receivedAt: '',
+      supplement: '否',
       shippingAmount: currentRecord?.shippingAmount || 0,
       returnAmount: currentRecord?.returnAmount || 0,
       reconciliationAmount: currentRecord?.reconciliationAmount || 0,
@@ -230,7 +259,8 @@
     };
     let first = null;
     Object.entries(messages).forEach(([key, message]) => {
-      if (!form.elements[key].value) {
+      const invalidExpectedAt = key === 'expectedAt' && !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(form.elements[key].value);
+      if (!form.elements[key].value || invalidExpectedAt) {
         form.querySelector(`[data-error-for="${key}"]`).textContent = message;
         form.elements[key].setAttribute('aria-invalid', 'true');
         first ||= form.elements[key];
@@ -308,8 +338,10 @@
   }
 
   async function loadRecord() {
+    populateCustomers(currentRecord?.customerName || '');
     if (!recordId) {
       // 添加模式：默认显示5行空商品选择框
+      refreshCanteens();
       goodsItems = [];
       for (let i = 0; i < DEFAULT_ROW_COUNT; i++) {
         goodsItems.push(createEmptyGoodsItem());
@@ -326,7 +358,7 @@
     }
     form.elements.customerName.value = currentRecord.customerName || '';
     refreshCanteens(currentRecord.canteen);
-    form.elements.expectedAt.value = currentRecord.expectedAt || '';
+    expectedAtPicker?.setValue(normalizeExpectedAt(currentRecord.expectedAt || ''), false);
     form.elements.orderTag.value = currentRecord.orderTag || '';
     form.elements.remark.value = currentRecord.remark || '';
     const storedLines = currentRecord.items?.length ? currentRecord.items : [];
@@ -402,7 +434,7 @@
     item.isNetVegetable = product.isNetVegetable;
     item.agreementPrice = product.agreementPrice;
     item.lastPrice = product.lastPrice;
-    item.marketPrice = product.marketPrice;
+    item.marketPrice = product?.marketPrice || 0;
     if (!item.unitPrice) item.unitPrice = product.agreementPrice;
 
     // 如果最后一行已选中商品，自动新增一行空选择框
@@ -414,6 +446,7 @@
   }
 
   root.addEventListener('change', (event) => {
+    if (event.target.matches('.filter-select')) event.target.classList.toggle('has-value', Boolean(event.target.value));
     if (event.target === form.elements.customerName) refreshCanteens();
     const row = event.target.closest('[data-line-id]');
     if (row && event.target.dataset.field) {

@@ -43,7 +43,7 @@
   const productColumns = [
     { key: 'goodsName', label: '商品名称（计量单位/品牌/规格）', render: renderGoodsName },
     { key: 'orderNo', label: '所属订单号', href: (item) => {
-      const orderId = item.orderId || window.MockOperations?.orders?.find((order) => order.orderNo === item.orderNo)?.id || '';
+      const orderId = item.orderId || window.DemoStore?.get('orders')?.find((order) => order.orderNo === item.orderNo)?.id || '';
       return `./order-detail.html?id=${encodeURIComponent(orderId)}&orderNo=${encodeURIComponent(item.orderNo || '')}`;
     } },
     { key: 'customerName', label: '客户名称' },

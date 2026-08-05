@@ -4,9 +4,11 @@
   const settingsIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   const recordIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
 
-  const warehouses = ['主仓库', '分仓库A', '分仓库B'];
-  const customers = ['全部', '客户A', '客户B', '客户C'];
+  const warehouses = (window.DemoStore?.get('warehouses') || []).map((warehouse) => warehouse.warehouseName || warehouse.name).filter(Boolean);
+  const defaultWarehouse = warehouses[0] || '';
+  const customers = ['全部', ...(window.MasterDataService?.listCustomers({ status: 'ENABLE' }) || []).map((customer) => customer.customerName)];
   const sortingStorageKey = 'procurement-operations-v1-sortingItems';
+  const ordersStorageKey = 'procurement-operations-v1-orders';
 
   function getLocalDateString(offsetDays = 0) {
     const date = new Date();
@@ -19,12 +21,108 @@
   }
 
   function getSortingRecords() {
+    if (window.OrderFlowService?.getProcessingDemand) {
+      return window.OrderFlowService.getProcessingDemand().map((record) => ({
+        ...record,
+        customer: record.customerName,
+        productCode: record.productId || record.goodsCode,
+        orderSortingQty: Number(record.actualQty || 0),
+        sortingCompleted: true
+      }));
+    }
     const fallback = window.MockOperations?.sortingItems || [];
-    return window.AppStorage?.read(sortingStorageKey, fallback) || fallback;
+    const sortingRecords = window.AppStorage?.read(sortingStorageKey, fallback) || fallback;
+    const ordersFallback = window.MockOperations?.orders || [];
+    const orders = window.AppStorage?.read(ordersStorageKey, ordersFallback) || ordersFallback;
+    const knownKeys = new Set(sortingRecords.map((record) => `${record.orderNo}|${record.goodsCode || record.productCode}`));
+    const derivedRecords = [];
+
+    orders.forEach((order) => {
+      if (['CLOSED', 'REJECTED'].includes(order.status)) return;
+      (order.items || []).forEach((item, index) => {
+        const goodsCode = item.goodsCode || item.productCode || item.goodsId || '';
+        const key = `${order.orderNo}|${goodsCode}`;
+        if (!goodsCode || knownKeys.has(key)) return;
+        const product = findProduct(goodsCode);
+        const isNetVegetable = item.isNetVegetable === true || product?.isNetVegetable === true;
+        if (!isNetVegetable) return;
+        derivedRecords.push({
+          id: `SORT-ORDER-${order.id || order.orderNo}-${index}`,
+          orderId: order.id || '',
+          goodsCode,
+          isNetVegetable: true,
+          goodsName: item.goodsName || product?.name || '',
+          customerName: order.customerName || '',
+          canteen: order.canteen || '',
+          orderQty: Number(item.quantity || 0),
+          actualQty: 0,
+          unit: item.unit || product?.unit || '',
+          orderNo: order.orderNo || '',
+          status: 'PENDING',
+          shortage: '否',
+          expectedAt: order.expectedAt || ''
+        });
+        knownKeys.add(key);
+      });
+    });
+
+    return [...sortingRecords, ...derivedRecords];
   }
 
   function getCanteenOptions() {
     return ['全部', ...new Set(getSortingRecords().map((record) => record.canteen).filter(Boolean))];
+  }
+
+  function normalizeGoodsName(value) {
+    return String(value || '').split('(')[0].trim();
+  }
+
+  function getOrderDemandProducts() {
+    const startDate = state.expectedDeliveryStart;
+    const endDate = state.expectedDeliveryEnd;
+    const products = new Map();
+    getSortingRecords().forEach((record) => {
+      const deliveryDate = String(record.expectedAt || record.expectedDeliveryDate || record.deliveryDate || '').slice(0, 10);
+      if (!deliveryDate || deliveryDate < startDate || deliveryDate > endDate) return;
+      if (state.customer !== '全部'
+        && record.customer !== state.customer
+        && record.customerName !== state.customer) return;
+      if (state.canteen !== '全部' && record.canteen !== state.canteen) return;
+
+      const productCode = record.goodsCode || record.productCode || '';
+      const product = findProduct(productCode);
+      if (record.isNetVegetable === false || (!record.isNetVegetable && !product?.isNetVegetable)) return;
+      if (!(Number(record.orderQty ?? record.quantity) > 0)) return;
+
+      const productName = product?.name || normalizeGoodsName(record.goodsName) || productCode;
+      const key = productCode || productName;
+      if (!products.has(key)) products.set(key, { code: productCode, name: productName });
+    });
+    return [...products.values()];
+  }
+
+  function templateMatchesOrderDemand(template, demandProducts) {
+    return (template.outputs || []).some((output) => {
+      const outputName = normalizeGoodsName(output.productName);
+      return demandProducts.some((product) =>
+        (product.code && output.productCode === product.code)
+        || (product.name && outputName === product.name)
+      );
+    });
+  }
+
+  function getOrderDemandNotice() {
+    if (!state.orderDemandQueryActive) return '';
+    if (state.orderDemandProducts.length === 0) {
+      return '<div class="template-demand-notice is-empty">当前查询条件下暂无净菜订单需求</div>';
+    }
+    if (state.missingOrderDemandProducts.length === 0) return '';
+    return `<div class="template-demand-notice">${state.missingOrderDemandProducts.map((product) => `
+      <div class="template-demand-notice-row">
+        <span>${escapeHtml(product.name)}没有加工方案</span>
+        <button class="btn btn-sm btn-blue" type="button" data-action="create-template-for-demand" data-product-code="${escapeHtml(product.code)}" data-product-name="${escapeHtml(product.name)}">新增方案</button>
+      </div>
+    `).join('')}</div>`;
   }
 
   function getCompletedProcessingQty(productCode) {
@@ -47,6 +145,34 @@
       .reduce((total, order) => total + (order.outputs || [])
         .filter((output) => output.productCode === productCode)
         .reduce((subtotal, output) => subtotal + (Number(output.actualQty) || 0), 0), 0);
+  }
+
+  function getOrderLineRefs(productCode) {
+    const startDate = state.expectedDeliveryStart;
+    const endDate = state.expectedDeliveryEnd;
+    if (state.operationMode !== 'order' || !startDate || !endDate) return [];
+    return getSortingRecords()
+      .filter((record) => {
+        const deliveryDate = String(record.expectedAt || record.expectedDeliveryDate || record.deliveryDate || '').slice(0, 10);
+        if (!deliveryDate || deliveryDate < startDate || deliveryDate > endDate) return false;
+        if (record.goodsCode !== productCode && record.productCode !== productCode) return false;
+        const orderProduct = findProduct(record.goodsCode || record.productCode);
+        if (record.isNetVegetable === false && !orderProduct?.isNetVegetable) return false;
+        const customerMatch = state.customer === '全部'
+          || !record.customer
+          || record.customer === state.customer
+          || record.customerName === state.customer;
+        const canteenMatch = state.canteen === '全部'
+          || !record.canteen
+          || record.canteen === state.canteen;
+        return customerMatch && canteenMatch;
+      })
+      .map((record) => ({
+        orderId: record.orderId || '',
+        orderLineId: record.orderLineId || '',
+        sortedQty: Number(record.orderSortingQty ?? record.actualQty) || 0
+      }))
+      .filter((record) => record.orderId && record.orderLineId);
   }
 
   /* ===== 页面骨架 HTML ===== */
@@ -89,6 +215,9 @@
     remark: '',
     attachments: [],
     operationMode: 'plan',
+    orderDemandQueryActive: false,
+    orderDemandProducts: [],
+    missingOrderDemandProducts: [],
     costMode: 'auto',
     materials: [],
     outputs: [],
@@ -109,6 +238,22 @@
     return state.products.find((p) => p.code === code) || null;
   }
 
+  function getProductDisplayData(item = {}, code = '') {
+    const product = findProduct(code || item.productCode || item.goodsCode || item.code);
+    return {
+      product,
+      name: product?.name || item.productName || item.goodsName || item.name || '--',
+      unit: product?.unit || item.unit || '--',
+      brand: product?.brand || item.brand || '--',
+      spec: product?.spec || item.spec || '--'
+    };
+  }
+
+  function formatProductDisplay(item = {}, code = '') {
+    const { name, unit, brand, spec } = getProductDisplayData(item, code);
+    return `${name}（${unit}/${brand}/${spec}）`;
+  }
+
   function productNetTag(productCode) {
     const product = findProduct(productCode);
     return product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
@@ -117,7 +262,7 @@
   function renderProductSelect(fieldType, selectedCode, isTemplateProduct = false, outputIndex = null) {
     const selectedProduct = selectedCode ? findProduct(selectedCode) : null;
     const netTag = selectedProduct?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
-    const displayText = selectedProduct ? `${escapeHtml(selectedProduct.name)} (${escapeHtml(selectedProduct.code)})` : '请选择';
+    const displayText = selectedProduct ? escapeHtml(formatProductDisplay(selectedProduct)) : '请选择';
     const selectedOutputCodes = fieldType === 'output'
       ? (state.templateEditData?.outputs || []).map((output) => output.productCode).filter(Boolean)
       : [];
@@ -131,7 +276,7 @@
           ${state.products.map((p) => {
             const tag = p.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
             const isDuplicate = fieldType === 'output' && p.code !== selectedCode && selectedOutputCodes.includes(p.code);
-            return `<div class="custom-select-option ${p.code === selectedCode ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(p.code)}" data-disabled="${isDuplicate}" data-action="select-product">${tag}${escapeHtml(p.name)} (${escapeHtml(p.code)})</div>`;
+            return `<div class="custom-select-option ${p.code === selectedCode ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(p.code)}" data-disabled="${isDuplicate}" data-action="select-product">${tag}${escapeHtml(formatProductDisplay(p))}</div>`;
           }).join('')}
         </div>
       </div>
@@ -228,7 +373,15 @@
   /* ===== 左侧：模版列表渲染 ===== */
   function renderTemplateList() {
     const searchValue = (document.getElementById('templateSearch')?.value || '').trim().toLowerCase();
-    state.filteredTemplates = state.templates.filter((t) =>
+    if (state.operationMode === 'order' && state.orderDemandQueryActive) {
+      state.missingOrderDemandProducts = state.orderDemandProducts.filter((product) =>
+        !state.templates.some((template) => templateMatchesOrderDemand(template, [product]))
+      );
+    }
+    const sourceTemplates = state.operationMode === 'order' && state.orderDemandQueryActive
+      ? state.templates.filter((template) => templateMatchesOrderDemand(template, state.orderDemandProducts))
+      : state.templates;
+    state.filteredTemplates = sourceTemplates.filter((t) =>
       !searchValue ||
       t.name.toLowerCase().includes(searchValue) ||
       (t.description || '').toLowerCase().includes(searchValue)
@@ -236,14 +389,14 @@
 
     const container = document.getElementById('templateList');
     if (state.filteredTemplates.length === 0) {
-      container.innerHTML = '<div class="template-list-empty">暂无加工方案</div>';
+      container.innerHTML = getOrderDemandNotice() || '<div class="template-list-empty">暂无加工方案</div>';
       return;
     }
 
-    container.innerHTML = state.filteredTemplates.map((tpl) => {
+    container.innerHTML = getOrderDemandNotice() + state.filteredTemplates.map((tpl) => {
       const isSelected = tpl.id === state.selectedTemplateId;
-      const materialNames = (tpl.materials || []).map((m) => escapeHtml(m.productName)).join('、');
-      const outputNames = (tpl.outputs || []).map((o) => escapeHtml(o.productName)).join('、');
+      const materialNames = (tpl.materials || []).map((m) => escapeHtml(formatProductDisplay(m))).join('、');
+      const outputNames = (tpl.outputs || []).map((o) => escapeHtml(formatProductDisplay(o))).join('、');
       return `
         <div class="template-card ${isSelected ? 'selected' : ''}" data-template-id="${escapeHtml(tpl.id)}" data-action="select-template">
           <div class="template-card-header">
@@ -265,6 +418,25 @@
         </div>
       `;
     }).join('');
+  }
+
+  function applyOrderDemandQuery() {
+    state.orderDemandQueryActive = true;
+    state.orderDemandProducts = getOrderDemandProducts();
+    state.missingOrderDemandProducts = state.orderDemandProducts
+      .filter((product) => !state.templates.some((template) => templateMatchesOrderDemand(template, [product])))
+      .map((product) => ({ ...product }));
+
+    const selectedTemplate = state.templates.find((template) => template.id === state.selectedTemplateId);
+    if (selectedTemplate && !templateMatchesOrderDemand(selectedTemplate, state.orderDemandProducts)) {
+      state.selectedTemplateId = null;
+      state.materials = [];
+      state.outputs = [];
+      renderOperationForm();
+    } else if (selectedTemplate) {
+      renderOpOutputTable();
+    }
+    renderTemplateList();
   }
 
   /* ===== 右侧：操作表单渲染 ===== */
@@ -456,7 +628,7 @@
       const unit = product ? product.unit : (item.unit || '--');
       return `
         <tr data-op-material-index="${index}">
-          <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(item.productName)}</span></td>
+          <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(formatProductDisplay(item))}</span></td>
           <td><span class="sub-table-readonly">${escapeHtml(unit)}</span></td>
           <td><span class="sub-table-readonly">${item.stock !== '' && item.stock != null ? item.stock : '--'}</span></td>
           <td><span class="sub-table-readonly">${item.avgPrice !== '' && item.avgPrice != null ? item.avgPrice : '--'}</span></td>
@@ -486,7 +658,7 @@
           </div>`;
       return `
         <tr data-op-output-index="${index}">
-          <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(item.productName)}</span></td>
+          <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(formatProductDisplay(item))}</span></td>
           <td><span class="sub-table-readonly">${escapeHtml(unit)}</span></td>
           <td><span class="sub-table-readonly">${item.refCoefficient || '--'}</span></td>
           <td><span class="sub-table-readonly">${item.refQty || '--'}</span></td>
@@ -511,7 +683,7 @@
     const startDate = state.expectedDeliveryStart;
     const endDate = state.expectedDeliveryEnd;
     if (state.operationMode !== 'order' || !startDate || !endDate) return 0;
-    const orderQty = getSortingRecords()
+    const actualSortingQty = getSortingRecords()
       .filter((record) => {
         const deliveryDate = String(record.expectedAt || record.expectedDeliveryDate || record.deliveryDate || '').slice(0, 10);
         if (!deliveryDate || deliveryDate < startDate || deliveryDate > endDate) return false;
@@ -527,8 +699,8 @@
           || record.canteen === state.canteen;
         return customerMatch && canteenMatch;
       })
-      .reduce((total, record) => total + (Number(record.orderQty ?? record.quantity) || 0), 0);
-    return Math.max(orderQty - getCompletedProcessingQty(item.productCode), 0);
+      .reduce((total, record) => total + (Number(record.orderSortingQty ?? record.actualQty) || 0), 0);
+    return Math.max(actualSortingQty - getCompletedProcessingQty(item.productCode), 0);
   }
 
   function updateRemainingQty(index) {
@@ -751,6 +923,7 @@
         unit: findProduct(o.productCode)?.unit || o.unit,
         sortingQty: state.operationMode === 'order' ? getSortingQty(o) : (o.sortingQty || ''),
         remainingQty: state.operationMode === 'order' ? calculateRemainingQty(o) : (o.remainingQty || ''),
+        orderLineRefs: state.operationMode === 'order' ? getOrderLineRefs(o.productCode) : (o.orderLineRefs || []),
         allocatedCost: state.costMode === 'auto' ? allocation.allocatedCost : (o.allocatedCost || ''),
         costPrice: state.costMode === 'auto' ? allocation.costPrice : o.costPrice
         };
@@ -829,12 +1002,18 @@
     form.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
       if (action === 'query-order-demand') {
-        renderOpOutputTable();
+        applyOrderDemandQuery();
         return;
       }
       if (action === 'switch-operation-mode') {
         state.operationMode = event.target.closest('[data-action]')?.dataset.mode || 'plan';
+        if (state.operationMode !== 'order') {
+          state.orderDemandQueryActive = false;
+          state.orderDemandProducts = [];
+          state.missingOrderDemandProducts = [];
+        }
         renderOperationForm();
+        renderTemplateList();
         return;
       }
       if (action === 'fill-reference-qty') {
@@ -1196,10 +1375,10 @@
     if (!tbody) return;
     const isEdit = state.templateEditMode === 'edit';
     const item = state.templateEditData.materials[0] || { warehouse: '', productCode: '', productName: '', unit: '', refConsumeQty: '' };
-    const product = item.productCode ? findProduct(item.productCode) : null;
-    const unit = product ? product.unit : (item.unit || '--');
-    const netTag = product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
-    const materialDisplay = product ? `${netTag}<span>${escapeHtml(product.name)} (${escapeHtml(product.code)})</span>` : '';
+    const displayData = getProductDisplayData(item);
+    const unit = displayData.unit;
+    const netTag = displayData.product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+    const materialDisplay = item.productCode ? `${netTag}<span>${escapeHtml(formatProductDisplay(item))}</span>` : '';
     tbody.innerHTML = `
       <tr data-tpl-material-index="0">
         <td>
@@ -1493,13 +1672,41 @@
     renderTemplateList();
   }
 
-  function startCreateTemplate() {
+  function ensureDemandProductOption(productInfo) {
+    const existing = findProduct(productInfo.code);
+    if (existing) return existing;
+    const product = {
+      seq: state.products.length + 1,
+      code: productInfo.code,
+      name: productInfo.name,
+      goodsName: productInfo.name,
+      isNetVegetable: true,
+      unit: productInfo.unit || 'KG',
+      brand: '--',
+      spec: '--',
+      marketPrice: '',
+      status: '已上架'
+    };
+    state.products.push(product);
+    return product;
+  }
+
+  function startCreateTemplate(prefillProduct = null) {
+    const outputProduct = prefillProduct?.code
+      ? ensureDemandProductOption(prefillProduct)
+      : null;
     state.templateEditMode = 'create';
     state.templateEditData = {
       name: '',
       description: '',
-      materials: [{ warehouse: '', productCode: '', productName: '', unit: '', refConsumeQty: '' }],
-      outputs: [{ warehouse: '', productCode: '', productName: '', unit: '', refCoefficient: '' }]
+      materials: [{ warehouse: defaultWarehouse, productCode: '', productName: '', unit: '', refConsumeQty: '' }],
+      outputs: [{
+        warehouse: '',
+        productCode: outputProduct?.code || '',
+        productName: outputProduct?.name || '',
+        unit: outputProduct?.unit || '',
+        refCoefficient: ''
+      }]
     };
     showTemplateEditorPage();
     renderTemplateEditor();
@@ -1538,6 +1745,13 @@
       }
       if (action === 'create-template') {
         startCreateTemplate();
+        return;
+      }
+      if (action === 'create-template-for-demand') {
+        startCreateTemplate({
+          code: actionEl.dataset.productCode || '',
+          name: actionEl.dataset.productName || ''
+        });
         return;
       }
 

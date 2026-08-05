@@ -127,6 +127,11 @@
   }
 
   function load() {
+    if (window.DemoStore) {
+      return clone(window.DemoStore.get('processingOrders') || [])
+        .map(normalizeOrder)
+        .filter(Boolean);
+    }
     const canonicalOrders = clone(window.MockProcessingOrders || []);
     const storedVersion = window.AppStorage?.read(dataVersionKey, '') || '';
     const versionChanged = storedVersion !== dataVersion;
@@ -146,6 +151,10 @@
   }
 
   function save(orders) {
+    if (window.DemoStore) {
+      window.DemoStore.replace('processingOrders', orders);
+      return;
+    }
     if (window.AppStorage) window.AppStorage.write(storageKey, orders);
   }
 
@@ -169,11 +178,44 @@
   }
 
   function getDocumentCollection(key, fallback) {
+    if (window.DemoStore) {
+      const resource = key === 'procurement-inbound-orders' ? 'inboundOrders' : 'outboundOrders';
+      return clone(window.DemoStore.get(resource) || []);
+    }
     return clone(window.AppStorage?.read(key, fallback || []) || []);
   }
 
   function saveDocumentCollection(key, value) {
+    if (window.DemoStore) {
+      const resource = key === 'procurement-inbound-orders' ? 'inboundOrders' : 'outboundOrders';
+      window.DemoStore.replace(resource, value);
+      return;
+    }
     if (window.AppStorage) window.AppStorage.write(key, value);
+  }
+
+  function applyProcessedQuantities(order) {
+    if (!window.DemoStore || !order || order.status !== '已完成') return;
+    const refsByProduct = new Map();
+    (order.outputs || []).forEach((output) => {
+      const refs = Array.isArray(output.orderLineRefs) ? output.orderLineRefs : [];
+      if (!refs.length) return;
+      refsByProduct.set(output.productCode, refs);
+    });
+    if (!refsByProduct.size) return;
+    window.DemoStore.transact((state) => {
+      state.sortingTasks.forEach((task) => {
+        const refs = refsByProduct.get(task.productId);
+        if (!refs || !refs.some((ref) => ref.orderId === task.orderId && ref.orderLineId === task.orderLineId)) return;
+        const output = (order.outputs || []).find((item) => item.productCode === task.productId);
+        const totalRefQty = refs.reduce((sum, ref) => sum + Number(ref.sortedQty || 0), 0);
+        const ref = refs.find((item) => item.orderId === task.orderId && item.orderLineId === task.orderLineId);
+        const allocation = totalRefQty > 0
+          ? Number(output?.actualQty || 0) * Number(ref?.sortedQty || 0) / totalRefQty
+          : 0;
+        task.processedQty = Math.min(task.actualQty, Number(task.processedQty || 0) + allocation);
+      });
+    });
   }
 
   function generateProcessingDocumentId(prefix, datePart, customerCode, order) {
@@ -351,6 +393,7 @@
         submittedAt: now
       });
       save(orders);
+      if (orders[index].status === '已完成') applyProcessedQuantities(orders[index]);
       return clone(orders[index]);
     },
     audit(id, approved) {
@@ -365,6 +408,7 @@
         auditResult: approved ? '通过' : '驳回'
       });
       save(orders);
+      if (approved) applyProcessedQuantities(orders[index]);
       return clone(orders[index]);
     },
     remove(id) {

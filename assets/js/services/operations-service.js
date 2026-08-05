@@ -1,5 +1,10 @@
 (function () {
   const storagePrefix = 'procurement-operations-v1-';
+  const centralResources = new Set([
+    'orders', 'orderLines', 'sortingItems', 'sortingProgress', 'shippingOrders', 'outboundOrders',
+    'inventoryBalance', 'inventoryDetails', 'inventoryCounts', 'inventoryLosses', 'openingInventory',
+    'returns', 'tags', 'receiptChanges', 'shortageItems', 'sorters', 'warehouses', 'qualityReports'
+  ]);
   const legacyOrderNumbers = {
     XS202607300001: { orderNo: 'DD202607300100001', orderId: 'ORD-20260730-001' },
     XS202607290012: { orderNo: 'DD202607290200012', orderId: 'ORD-20260729-012' },
@@ -19,6 +24,7 @@
   }
 
   function assertResource(resource) {
+    if (centralResources.has(resource) && window.DemoStore) return;
     if (!Object.prototype.hasOwnProperty.call(window.MockOperations || {}, resource)) {
       throw error('RESOURCE_NOT_FOUND', '未找到业务数据');
     }
@@ -38,15 +44,52 @@
 
   function load(resource) {
     assertResource(resource);
+    if (centralResources.has(resource) && window.DemoStore) return window.DemoStore.get(resource);
     const fallback = window.MockOperations[resource] || [];
     const records = clone(window.AppStorage?.read(`${storagePrefix}${resource}`, fallback) || fallback);
     return normalizeOrderNumbers(resource, records);
   }
 
   function save(resource, items) {
+    if (centralResources.has(resource) && window.DemoStore) {
+      window.DemoStore.replace(resource, items);
+      return;
+    }
     if (!window.AppStorage?.write(`${storagePrefix}${resource}`, items)) {
       throw error('STORAGE_WRITE_FAILED', '本地数据保存失败');
     }
+  }
+
+  function syncOrderToSortingItems(order) {
+    if (window.OrderFlowService && window.DemoStore) return;
+    if (!order?.orderNo || !Array.isArray(order.items)) return;
+    const sortingItems = load('sortingItems');
+    const existingKeys = new Set(sortingItems.map((item) => `${item.orderNo}|${item.goodsCode || item.productCode}`));
+    order.items.forEach((item, index) => {
+      if (item.isNetVegetable !== true) return;
+      const goodsCode = item.goodsCode || item.productCode || item.goodsId || '';
+      const key = `${order.orderNo}|${goodsCode}`;
+      if (!goodsCode || existingKeys.has(key)) return;
+      sortingItems.push({
+        id: `SORT-ORDER-${order.id || order.orderNo}-${index}`,
+        orderId: order.id || '',
+        goodsCode,
+        isNetVegetable: true,
+        goodsName: item.goodsName || '',
+        customerName: order.customerName || '',
+        canteen: order.canteen || '',
+        orderQty: Number(item.quantity || 0),
+        actualQty: 0,
+        unit: item.unit || '',
+        orderNo: order.orderNo,
+        orderTag: order.orderTag || '',
+        status: 'PENDING',
+        shortage: '否',
+        expectedAt: order.expectedAt || ''
+      });
+      existingKeys.add(key);
+    });
+    save('sortingItems', sortingItems);
   }
 
   function normalize(value) {
@@ -95,6 +138,7 @@
     const mapping = {
       approve: 'APPROVED',
       confirm: 'CONFIRMED',
+      reject: 'REJECTED',
       close: 'CLOSED',
       enable: 'ENABLE',
       disable: 'DISABLE',
@@ -218,6 +262,7 @@
     },
 
     async create(resource, data) {
+      if (resource === 'orders' && window.OrderFlowService) return window.OrderFlowService.createOrder(data);
       const items = load(resource);
       validate(resource, data);
       const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -228,7 +273,11 @@
         ...clone(data)
       };
       if (resource === 'orders') created.orderNo ||= nextOrderNumber(items, created.customerName);
-      if (resource === 'returns') created.returnNo ||= `TH${Date.now()}`;
+      if (resource === 'returns') {
+        const datePart = now.slice(0, 10).replace(/-/g, '');
+        const sequence = String(items.filter((item) => String(item.returnNo || '').startsWith(`THD${datePart}`)).length + 1).padStart(5, '0');
+        created.returnNo ||= `THD${datePart}${sequence}`;
+      }
       if (resource === 'receiptChanges') created.changeNo ||= `BG${Date.now()}`;
       if (resource === 'receiptChanges') {
         created.beforeAmount = Number((created.items || []).reduce((sum, item) => sum + Number(item.shippingAmount || 0), 0).toFixed(2));
@@ -245,10 +294,15 @@
       }
       items.unshift(created);
       save(resource, items);
+      if (resource === 'orders') syncOrderToSortingItems(created);
       return clone(created);
     },
 
     async update(resource, id, data) {
+      if (resource === 'orders' && window.OrderFlowService) return window.OrderFlowService.updateOrder(id, data);
+      if (resource === 'sortingItems' && data.actualQty !== undefined && window.OrderFlowService) {
+        return window.OrderFlowService.transition(resource, id, 'sort', { actualQty: data.actualQty });
+      }
       const items = load(resource);
       const index = items.findIndex((item) => item.id === id);
       if (index < 0) throw error('RECORD_NOT_FOUND', '记录不存在或已删除');
@@ -266,10 +320,12 @@
         items[index].refundAmount = Number(items[index].items.reduce((sum, item) => sum + Number(item.applyAmount || 0), 0).toFixed(2));
       }
       save(resource, items);
+      if (resource === 'orders') syncOrderToSortingItems(items[index]);
       return clone(items[index]);
     },
 
     async remove(resource, id) {
+      if (resource === 'orders' && window.OrderFlowService) return window.OrderFlowService.removeOrder(id);
       const items = load(resource);
       const index = items.findIndex((item) => item.id === id);
       if (index < 0) throw error('RECORD_NOT_FOUND', '记录不存在或已删除');
@@ -282,6 +338,9 @@
     },
 
     async transition(resource, id, action, payload = {}) {
+      if (window.OrderFlowService && ['orders', 'sortingItems', 'sortingProgress', 'shippingOrders', 'outboundOrders'].includes(resource)) {
+        return window.OrderFlowService.transition(resource, id, action, payload);
+      }
       const items = load(resource);
       const item = items.find((entry) => entry.id === id);
       if (!item) throw error('RECORD_NOT_FOUND', '记录不存在或已删除');

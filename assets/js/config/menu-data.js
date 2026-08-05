@@ -59,7 +59,10 @@
       { name: '期初库存', href: './opening-inventory.html' }
     ] },
     { name: '物流配送', icon: 'route', children: ['数据监测', '线路管理', '物流排线', '司机管理', '车辆管理', '配送地址'] },
-    { name: '客户信息', icon: 'users', children: ['客户档案', '客户类型'] },
+    { name: '客户信息', icon: 'users', children: [
+      { name: '客户档案', href: './customer.html' },
+      '客户类型'
+    ] },
     { name: '财务对账', icon: 'wallet', children: [
       { name: '销售对账', children: ['对账', '销售账款'] },
       { name: '采购对账', children: ['对账', '采购账款'] }
@@ -70,7 +73,7 @@
       { name: '销售毛利统计', children: ['商品毛利统计', '客户毛利统计'] }
     ] },
     { name: '系统管理', icon: 'settings', children: [
-      { name: '系统配置', children: ['审核配置', '业务配置'] },
+      { name: '系统配置', children: ['审核配置', { name: '业务配置', href: './system-config.html' }] },
       '用户管理', '角色管理', '基础信息', '个人中心'
     ] }
   ].map((item) => {

@@ -131,10 +131,11 @@
     const panel = document.createElement('div');
     const panelId = options.panelId || `datePickerPanel${++instanceCount}`;
     panel.id = panelId;
-    panel.className = 'calendar-panel single-calendar-panel';
+    panel.className = `calendar-panel single-calendar-panel${options.withTime ? ' with-time' : ''}`;
     document.body.appendChild(panel);
 
-    const state = { year: 0, month: 0, date: input.value || '' };
+    const initialParts = String(input.value || '').trim().split(/\s+/);
+    const state = { year: 0, month: 0, date: initialParts[0] || '', time: initialParts[1] || (options.withTime ? '08:00:00' : '') };
     const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -156,21 +157,29 @@
       const cellArray = cells.split('</td>');
       const rows = [];
       for (let i = 0; i < cellArray.length - 1; i += 7) rows.push(`<tr>${cellArray.slice(i, i + 7).join('</td>')}</td></tr>`);
-      panel.innerHTML = `<div class="cal-header"><button class="cal-nav" type="button" data-action="dp-prev-year">‹</button><button class="cal-nav" type="button" data-action="dp-prev">‹</button><span class="cal-title">${state.year}年 ${monthNames[state.month]}</span><button class="cal-nav" type="button" data-action="dp-next">›</button><button class="cal-nav" type="button" data-action="dp-next-year">›</button></div><table class="cal-table"><thead><tr>${weekDays.map((day) => `<th>${day}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table><div class="cal-footer"><span class="cal-hint">请选择日期</span><div class="cal-btns"><button class="btn btn-sm" type="button" data-action="dp-clear">清空</button></div></div>`;
+      const dateMarkup = `<div class="cal-header"><button class="cal-nav" type="button" data-action="dp-prev-year">‹</button><button class="cal-nav" type="button" data-action="dp-prev">‹</button><span class="cal-title">${state.year}年 ${monthNames[state.month]}</span><button class="cal-nav" type="button" data-action="dp-next">›</button><button class="cal-nav" type="button" data-action="dp-next-year">›</button></div><table class="cal-table"><thead><tr>${weekDays.map((day) => `<th>${day}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+      const timeMarkup = options.withTime ? `<div class="cal-time-panel"><div class="cal-current-time">${state.time || '08:00:00'}</div><div class="cal-time-scrolls">${[['hour', '时', 24, 0], ['minute', '分', 60, 3], ['second', '秒', 60, 6]].map(([part, label, count, offset]) => `<div class="cal-time-column-wrap"><span class="cal-time-label">${label}</span><div class="cal-time-column" data-time-part="${part}">${Array.from({ length: count }, (_, value) => { const text = String(value).padStart(2, '0'); return `<button class="cal-time-option ${state.time.slice(offset, offset + 2) === text ? 'is-selected' : ''}" type="button" data-time-value="${text}">${text}</button>`; }).join('')}</div></div>`).join('')}</div></div>` : '';
+      panel.innerHTML = `<div class="${options.withTime ? 'cal-dual-body' : ''}"><div class="cal-panel">${dateMarkup}</div>${timeMarkup}</div><div class="cal-footer"><span class="cal-hint">${options.withTime ? '请选择日期和时间' : '请选择日期'}</span><div class="cal-btns"><button class="btn btn-sm" type="button" data-action="dp-clear">清空</button>${options.withTime ? '<button class="btn btn-primary btn-sm" type="button" data-action="dp-confirm">确定</button>' : ''}</div></div>`;
+      if (options.withTime) panel.querySelectorAll('.cal-time-column').forEach((column) => {
+        const selected = column.querySelector('.cal-time-option.is-selected');
+        if (selected) column.scrollTop = selected.offsetTop - (column.clientHeight - selected.offsetHeight) / 2;
+      });
     }
 
     function open() {
       const value = input.value || state.date;
       if (value) {
-        const parts = value.split('-');
+        const parts = value.split(/[-\s:]/);
         state.year = Number(parts[0]);
         state.month = Number(parts[1]) - 1;
+        state.date = `${parts[0]}-${String(parts[1]).padStart(2, '0')}-${String(parts[2]).padStart(2, '0')}`;
+        if (options.withTime) state.time = `${String(parts[3] || '08').padStart(2, '0')}:${String(parts[4] || '00').padStart(2, '0')}:${String(parts[5] || '00').padStart(2, '0')}`;
       } else {
         const now = new Date();
         state.year = now.getFullYear();
         state.month = now.getMonth();
       }
-      state.date = value;
+      if (!state.date) state.date = value;
       const rect = input.getBoundingClientRect();
       panel.style.top = `${rect.bottom + 4}px`;
       panel.style.left = `${rect.left}px`;
@@ -179,7 +188,13 @@
     }
 
     function close() { panel.classList.remove('is-visible'); }
-    function emitChange() { options.onChange?.(state.date); }
+    function getValue() { return options.withTime && state.date ? `${state.date} ${state.time || '08:00:00'}` : state.date; }
+    function updateInput() { input.value = getValue(); }
+    function updateCurrentTime() {
+      const display = panel.querySelector('.cal-current-time');
+      if (display) display.textContent = state.time || '08:00:00';
+    }
+    function emitChange() { options.onChange?.(getValue()); }
     function shift(direction, yearOnly = false) {
       if (yearOnly) state.year += direction === 'prev' ? -1 : 1;
       else {
@@ -196,22 +211,55 @@
       const action = event.target.closest('[data-action]')?.dataset.action;
       if (action === 'dp-prev' || action === 'dp-next') { shift(action === 'dp-prev' ? 'prev' : 'next'); return; }
       if (action === 'dp-prev-year' || action === 'dp-next-year') { shift(action === 'dp-prev-year' ? 'prev' : 'next', true); return; }
-      if (action === 'dp-clear') { state.date = ''; input.value = ''; close(); emitChange(); return; }
+      if (action === 'dp-clear') { state.date = ''; state.time = options.withTime ? '08:00:00' : ''; input.value = ''; close(); emitChange(); return; }
+      if (action === 'dp-confirm') { updateInput(); close(); emitChange(); return; }
+      const timeOption = event.target.closest('.cal-time-option');
+      if (timeOption) {
+        const column = timeOption.closest('[data-time-part]');
+        const part = column?.dataset.timePart;
+        const value = timeOption.dataset.timeValue || '00';
+        const parts = [state.time.slice(0, 2), state.time.slice(3, 5), state.time.slice(6, 8)];
+        const index = { hour: 0, minute: 1, second: 2 }[part];
+        if (index !== undefined) parts[index] = value;
+        state.time = `${parts[0]}:${parts[1]}:${parts[2]}`;
+        column.querySelectorAll('.cal-time-option').forEach((option) => option.classList.toggle('is-selected', option === timeOption));
+        column.scrollTop = timeOption.offsetTop - (column.clientHeight - timeOption.offsetHeight) / 2;
+        updateCurrentTime();
+        updateInput();
+        return;
+      }
       const day = event.target.closest('.cal-day');
       if (!day) return;
       state.date = day.dataset.date;
-      input.value = state.date;
-      close();
+      updateInput();
+      if (!options.withTime) close();
+      else render();
       emitChange();
     });
+    panel.addEventListener('scroll', (event) => {
+      if (!options.withTime) return;
+      const column = event.target.closest?.('[data-time-part]');
+      if (!column) return;
+      const optionsList = [...column.querySelectorAll('.cal-time-option')];
+      if (!optionsList.length) return;
+      const itemHeight = optionsList[0].offsetHeight || 36;
+      const index = Math.max(0, Math.min(optionsList.length - 1, Math.round(column.scrollTop / itemHeight)));
+      const selected = optionsList[index];
+      const parts = [state.time.slice(0, 2), state.time.slice(3, 5), state.time.slice(6, 8)];
+      parts[{ hour: 0, minute: 1, second: 2 }[column.dataset.timePart]] = selected.dataset.timeValue;
+      state.time = `${parts[0]}:${parts[1]}:${parts[2]}`;
+      optionsList.forEach((option) => option.classList.toggle('is-selected', option === selected));
+      updateCurrentTime();
+      updateInput();
+    }, true);
     const onDocumentClick = (event) => { if (panel.classList.contains('is-visible') && !panel.contains(event.target) && event.target !== input) close(); };
     document.addEventListener('click', onDocumentClick);
 
     return {
-      getValue: () => state.date,
+      getValue: () => getValue(),
       open,
       close,
-      setValue(value = '', emit = true) { state.date = value; input.value = value; if (emit) emitChange(); },
+      setValue(value = '', emit = true) { const parts = String(value || '').trim().split(/\s+/); state.date = parts[0] || ''; state.time = parts[1] || (options.withTime ? '08:00:00' : ''); input.value = getValue(); if (emit) emitChange(); },
       clear(emit = true) { this.setValue('', emit); },
       destroy() { close(); panel.remove(); document.removeEventListener('click', onDocumentClick); }
     };

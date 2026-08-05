@@ -1264,7 +1264,7 @@
           state.formItems[index].productCode = product.code;
           state.formItems[index].productName = product.name;
           state.formItems[index].unit = product.unit;
-          if (!state.formItems[index].unitPrice) state.formItems[index].unitPrice = product.marketPrice || '';
+          if (!state.formItems[index].unitPrice) state.formItems[index].unitPrice = product?.marketPrice || '';
         } else {
           state.formItems[index].productCode = '';
           state.formItems[index].productName = '';
@@ -1348,7 +1348,7 @@
           state.formItems[index].productName = product.name;
           state.formItems[index].unit = product.unit;
           if (!state.formItems[index].unitPrice) {
-            state.formItems[index].unitPrice = product.marketPrice || '';
+            state.formItems[index].unitPrice = product?.marketPrice || '';
           }
           calculateRowAmount(index);
         } else {

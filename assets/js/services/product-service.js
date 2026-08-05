@@ -9,6 +9,18 @@
   }
 
   function load() {
+    if (window.DemoStore) {
+      return (window.DemoStore.get('products') || []).filter((product) => product && (product.code || product.id)).map((product, index) => ({
+        ...product,
+        isNetVegetable: product.isNetVegetable ?? product.name === '土豆丝',
+        purchaseType: product.purchaseType,
+        defaultSupplier: product.defaultSupplier || '平台默认供应商',
+        responsible: product.responsible || '管理员',
+        source: product.source || '平台添加',
+        addTime: product.addTime || `2026-08-${String((index % 9) + 1).padStart(2, '0')} 09:00:00`,
+        shelfLife: product.shelfLife === false || product.shelfLife == null ? '' : product.shelfLife
+      }));
+    }
     let useMock = false;
     try {
       const cachedVersion = window.localStorage.getItem(versionKey);
@@ -29,17 +41,23 @@
     if (demoPotato && !clonedProducts.some((product) => product.code === demoPotato.code)) {
       clonedProducts.push(clone(demoPotato));
     }
-    return clonedProducts.map((product) => ({
+    return clonedProducts.map((product, index) => ({
       ...product,
       isNetVegetable: product.isNetVegetable ?? product.name === '土豆丝',
-      purchaseType: (product.isNetVegetable ?? product.name === '土豆丝') ? '企业自加工' : product.purchaseType,
+      purchaseType: product.purchaseType,
       defaultSupplier: product.defaultSupplier || '平台默认供应商',
       responsible: product.responsible || '管理员',
+      source: product.source || '平台添加',
+      addTime: product.addTime || `2026-08-${String((index % 9) + 1).padStart(2, '0')} 09:00:00`,
       shelfLife: product.shelfLife === false || product.shelfLife == null ? '' : product.shelfLife
     }));
   }
 
   function save(products) {
+    if (window.DemoStore) {
+      window.DemoStore.replace('products', products);
+      return;
+    }
     if (window.AppStorage) {
       window.AppStorage.write(storageKey, products);
       try { window.localStorage.setItem(versionKey, String(dataVersion)); } catch {}

@@ -1,6 +1,6 @@
 (function () {
   const storageKey = 'procurement-processing-templates';
-  const versionKey = 'procurement-processing-templates-v3';
+  const versionKey = 'procurement-processing-templates-v5';
   const outputLimit = 200;
 
   function clone(value) {
@@ -28,20 +28,43 @@
     });
   }
 
+  function normalizeWarehouseName(warehouse) {
+    const source = String(warehouse || '').trim();
+    if (!source) return '';
+    const masterWarehouses = (window.DemoStore?.get('warehouses') || [])
+      .map((item) => item.warehouseName || item.name)
+      .filter(Boolean);
+    if (masterWarehouses.includes(source)) return source;
+    const legacyAliases = {
+      主仓库: '中心仓',
+      分仓库A: '北区仓',
+      分仓库B: '临时仓'
+    };
+    const alias = legacyAliases[source];
+    return alias && masterWarehouses.includes(alias) ? alias : source;
+  }
+
+  function normalizeWarehouseRows(rows) {
+    return (Array.isArray(rows) ? rows : []).map((row) => ({
+      ...row,
+      warehouse: normalizeWarehouseName(row.warehouse)
+    }));
+  }
+
   function normalizeTemplate(template) {
     return {
       ...template,
-      materials: Array.isArray(template.materials) ? template.materials.slice(0, 1) : [],
-      outputs: Array.isArray(template.outputs) ? template.outputs.slice(0, outputLimit) : []
+      materials: normalizeWarehouseRows(Array.isArray(template.materials) ? template.materials.slice(0, 1) : []),
+      outputs: normalizeWarehouseRows(Array.isArray(template.outputs) ? template.outputs.slice(0, outputLimit) : [])
     };
   }
 
   function load() {
     // 检查版本，若旧数据无仓库字段则重置为最新 mock
     const version = window.AppStorage?.read(versionKey, '0');
-    if (version !== '3') {
+    if (version !== '5') {
       window.AppStorage?.write(storageKey, window.MockProcessingTemplates);
-      window.AppStorage?.write(versionKey, '3');
+      window.AppStorage?.write(versionKey, '5');
     }
     const templates = window.AppStorage?.read(storageKey, window.MockProcessingTemplates) || window.MockProcessingTemplates;
     const normalizedTemplates = clone(templates).map(normalizeTemplate);
@@ -77,8 +100,8 @@
       const created = {
         ...data,
         id: generateId(),
-        materials: Array.isArray(data.materials) ? data.materials.slice(0, 1) : [],
-        outputs: Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : [],
+        materials: normalizeWarehouseRows(Array.isArray(data.materials) ? data.materials.slice(0, 1) : []),
+        outputs: normalizeWarehouseRows(Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : []),
         createTime: createdAt,
         lastActionType: 'created',
         lastActionAt: createdAt
@@ -95,8 +118,8 @@
         ...templates[index],
         ...data,
         id: templates[index].id,
-        materials: Array.isArray(data.materials) ? data.materials.slice(0, 1) : [],
-        outputs: Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : [],
+        materials: normalizeWarehouseRows(Array.isArray(data.materials) ? data.materials.slice(0, 1) : []),
+        outputs: normalizeWarehouseRows(Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : []),
         lastActionType: 'edited',
         lastActionAt: formatNow(),
         updatedAt: formatNow()

@@ -2,8 +2,13 @@
   const service = window.OperationsService;
   const statusMap = {
     PENDING: ['待审核', 'warning'],
+    PENDING_CONFIRM: ['待确认', 'warning'],
+    PENDING_AUDIT: ['待审核', 'warning'],
+    READY_FOR_SORTING: ['待分拣', 'info'],
+    READY_FOR_SHIPPING: ['待发货', 'warning'],
     APPROVED: ['已审核', 'info'],
     CONFIRMED: ['已确认', 'success'],
+    SHIPPED: ['已发货', 'success'],
     COMPLETED: ['已完成', 'success'],
     CLOSED: ['已关闭', 'danger']
     ,DRAFT: ['暂存', 'info']
@@ -62,7 +67,7 @@
           <div class="operations-filter-grid">
           <div class="operations-field"><label class="filter-label" for="customerType">客户类型</label><select class="filter-select" id="customerType"><option value="">全部</option><option>学校</option><option>幼儿园</option><option>机关单位</option></select></div>
           <div class="operations-field"><label class="filter-label" for="orderTag">订单标签</label><select class="filter-select" id="orderTag"><option value="">全部</option><option>营养餐</option><option>普通餐</option><option>应急保供</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="status">单据状态</label><select class="filter-select" id="status"><option value="">全部</option><option value="DRAFT">暂存</option><option value="PENDING">待审核</option><option value="REJECTED">已驳回</option><option value="APPROVED">已审核</option><option value="CONFIRMED">已确认</option><option value="COMPLETED">已完成</option><option value="CLOSED">已关闭</option></select></div>
+          <div class="operations-field"><label class="filter-label" for="status">单据状态</label><select class="filter-select" id="status"><option value="">全部</option><option value="DRAFT">暂存</option><option value="PENDING_CONFIRM">待确认</option><option value="PENDING_AUDIT">待审核</option><option value="READY_FOR_SORTING">待分拣</option><option value="READY_FOR_SHIPPING">待发货</option><option value="REJECTED">已驳回</option><option value="SHIPPED">已发货</option><option value="CLOSED">已关闭</option></select></div>
           <div class="operations-field"><label class="filter-label" for="warehouse">仓库</label><select class="filter-select" id="warehouse"><option value="">全部</option><option>中心仓</option><option>北区仓</option><option>临时仓</option></select></div>
           <div class="operations-field"><label class="filter-label" for="source">单据来源</label><select class="filter-select" id="source"><option value="">全部</option><option>客户下单</option><option>平台添加</option></select></div>
           <div class="operations-field"><label class="filter-label" for="receiptStatus">收货状态</label><select class="filter-select" id="receiptStatus"><option value="">全部</option><option>待收货</option><option>部分收货</option><option>已收货</option><option>未收货</option></select></div>
@@ -148,12 +153,12 @@
 
   function visibleActions(item) {
     const actions = [];
-    if (item.status === 'PENDING') actions.push({ key: 'approve', label: '审核' });
-    if (item.status === 'APPROVED') actions.push({ key: 'confirm', label: '确认供货' });
-    if (['DRAFT', 'PENDING', 'REJECTED'].includes(item.status)) actions.push({ key: 'edit', label: '编辑' });
+    if (item.status === 'PENDING_AUDIT') actions.push({ key: 'approve', label: '审核' });
+    if (item.status === 'PENDING_CONFIRM') actions.push({ key: 'confirm', label: '确认供货' });
+    if (['DRAFT', 'PENDING', 'PENDING_AUDIT', 'PENDING_CONFIRM', 'REJECTED'].includes(item.status)) actions.push({ key: 'edit', label: '编辑' });
     actions.push({ key: 'copy', label: '复制' });
-    if (!['COMPLETED', 'CLOSED'].includes(item.status)) actions.push({ key: 'close', label: '关闭' });
-    if (item.status === 'PENDING') actions.push({ key: 'delete', label: '删除', danger: true });
+    if (!['SHIPPED', 'CLOSED'].includes(item.status)) actions.push({ key: 'close', label: '关闭' });
+    if (['PENDING_AUDIT', 'PENDING_CONFIRM'].includes(item.status)) actions.push({ key: 'delete', label: '删除', danger: true });
     return actions;
   }
 
