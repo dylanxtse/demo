@@ -904,6 +904,20 @@
 .processing-record-page .data-table {
   min-width: 1900px;
 }
+/* 加工记录表为两级表头：滚动时保持“加工成品”及其子表头同时可见 */
+.processing-record-page .data-table thead tr:first-child th {
+  top: 0;
+  z-index: 4;
+  background: #fafafa;
+}
+.processing-record-page .data-table thead tr:nth-child(2) th {
+  top: 44px;
+  z-index: 3;
+  background: #fafafa;
+}
+.processing-record-page .data-table thead tr:first-child th[rowspan="2"] {
+  z-index: 5;
+}
 .processing-record-page .processing-record-product-name {
   min-width: 0;
   text-align: left;
