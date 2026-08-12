@@ -105,18 +105,6 @@
   background: transparent;
 }
 
-.multi-unit-area.is-active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: calc(25% + 6px);
-  bottom: 0;
-  left: 400px;
-  z-index: 0;
-  background: var(--bg-page);
-  pointer-events: none;
-}
-
 .multi-unit-area > .multi-unit-row,
 .multi-unit-area .multi-unit-primary-group,
 .multi-unit-area .multi-unit-price-group {
@@ -801,7 +789,6 @@
   .shelf-life-fields-row,
   .weighing-row { grid-column: 1; grid-template-columns: minmax(360px, 640px); }
   .multi-unit-area { grid-column: 1; grid-template-columns: minmax(360px, 640px); }
-  .multi-unit-area.is-active::before { left: 0; right: 0; }
   .multi-unit-row { grid-column: 1; width: 100%; }
   .multi-unit-heading { left: auto; right: 0; }
   .multi-unit-settings { grid-column: 1; display: contents; }

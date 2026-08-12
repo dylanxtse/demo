@@ -50,10 +50,16 @@
   }
 
   function normalizeTemplate(template) {
+    const materials = normalizeWarehouseRows(Array.isArray(template.materials) ? template.materials.slice(0, 1) : []);
+    const outputs = normalizeWarehouseRows(Array.isArray(template.outputs) ? template.outputs.slice(0, outputLimit) : []);
+    const materialWarehouse = normalizeWarehouseName(template.materialWarehouse || materials[0]?.warehouse || '');
+    const outputWarehouse = normalizeWarehouseName(template.outputWarehouse || outputs.find((item) => item.warehouse)?.warehouse || materialWarehouse);
     return {
       ...template,
-      materials: normalizeWarehouseRows(Array.isArray(template.materials) ? template.materials.slice(0, 1) : []),
-      outputs: normalizeWarehouseRows(Array.isArray(template.outputs) ? template.outputs.slice(0, outputLimit) : [])
+      materialWarehouse,
+      outputWarehouse,
+      materials: materials.map((item) => ({ ...item, warehouse: materialWarehouse })),
+      outputs: outputs.map((item) => ({ ...item, warehouse: outputWarehouse }))
     };
   }
 
@@ -90,15 +96,13 @@
     create(data) {
       const templates = load();
       const createdAt = formatNow();
-      const created = {
+      const created = normalizeTemplate({
         ...data,
         id: generateId(),
-        materials: normalizeWarehouseRows(Array.isArray(data.materials) ? data.materials.slice(0, 1) : []),
-        outputs: normalizeWarehouseRows(Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : []),
         createTime: createdAt,
         lastActionType: 'created',
         lastActionAt: createdAt
-      };
+      });
       templates.push(created);
       save(templates);
       return clone(created);
@@ -107,16 +111,14 @@
       const templates = load();
       const index = templates.findIndex((t) => t.id === id);
       if (index < 0) return null;
-      templates[index] = {
+      templates[index] = normalizeTemplate({
         ...templates[index],
         ...data,
         id: templates[index].id,
-        materials: normalizeWarehouseRows(Array.isArray(data.materials) ? data.materials.slice(0, 1) : []),
-        outputs: normalizeWarehouseRows(Array.isArray(data.outputs) ? data.outputs.slice(0, outputLimit) : []),
         lastActionType: 'edited',
         lastActionAt: formatNow(),
         updatedAt: formatNow()
-      };
+      });
       save(templates);
       return clone(templates[index]);
     },

@@ -41,6 +41,7 @@
   function normalizeOutputBusinessData(order) {
     const outputs = Array.isArray(order.outputs) ? order.outputs.map((output) => ({ ...output })) : [];
     if (outputs.length === 0) return null;
+    const isManualCostMode = order.costMode === 'manual';
 
     const materialCost = (order.materials || []).reduce((sum, material) => (
       sum + (Number(material.consumeQty) || 0) * (Number(material.avgPrice) || 0)
@@ -73,7 +74,17 @@
     const canUseSalesWeight = totalSalesAmount > 0 && salesOutputs.every((output) => output.salesAmount > 0);
     let allocatedTotal = 0;
 
-    return normalizedOutputs.map((output, index) => {
+    const allocatedOutputs = normalizedOutputs.map((output, index) => {
+      if (isManualCostMode) {
+        const costPrice = Number(output.costPrice);
+        if (!isValidPrice(costPrice)) return null;
+        const allocatedCost = Math.max(Math.round(Number(output.actualQty) * costPrice * 100) / 100, 0.01);
+        return {
+          ...output,
+          allocatedCost: allocatedCost.toFixed(2),
+          costPrice: costPrice.toFixed(2)
+        };
+      }
       const allocation = canUseSalesWeight
         ? materialCost * (salesOutputs[index].salesAmount / totalSalesAmount)
         : materialCost * (Number(output.actualQty) / totalActualQty);
@@ -88,6 +99,7 @@
         costPrice: costPrice.toFixed(2)
       };
     });
+    return allocatedOutputs.some((output) => !output) ? null : allocatedOutputs;
   }
 
   function hasValidProcessingPayload(order) {
@@ -112,12 +124,16 @@
       : order.materials;
     const normalizedOutputs = normalizeOutputBusinessData({ ...order, materials: normalizedMaterials });
     if (!normalizedOutputs) return null;
+    const sourceStatus = normalizeStatus(order.status);
+    const normalizedStatus = sourceStatus === 'PENDING_CONFIRM'
+      ? (getConfig().auditEnabled ? 'PENDING_AUDIT' : 'COMPLETED')
+      : sourceStatus;
     const normalizedBase = {
       ...order,
       materials: normalizedMaterials,
       outputs: normalizedOutputs,
       customerCode,
-      status: normalizeStatus(order.status)
+      status: normalizedStatus
     };
     const sequence = currentId.match(/(\d{1,5})$/)?.[1] || String(index + 1);
     const normalizedOrder = {
@@ -213,7 +229,8 @@
       unitPrice: Number(output.costPrice).toFixed(2),
       amount: (Number(output.actualQty) * Number(output.costPrice)).toFixed(2),
       productionDate: order.processingDate || '',
-      qualityReport: '合格'
+      qualityReport: '合格',
+      qualityFiles: []
     }));
   }
 
@@ -248,6 +265,30 @@
     ];
   }
 
+  function buildPendingOperationLogs(order, docType) {
+    const operator = order.operator || '管理员';
+    const baseDate = order.processingDate || order.createTime || '';
+    const dateStr = baseDate.length >= 10 ? baseDate.slice(0, 10) : '';
+    const createTime = order.createTime || (dateStr ? `${dateStr} 09:00:00` : '');
+    const docLabel = docType === 'inbound' ? '入库单' : '出库单';
+    return [
+      { action: '添加', operator, desc: `${operator} 添加${docLabel} ${createTime}` }
+    ];
+  }
+
+  function mergeInboundItemsWithQualityFiles(existingItems, nextItems) {
+    const previousItems = Array.isArray(existingItems) ? existingItems : [];
+    return nextItems.map((item, index) => {
+      const previous = previousItems[index]
+        || previousItems.find((candidate) => candidate.productCode === item.productCode);
+      return {
+        ...item,
+        qualityFiles: Array.isArray(previous?.qualityFiles) ? previous.qualityFiles : [],
+        qualityReport: previous?.qualityReport || item.qualityReport
+      };
+    });
+  }
+
   function ensureRelatedDocuments(order) {
     if (order.status !== 'COMPLETED') return order;
     const datePart = getDatePart(order.processingDate || order.createTime);
@@ -269,21 +310,21 @@
         warehouseName: order.outputWarehouse || order.warehouse || '主仓库',
         relNo: order.id,
         expectedDeliveryDate: order.processingDate || '--',
-        status: 'COMPLETED',
+        status: 'PENDING',
         purchaserLeaderName: order.operator || '管理员',
         creator: order.operator || '管理员',
         remark: order.remark || '加工成品入库',
         attachments: [],
-        operationLogs: buildOperationLogs(order, 'inbound'),
+        operationLogs: buildPendingOperationLogs(order, 'inbound'),
         items: buildInboundItems(order)
       });
       saveDocumentCollection('procurement-inbound-orders', inboundOrders);
     } else {
       const inboundOrder = inboundOrders.find((item) => item.id === inboundId);
       if (inboundOrder && inboundOrder.relNo === order.id) {
-        inboundOrder.items = buildInboundItems(order);
+        inboundOrder.items = mergeInboundItemsWithQualityFiles(inboundOrder.items, buildInboundItems(order));
         inboundOrder.entryAmt = inboundOrder.items.reduce((sum, item) => sum + Number(item.amount), 0).toFixed(2);
-        if (!inboundOrder.operationLogs) inboundOrder.operationLogs = buildOperationLogs(order, 'inbound');
+        if (!inboundOrder.operationLogs) inboundOrder.operationLogs = buildPendingOperationLogs(order, 'inbound');
         if (!inboundOrder.attachments) inboundOrder.attachments = [];
         saveDocumentCollection('procurement-inbound-orders', inboundOrders);
       }
@@ -303,11 +344,11 @@
         supplierPurchaserCustomerName: order.customer || '企业自加工',
         customerName: order.customer || '企业自加工',
         relNo: order.id,
-        status: 'COMPLETED',
+        status: 'PENDING',
         creator: order.operator || '管理员',
         remark: order.remark || '加工原料出库',
         attachments: [],
-        operationLogs: buildOperationLogs(order, 'outbound'),
+        operationLogs: buildPendingOperationLogs(order, 'outbound'),
         items: buildOutboundItems(order)
       });
       saveDocumentCollection('procurement-outbound-orders', outboundOrders);
@@ -342,7 +383,7 @@
         ...data,
         customerCode,
         id: generateId(data.processingDate, customerCode, orders),
-        status: normalizeStatus(data.status || 'PENDING_CONFIRM'),
+        status: normalizeStatus(data.status || (getConfig().auditEnabled ? 'PENDING_AUDIT' : 'COMPLETED')),
         operator: data.operator || '管理员',
         createTime: window.BusinessRules.now(now)
       };
@@ -364,6 +405,43 @@
       orders[index] = ensureRelatedDocuments({ ...orders[index], ...data, id: orders[index].id });
       save(orders);
       return clone(orders[index]);
+    },
+    submitEdited(id, data) {
+      const orders = load();
+      const index = orders.findIndex((order) => order.id === id);
+      if (index < 0 || !['PENDING_CONFIRM', 'DRAFT', 'REJECTED'].includes(orders[index].status)) return null;
+
+      const now = window.BusinessRules.now();
+      const nextStatus = getConfig().auditEnabled ? 'PENDING_AUDIT' : 'COMPLETED';
+      const currentStatus = orders[index].status;
+      const updated = normalizeOrder({
+        ...orders[index],
+        ...data,
+        id: orders[index].id,
+        status: nextStatus,
+        submittedAt: now,
+        auditedAt: '',
+        auditResult: ''
+      }, index);
+      if (!updated) return null;
+
+      updated.operationLogs = [
+        ...(updated.operationLogs || []),
+        {
+          action: currentStatus === 'REJECTED' ? '重新提交审核' : '编辑后提交审核',
+          operator: updated.operator || '管理员',
+          desc: `${updated.operator || '管理员'} ${currentStatus === 'REJECTED' ? '修改后重新提交审核' : '编辑后提交审核'} ${now}`
+        }
+      ];
+      orders[index] = ensureRelatedDocuments(updated);
+      save(orders);
+      if (orders[index].status === 'COMPLETED') applyProcessedQuantities(orders[index]);
+      return clone(orders[index]);
+    },
+    resubmit(id, data) {
+      const current = this.getDetail(id);
+      if (!current || current.status !== 'REJECTED') return null;
+      return this.submitEdited(id, data);
     },
     getConfig() {
       return getConfig();

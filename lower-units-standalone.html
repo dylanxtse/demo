@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>下属单位管理</title>
+  <style>
+    :root { --blue:#1768e5; --blue-light:#eaf2ff; --text:#1f2937; --muted:#7b8494; --border:#e3e7ee; --bg:#f5f7fa; --danger:#d64545; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:1080px; color:var(--text); background:var(--bg); font:14px -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; }
+    .app-header { height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:#fff; border-bottom:1px solid var(--border); }
+    .company-name { font-size:18px; }
+    .user { color:#586273; }
+    .page { height:calc(100vh - 64px); display:flex; flex-direction:column; padding:16px; background:var(--bg); }
+    .page-card { min-height:0; flex:1; display:flex; flex-direction:column; overflow:hidden; background:#fff; border-radius:6px; }
+    .page-header { min-height:62px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; border-bottom:1px solid var(--border); }
+    h1 { margin:0; font-size:16px; font-weight:600; }
+    .btn { height:32px; padding:0 16px; border:1px solid #cfd6e1; border-radius:4px; color:var(--text); background:#fff; }
+    .btn:hover { border-color:var(--blue); color:var(--blue); }
+    .btn-primary { border-color:var(--blue); color:#fff; background:var(--blue); }
+    .btn-primary:hover { color:#fff; background:#075bd1; }
+    .btn-link { padding:0 4px; border:0; color:var(--blue); background:transparent; }
+    .btn-link.danger { color:var(--danger); }
+    .filters { display:flex; align-items:flex-end; gap:24px; margin:16px 20px 0; padding:16px 0; }
+    .filter-main { display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:16px 28px; flex:1; }
+    .filter-item { display:flex; align-items:center; gap:8px; min-width:0; }
+    .filter-item label { width:110px; flex-shrink:0; color:#5b6473; text-align:right; white-space:nowrap; }
+    .filter-item input,.filter-item select { width:100%; min-width:0; flex:1; height:32px; padding:0 10px; border:1px solid #cfd6e1; border-radius:3px; outline:0; background:#fff; }
+    .filter-item input:focus,.filter-item select:focus { border-color:var(--blue); }
+    .filter-actions { display:flex; gap:8px; flex-shrink:0; }
+    .table-wrap { flex:1; min-height:0; margin:0 20px; padding:16px 0 20px; overflow:auto; }
+    table { width:100%; min-width:1260px; border-collapse:collapse; background:#fff; }
+    th,td { height:46px; padding:0 12px; border:1px solid var(--border); text-align:center; white-space:nowrap; }
+    th { height:38px; color:#5b6473; background:#f7f8fa; font-size:13px; font-weight:500; }
+    td { font-size:13px; }
+    th:last-child,td:last-child { position:sticky; right:0; z-index:2; background:#fff; box-shadow:-4px 0 8px rgba(31,41,55,.06); }
+    th:last-child { z-index:3; background:#f7f8fa; }
+    .actions { display:flex; justify-content:center; gap:12px; }
+    .code { color:var(--muted); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .tag { display:inline-block; margin:2px 4px 2px 0; padding:2px 7px; border-radius:3px; color:#37679f; background:#edf4ff; font-size:12px; }
+    .status { display:inline-block; padding:3px 8px; border-radius:3px; }
+    .status.pending { color:#8a5a00; background:#fff3cd; }
+    .status.enabled { color:#176b47; background:#e8f8f0; }
+    .status.disabled { color:#7b8494; background:#f1f3f5; }
+    .empty { height:180px; color:var(--muted); }
+    .overlay { position:fixed; inset:0; z-index:10; display:none; align-items:center; justify-content:center; background:rgba(15,23,42,.35); }
+    .overlay.show { display:flex; }
+    .dialog { width:560px; max-width:calc(100vw - 48px); border-radius:6px; background:#fff; box-shadow:0 16px 48px rgba(0,0,0,.18); }
+    .dialog-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+    .dialog-head h2 { margin:0; font-size:16px; }
+    .close { border:0; color:var(--muted); background:transparent; font-size:22px; }
+    .dialog-body { padding:20px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .field.full { grid-column:1/-1; }
+    .field label { color:#5b6473; font-size:13px; }
+    .field label.required::before { content:'*'; margin-right:4px; color:#d64545; }
+    .field input { width:100%; height:34px; padding:0 10px; border:1px solid #cfd6e1; border-radius:3px; outline:0; }
+    .field input:focus { border-color:var(--blue); }
+    .districts { display:grid; grid-template-columns:repeat(4,1fr); gap:8px 12px; padding:10px 12px; border:1px solid var(--border); border-radius:3px; }
+    .district { display:flex; align-items:center; gap:6px; color:#5b6473; font-size:13px; }
+    .district input { width:15px; height:15px; }
+    .dialog-foot { display:flex; justify-content:flex-end; gap:10px; padding:12px 20px 20px; }
+    .credential { color:#5b6473; line-height:30px; }
+    .credential strong { color:var(--text); font-weight:500; }
+    @media (max-width:760px) { .filters { flex-direction:column; align-items:stretch; } .filter-main { grid-template-columns:1fr; } .filter-actions { justify-content:flex-end; } .form-grid { grid-template-columns:1fr; } .field.full { grid-column:auto; } }
+  </style>
+</head>
+<body>
+  <header class="app-header"><span class="company-name">产品部学校食材集采供应链有限公司</span><span class="user">总公司管理员</span></header>
+  <main class="page"><section class="page-card">
+    <div class="page-header"><h1>下属单位管理</h1><button class="btn btn-primary" data-action="add">新增下属单位</button></div>
+    <div class="filters"><div class="filter-main">
+      <div class="filter-item"><label for="keyword">单位名称/联系人</label><input id="keyword" placeholder="请输入单位名称、联系人"></div>
+      <div class="filter-item"><label for="districtFilter">负责区域</label><select id="districtFilter"><option value="">全部区域</option></select></div>
+      <div class="filter-item"><label for="statusFilter">状态</label><select id="statusFilter"><option value="">全部状态</option><option value="PENDING_ENABLE">待启用</option><option value="ENABLE">启用</option><option value="DISABLE">停用</option></select></div>
+    </div><div class="filter-actions"><button class="btn btn-primary" data-action="query">查询</button><button class="btn" data-action="reset">重置</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>下级单位名称</th><th>单位编号</th><th>负责区域</th><th>联系人</th><th>联系电话</th><th>管理员用户名</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作人</th><th>操作</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </section></main>
+  <div class="overlay" id="modal"></div>
+  <script>
+    (() => {
+      const KEY='lower-units-standalone-demo-v2';
+      const districts=['东城区','西城区','朝阳区','海淀区','丰台区','通州区','顺义区','昌平区'];
+      const password='1234567Aa';
+      const seed=[
+        {id:'COMP-SUB-001',code:'SUB001',name:'东城学校食材供应链有限公司',districts:['东城区','通州区'],contact:'张经理',phone:'13800000001',address:'东城区',username:'subadmin',status:'PENDING_ENABLE',createdAt:'2026-08-12 09:00:00',updatedAt:'2026-08-12 09:00:00',operator:'总公司管理员'},
+        {id:'COMP-SUB-002',code:'SUB002',name:'西城学校食材供应链有限公司',districts:['西城区','丰台区'],contact:'李经理',phone:'13800000002',address:'西城区',username:'xicheng_admin',status:'ENABLE',createdAt:'2026-08-11 14:20:00',updatedAt:'2026-08-12 10:10:00',operator:'总公司管理员'},
+        {id:'COMP-SUB-003',code:'SUB003',name:'北部学校食材供应链有限公司',districts:['昌平区','顺义区'],contact:'王经理',phone:'13800000003',address:'昌平区',username:'north_admin',status:'DISABLE',createdAt:'2026-08-10 11:05:00',updatedAt:'2026-08-12 09:45:00',operator:'总公司管理员'}
+      ];
+      let data=read(); let filter={keyword:'',district:'',status:''}; let editId='';
+      const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const now=()=>new Date().toISOString().slice(0,19).replace('T',' ');
+      const statusText=s=>({PENDING_ENABLE:'待启用',ENABLE:'启用',DISABLE:'停用'}[s]||s);
+      const statusClass=s=>({PENDING_ENABLE:'pending',ENABLE:'enabled',DISABLE:'disabled'}[s]||'disabled');
+      function read(){try{const value=JSON.parse(localStorage.getItem(KEY)||'null');return Array.isArray(value)?value:seed.map(v=>({...v}));}catch(e){return seed.map(v=>({...v}));}}
+      function persist(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}
+      function nextCode(){let i=1;const used=new Set(data.map(v=>v.code));while(used.has('SUB'+String(i).padStart(3,'0')))i++;return 'SUB'+String(i).padStart(3,'0');}
+      function matches(item){const key=filter.keyword.toLocaleLowerCase();return(!key||item.name.toLocaleLowerCase().includes(key)||item.contact.toLocaleLowerCase().includes(key))&&(!filter.district||item.districts.includes(filter.district))&&(!filter.status||item.status===filter.status);}
+      function render(){const rows=data.filter(matches);document.getElementById('keyword').value=filter.keyword;document.getElementById('districtFilter').value=filter.district;document.getElementById('statusFilter').value=filter.status;document.getElementById('rows').innerHTML=rows.length?rows.map(row).join(''):'<tr><td class="empty" colspan="11">暂无符合条件的下属单位</td></tr>';}
+      function row(item){return '<tr><td>'+esc(item.name)+'</td><td class="code">'+esc(item.code)+'</td><td>'+item.districts.map(v=>'<span class="tag">'+esc(v)+'</span>').join('')+'</td><td>'+esc(item.contact||'--')+'</td><td>'+esc(item.phone||'--')+'</td><td><button class="btn-link" data-action="credential" data-id="'+item.id+'">'+esc(item.username)+'</button></td><td><span class="status '+statusClass(item.status)+'">'+statusText(item.status)+'</span></td><td>'+esc(item.createdAt)+'</td><td>'+esc(item.updatedAt)+'</td><td>'+esc(item.operator)+'</td><td><div class="actions"><button class="btn-link" data-action="edit" data-id="'+item.id+'">编辑</button><button class="btn-link" data-action="reset-password" data-id="'+item.id+'">重置密码</button><button class="btn-link '+(item.status==='ENABLE'?'danger':'')+'" data-action="toggle" data-id="'+item.id+'">'+(item.status==='ENABLE'?'停用':'启用')+'</button></div></td></tr>';}
+      function openEditor(item){editId=item?.id||'';const selected=new Set(item?.districts||[]);document.getElementById('modal').innerHTML='<div class="dialog"><div class="dialog-head"><h2>'+(item?'编辑下属单位':'新增下属单位')+'</h2><button class="close" data-action="close">×</button></div><div class="dialog-body"><div class="form-grid"><div class="field full"><label class="required">下级单位名称</label><input id="formName" value="'+esc(item?.name||'')+'" placeholder="请输入下级单位名称"></div><div class="field full"><label class="required">管理员用户名</label><input id="formUsername" value="'+esc(item?.username||'')+'" placeholder="请设置管理员用户名"></div><div class="field"><label>联系人</label><input id="formContact" value="'+esc(item?.contact||'')+'" placeholder="请输入"></div><div class="field"><label>联系电话</label><input id="formPhone" value="'+esc(item?.phone||'')+'" placeholder="请输入"></div><div class="field full"><label>地址</label><input id="formAddress" value="'+esc(item?.address||'')+'" placeholder="请输入"></div><div class="field full"><label>绑定负责区域</label><div class="districts">'+districts.map(v=>'<label class="district"><input type="checkbox" name="formDistrict" value="'+esc(v)+'" '+(selected.has(v)?'checked':'')+'><span>'+esc(v)+'</span></label>').join('')+'</div></div></div></div><div class="dialog-foot"><button class="btn" data-action="close">取消</button><button class="btn btn-primary" data-action="save">保存</button></div></div>';document.getElementById('modal').classList.add('show');}
+      function close(){document.getElementById('modal').classList.remove('show');editId='';}
+      function credential(item,title='管理员账号'){document.getElementById('modal').innerHTML='<div class="dialog"><div class="dialog-head"><h2>'+title+'</h2><button class="close" data-action="close">×</button></div><div class="dialog-body credential"><div>所属单位：<strong>'+esc(item.name)+'</strong></div><div>单位编号：<strong>'+esc(item.code)+'</strong></div><div>管理员用户名：<strong>'+esc(item.username)+'</strong></div><div>初始密码：<strong>'+password+'</strong></div></div><div class="dialog-foot"><button class="btn btn-primary" data-action="close">知道了</button></div></div>';document.getElementById('modal').classList.add('show');}
+      document.getElementById('districtFilter').innerHTML='<option value="">全部区域</option>'+districts.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');
+      document.body.addEventListener('click',e=>{const button=e.target.closest('[data-action]');if(!button)return;const action=button.dataset.action,id=button.dataset.id,item=data.find(v=>v.id===id);if(action==='query'){filter={keyword:document.getElementById('keyword').value.trim(),district:document.getElementById('districtFilter').value,status:document.getElementById('statusFilter').value};render();}else if(action==='reset'){filter={keyword:'',district:'',status:''};render();}else if(action==='add'){openEditor();}else if(action==='edit'){openEditor(item);}else if(action==='close'||e.target.id==='modal'){close();}else if(action==='credential'){credential(item);}else if(action==='reset-password'&&confirm('确定重置「'+item.name+'」的管理员密码吗？\n\n重置后密码将变更为：1234567Aa')){credential(item,'管理员密码已重置');}else if(action==='toggle'&&confirm('确定'+(item.status==='ENABLE'?'停用':'启用')+'「'+item.name+'」吗？')){item.status=item.status==='ENABLE'?'DISABLE':'ENABLE';item.updatedAt=now();item.operator='总公司管理员';persist();render();}else if(action==='save'){const name=document.getElementById('formName').value.trim(),username=document.getElementById('formUsername').value.trim();if(!name)return alert('请输入下级单位名称');if(!username)return alert('请输入管理员用户名');if(!/^[A-Za-z0-9_]{3,20}$/.test(username))return alert('管理员用户名需为3～20位字母、数字或下划线');if(data.some(v=>v.name===name&&v.id!==editId))return alert('下级单位名称不能完全相同');const next={name,username,contact:document.getElementById('formContact').value.trim(),phone:document.getElementById('formPhone').value.trim(),address:document.getElementById('formAddress').value.trim(),districts:[...document.querySelectorAll('input[name="formDistrict"]:checked')].map(v=>v.value)};let created=null;if(editId){Object.assign(item,next,{updatedAt:now(),operator:'总公司管理员'});}else{Object.assign(next,{id:'COMP-SUB-'+Date.now(),code:nextCode(),status:'PENDING_ENABLE',createdAt:now(),updatedAt:now(),operator:'总公司管理员'});data.unshift(next);created=next;}persist();close();render();if(created)credential(created);}});
+      render();
+    })();
+  </script>
+</body>
+</html>

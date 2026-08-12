@@ -156,6 +156,19 @@
 
   const pageContent = workspaceHTML + `
     <div class="template-editor-page" id="templateEditorPage" style="display:none;"></div>
+    <div class="processing-submit-modal" id="processingSubmitConfirmModal" aria-hidden="true">
+      <div class="processing-submit-dialog" role="dialog" aria-modal="true" aria-labelledby="processingSubmitConfirmTitle">
+        <div class="processing-submit-header">
+          <h2 id="processingSubmitConfirmTitle">确认提交加工单</h2>
+          <button class="processing-submit-close" type="button" data-action="close-processing-submit" aria-label="关闭">×</button>
+        </div>
+        <div class="processing-submit-body" id="processingSubmitConfirmMessage"></div>
+        <div class="processing-submit-footer">
+          <button class="btn" type="button" data-action="close-processing-submit">取消</button>
+          <button class="btn btn-primary" type="button" data-action="confirm-processing-submit">确认提交</button>
+        </div>
+      </div>
+    </div>
   `;
 
   /* ===== 状态 ===== */
@@ -183,7 +196,8 @@
     outputs: [],
     // 方案编辑器
     templateEditMode: null,    // 'create' | 'edit'
-    templateEditData: null
+    templateEditData: null,
+    pendingSubmitData: null
   };
   const OUTPUT_LIMIT = 200;
   let orderDatePicker = null;
@@ -243,17 +257,16 @@
     `;
   }
 
-  function renderWarehouseSelect(selectedWarehouse, outputIndex) {
+  function renderWarehouseSelect(selectedWarehouse, warehouseScope = '') {
     const displayText = selectedWarehouse ? escapeHtml(selectedWarehouse) : '请选择';
-    const selectType = outputIndex != null ? `warehouse-output-${outputIndex}` : 'warehouse';
     return `
-      <div class="custom-select" data-select-type="${selectType}">
+      <div class="custom-select" data-select-type="warehouse" data-warehouse-scope="${warehouseScope}">
         <div class="custom-select-trigger" data-action="toggle-select">
           <span class="custom-select-text ${!selectedWarehouse ? 'is-placeholder' : ''}">${displayText}</span>
           <svg class="custom-select-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="custom-select-dropdown">
-          ${warehouses.map((w) => `<div class="custom-select-option ${w === selectedWarehouse ? 'selected' : ''}" data-value="${escapeHtml(w)}" data-action="select-warehouse" data-output-index="${outputIndex != null ? outputIndex : ''}">${escapeHtml(w)}</div>`).join('')}
+          ${warehouses.map((w) => `<div class="custom-select-option ${w === selectedWarehouse ? 'selected' : ''}" data-value="${escapeHtml(w)}" data-action="select-warehouse">${escapeHtml(w)}</div>`).join('')}
         </div>
       </div>
     `;
@@ -775,8 +788,8 @@
     state.expectedDeliveryEnd = getDefaultExpectedDeliveryDate();
     state.customer = '全部';
     state.canteen = '全部';
-    state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
-    state.outputWarehouse = tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
+    state.materialWarehouse = tpl.materialWarehouse || tpl.materials?.[0]?.warehouse || '';
+    state.outputWarehouse = tpl.outputWarehouse || tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
     state.attachments = [];
 
@@ -821,8 +834,8 @@
     state.expectedDeliveryEnd = getDefaultExpectedDeliveryDate();
     state.customer = '全部';
     state.canteen = '全部';
-    state.materialWarehouse = tpl.materials?.[0]?.warehouse || '';
-    state.outputWarehouse = tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
+    state.materialWarehouse = tpl.materialWarehouse || tpl.materials?.[0]?.warehouse || '';
+    state.outputWarehouse = tpl.outputWarehouse || tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
     state.attachments = [];
     state.costMode = tpl.costMode || 'auto';
@@ -869,6 +882,9 @@
       remark: document.getElementById('opRemark').value.trim(),
       attachments: [...state.attachments],
       processingMode: state.operationMode,
+      templateId: state.selectedTemplateId,
+      templateName: state.templates.find((template) => template.id === state.selectedTemplateId)?.name || '',
+      templateDescription: state.templates.find((template) => template.id === state.selectedTemplateId)?.description || '',
       costMode: state.costMode,
       materials: state.materials.map((m) => ({
         ...m,
@@ -929,7 +945,49 @@
     });
   }
 
-  function submitOperation(targetStatus) {
+  function openSubmitConfirm(data) {
+    state.pendingSubmitData = data;
+    const auditEnabled = window.ProcessingService.getConfig().auditEnabled;
+    const message = auditEnabled
+      ? '确认提交当前加工单吗？提交后将进入待审核状态。'
+      : '确认提交当前加工单吗？提交后将直接标记为已完成。';
+    const modal = document.getElementById('processingSubmitConfirmModal');
+    document.getElementById('processingSubmitConfirmMessage').textContent = message;
+    modal.classList.add('is-visible');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeSubmitConfirm() {
+    state.pendingSubmitData = null;
+    const modal = document.getElementById('processingSubmitConfirmModal');
+    modal.classList.remove('is-visible');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function confirmSubmitOperation() {
+    const data = state.pendingSubmitData;
+    if (!data) return;
+    const auditEnabled = window.ProcessingService.getConfig().auditEnabled;
+    const targetStatus = auditEnabled ? '待审核' : '已完成';
+    data.status = targetStatus;
+    closeSubmitConfirm();
+    const saved = window.ProcessingService.create(data);
+    if (!saved) {
+      showOpFormStatus('提交失败，请重试。', 'error');
+      return;
+    }
+    if (state.selectedTemplateId) {
+      window.ProcessingTemplateService.markProcessed(state.selectedTemplateId);
+      state.templates = window.ProcessingTemplateService.getList();
+      renderTemplateList();
+    }
+    showOpFormStatus(auditEnabled ? '提交成功，已进入待审核。' : '提交成功，加工单已完成。', 'success');
+    setTimeout(() => {
+      resetOperationForm();
+    }, 1000);
+  }
+
+  function submitOperation() {
     const data = collectOperationData();
     const errors = window.ProcessingValidator.validate(data);
     if (Object.keys(errors).length > 0) {
@@ -937,21 +995,7 @@
       showOpFormStatus('请检查并补充表单中的必填信息。', 'error');
       return;
     }
-    data.status = targetStatus;
-    const saved = window.ProcessingService.create(data);
-    if (!saved) {
-      showOpFormStatus('保存失败，请重试。', 'error');
-      return;
-    }
-    if (targetStatus === '待确认' && state.selectedTemplateId) {
-      window.ProcessingTemplateService.markProcessed(state.selectedTemplateId);
-      state.templates = window.ProcessingTemplateService.getList();
-      renderTemplateList();
-    }
-    showOpFormStatus(targetStatus === '待确认' ? '保存成功，请到加工记录中提交审核。' : '草稿保存成功！', 'success');
-    setTimeout(() => {
-      resetOperationForm();
-    }, 1000);
+    openSubmitConfirm(data);
   }
 
   function bindOperationFormEvents() {
@@ -981,7 +1025,7 @@
         fillActualQtyByReference();
         return;
       }
-      if (action === 'save-process') { submitOperation('待确认'); return; }
+      if (action === 'save-process') { submitOperation(); return; }
       if (action === 'reset-form') { resetOperationForm(); return; }
       if (action === 'upload-attachment') {
         document.getElementById('opAttachmentInput')?.click();
@@ -1289,10 +1333,15 @@
           <div class="form-section-header">
             <span class="section-title-mark">原料商品</span>
           </div>
+          <div class="form-section-body template-single-warehouse-field">
+            <div class="basic-info-field">
+              <label class="field-label required">原料出库</label>
+              <div id="tplMaterialWarehouseField"></div>
+            </div>
+          </div>
           <table class="processing-sub-table">
             <thead>
               <tr>
-                <th style="width:140px">出库仓库</th>
                 <th style="width:240px">原料商品</th>
                 <th style="width:80px">单位</th>
               </tr>
@@ -1305,10 +1354,15 @@
           <div class="form-section-header">
             <span class="section-title-mark">成品商品</span>
           </div>
+          <div class="form-section-body template-single-warehouse-field">
+            <div class="basic-info-field">
+              <label class="field-label required">成品入库</label>
+              <div id="tplOutputWarehouseField"></div>
+            </div>
+          </div>
           <table class="processing-sub-table">
             <thead>
               <tr>
-                <th style="width:140px">入库仓库</th>
                 <th style="width:180px">成品商品</th>
                 <th style="width:70px">单位</th>
                 <th style="width:100px">转换系数</th>
@@ -1327,7 +1381,30 @@
 
     renderTplMaterialTable();
     renderTplOutputTable();
+    renderTplMaterialWarehouseField();
+    renderTplOutputWarehouseField();
     bindTemplateEditorEvents();
+  }
+
+  function renderTplMaterialWarehouseField() {
+    const container = document.getElementById('tplMaterialWarehouseField');
+    if (!container) return;
+    const isEdit = state.templateEditMode === 'edit';
+    const item = state.templateEditData.materials[0] || {};
+    container.innerHTML = isEdit
+      ? `<span class="template-warehouse-readonly">${escapeHtml(item.warehouse || '--')}</span>`
+      : renderWarehouseSelect(item.warehouse);
+  }
+
+  function renderTplOutputWarehouseField() {
+    const container = document.getElementById('tplOutputWarehouseField');
+    if (!container) return;
+    const outputs = Array.isArray(state.templateEditData.outputs) ? state.templateEditData.outputs : [];
+    const selectedWarehouse = state.templateEditData.outputWarehouse
+      || outputs.find((item) => item.warehouse)?.warehouse
+      || state.templateEditData.materials?.[0]?.warehouse
+      || '';
+    container.innerHTML = renderWarehouseSelect(selectedWarehouse, 'output');
   }
 
   function renderTplMaterialTable() {
@@ -1341,12 +1418,6 @@
     const materialDisplay = item.productCode ? `${netTag}<span>${escapeHtml(formatProductDisplay(item))}</span>` : '';
     tbody.innerHTML = `
       <tr data-tpl-material-index="0">
-        <td>
-          ${isEdit
-            ? `<span class="sub-table-readonly">${escapeHtml(item.warehouse || '--')}</span>`
-            : renderWarehouseSelect(item.warehouse)
-          }
-        </td>
         <td>
           ${isEdit
             ? `<span class="sub-table-readonly template-product-display">${materialDisplay || '--'}</span>`
@@ -1364,16 +1435,11 @@
     const tbody = document.getElementById('tplOutputBody');
     if (!tbody) return;
     normalizeOutputRows();
-    const materialWarehouse = state.templateEditData.materials[0]?.warehouse || '';
     tbody.innerHTML = state.templateEditData.outputs.map((item, index) => {
       const product = item.productCode ? findProduct(item.productCode) : null;
       const unit = product ? product.unit : (item.unit || '--');
-      const outputWarehouse = item.warehouse || materialWarehouse;
       return `
         <tr data-tpl-output-index="${index}">
-          <td>
-            ${renderWarehouseSelect(outputWarehouse, index)}
-          </td>
           <td>
             ${renderProductSelect('output', item.productCode, true, index)}
           </td>
@@ -1387,10 +1453,15 @@
 
   function normalizeOutputRows() {
     const outputs = Array.isArray(state.templateEditData.outputs) ? state.templateEditData.outputs : [];
-    const selected = outputs.filter((item) => item.productCode).slice(0, OUTPUT_LIMIT);
+    const materialWarehouse = state.templateEditData.materialWarehouse || state.templateEditData.materials?.[0]?.warehouse || '';
+    const outputWarehouse = state.templateEditData.outputWarehouse || outputs.find((item) => item.warehouse)?.warehouse || materialWarehouse;
+    state.templateEditData.materialWarehouse = materialWarehouse;
+    state.templateEditData.outputWarehouse = outputWarehouse;
+    const selected = outputs.filter((item) => item.productCode).slice(0, OUTPUT_LIMIT)
+      .map((item) => ({ ...item, warehouse: outputWarehouse }));
     state.templateEditData.outputs = selected;
     if (selected.length < OUTPUT_LIMIT) {
-      state.templateEditData.outputs.push({ warehouse: '', productCode: '', productName: '', unit: '', refCoefficient: '' });
+      state.templateEditData.outputs.push({ warehouse: outputWarehouse, productCode: '', productName: '', unit: '', refCoefficient: '' });
     }
   }
 
@@ -1483,25 +1554,29 @@
         const option = event.target.closest('.custom-select-option');
         const select = option.closest('.custom-select');
         const warehouse = option.dataset.value;
-        const outputIndex = option.dataset.outputIndex;
+        const warehouseScope = option.closest('.custom-select')?.dataset.warehouseScope || '';
         select.classList.remove('is-open');
         const dd = select.querySelector('.custom-select-dropdown');
         if (dd) dd.style.display = 'none';
-        if (outputIndex !== '' && outputIndex != null) {
-          // 成品仓库选择
-          const idx = Number(outputIndex);
-          state.templateEditData.outputs[idx].warehouse = warehouse;
+        if (warehouseScope === 'output') {
+          state.templateEditData.outputWarehouse = warehouse;
+          state.templateEditData.outputs.forEach((output) => { output.warehouse = warehouse; });
           renderTplOutputTable();
+          renderTplOutputWarehouseField();
         } else {
-          // 原料仓库选择，同步更新所有成品仓库
+          // 原料仓库选择，保留原有清空商品并重置成品仓库的逻辑
           state.templateEditData.materials[0].warehouse = warehouse;
+          state.templateEditData.materialWarehouse = warehouse;
           state.templateEditData.materials[0].productCode = '';
           state.templateEditData.materials[0].productName = '';
           state.templateEditData.materials[0].unit = '';
           // 清空所有成品的仓库，让它们回显原料仓库
+          state.templateEditData.outputWarehouse = '';
           state.templateEditData.outputs.forEach((o) => { o.warehouse = ''; });
           renderTplMaterialTable();
           renderTplOutputTable();
+          renderTplMaterialWarehouseField();
+          renderTplOutputWarehouseField();
         }
         event.stopPropagation();
         return;
@@ -1561,13 +1636,13 @@
       return;
     }
     if (!validMaterials[0].warehouse) { alert('请选择原料仓库'); return; }
-    const defaultOutputWarehouse = state.templateEditData.materials[0]?.warehouse || '';
+    const materialWarehouse = validMaterials[0].warehouse;
+    const outputWarehouse = state.templateEditData.outputWarehouse || materialWarehouse;
     const validOutputs = state.templateEditData.outputs
       .filter((o) => o.productCode)
       .map((output) => ({
         ...output,
-        // 成品未单独选择仓库时，使用界面显示的原料仓库作为实际入库仓库。
-        warehouse: output.warehouse || defaultOutputWarehouse
+        warehouse: outputWarehouse
       }));
     if (validOutputs.length === 0) {
       alert('成品商品不能为空');
@@ -1579,22 +1654,28 @@
       alert('成品商品不能重复，一个商品只能设置一行');
       return;
     }
-    if (validOutputs.some((output) => !output.warehouse || !Number.isFinite(Number(output.refCoefficient)) || Number(output.refCoefficient) <= 0)) {
-      alert('成品仓库和转换系数不能为空且转换系数必须大于0');
+    if (!outputWarehouse) {
+      alert('请选择成品入库仓库');
+      return;
+    }
+    if (validOutputs.some((output) => !Number.isFinite(Number(output.refCoefficient)) || Number(output.refCoefficient) <= 0)) {
+      alert('转换系数不能为空且必须大于0');
       return;
     }
 
     const payload = {
       name,
       description,
+      materialWarehouse,
+      outputWarehouse,
       materials: validMaterials.map((m) => ({
-        warehouse: m.warehouse,
+        warehouse: materialWarehouse,
         productCode: m.productCode,
         productName: m.productName,
         unit: m.unit
       })),
       outputs: validOutputs.map((o) => ({
-        warehouse: o.warehouse,
+        warehouse: outputWarehouse,
         productCode: o.productCode,
         productName: o.productName,
         unit: o.unit,
@@ -1660,6 +1741,8 @@
       name: '',
       description: '',
       materials: [{ warehouse: defaultWarehouse, productCode: '', productName: '', unit: '', refConsumeQty: '' }],
+      materialWarehouse: defaultWarehouse,
+      outputWarehouse: '',
       outputs: [{
         warehouse: '',
         productCode: outputProduct?.code || '',
@@ -1730,6 +1813,19 @@
     }
   }
 
+  function bindSubmitConfirmEvents() {
+    const modal = document.getElementById('processingSubmitConfirmModal');
+    if (!modal) return;
+    modal.addEventListener('click', (event) => {
+      const action = event.target.closest('[data-action]')?.dataset.action;
+      if (action === 'close-processing-submit' || event.target === modal) {
+        closeSubmitConfirm();
+        return;
+      }
+      if (action === 'confirm-processing-submit') confirmSubmitOperation();
+    });
+  }
+
   /* ===== 初始化 ===== */
   window.AppShell.mount({ title: '净菜加工', content: pageContent });
   state.filteredTemplates = [...state.templates];
@@ -1737,6 +1833,7 @@
   renderOperationForm();
   bindGlobalEvents();
   bindTemplateEditorPageEvents();
+  bindSubmitConfirmEvents();
 
   document.addEventListener('click', () => {
     document.querySelectorAll('.custom-select.is-open').forEach((s) => {

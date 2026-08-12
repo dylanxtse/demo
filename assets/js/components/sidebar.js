@@ -196,8 +196,14 @@
   }
 
   window.AppSidebar = {
+    getVisibleMenu() {
+      const menu = window.AppMenuConfig.menu;
+      const session = window.DemoStore?.getSession?.();
+      return session?.role === 'HQ_ADMIN' ? menu : menu.filter((item) => item.name !== '系统管理');
+    },
     render() {
-      const { menu, icons } = window.AppMenuConfig;
+      const menu = this.getVisibleMenu();
+      const { icons } = window.AppMenuConfig;
       return `
         <aside class="sidebar">
           <div class="sidebar-logo">
@@ -212,7 +218,7 @@
     },
     bind(root) {
       const sidebar = root.querySelector('.sidebar');
-      const menu = window.AppMenuConfig.menu;
+      const menu = this.getVisibleMenu();
       autoSelectByHref(menu, window.location.pathname.split('/').pop() || 'index.html');
       if (sidebar) {
         sidebar.innerHTML = `<div class="sidebar-logo">

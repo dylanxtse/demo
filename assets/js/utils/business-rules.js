@@ -231,6 +231,8 @@
     const normalized = normalizeStatus(resource, value);
     if (resource === 'products' && normalized === 'ENABLE') return '已上架';
     if (resource === 'products' && normalized === 'DISABLE') return '已下架';
+    if (resource === 'inboundOrders' && normalized === 'PENDING') return '待入库';
+    if (resource === 'outboundOrders' && normalized === 'PENDING') return '待出库';
     return commonStatusLabels[normalized] || String(value || '--');
   }
 

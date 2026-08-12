@@ -1,13 +1,29 @@
 (function () {
   const backIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/><path d="M19 12H9"/></svg>';
   const escapeHtml = (value) => window.DomUtils.escapeHtml(value);
-  const getStatusClass = (status) => status === 'COMPLETED' ? 'online' : (status === 'PENDING_AUDIT' ? 'draft' : 'offline');
+  const getStatusClass = (status) => status === 'COMPLETED'
+    ? 'online'
+    : (status === 'PENDING_AUDIT' ? 'draft' : (status === 'PENDING' ? 'pending' : 'offline'));
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const returnTo = ['processing-record.html', 'outbound.html', 'inbound.html'].includes(params.get('returnTo'))
     ? params.get('returnTo')
     : 'inbound.html';
-  const order = window.InboundService.getDetail(id);
+  let order = window.InboundService.getDetail(id);
+  let qualityRowIndex = null;
+
+  function canUploadQualityReports() {
+    return order?.entryType === '净菜加工入库' && order.status === 'PENDING';
+  }
+
+  function renderQualityReportCell(item, index) {
+    const count = (item.qualityFiles && item.qualityFiles.length) || 0;
+    if (!canUploadQualityReports()) return count > 0 ? `${count}份` : '--';
+    return `<div class="detail-quality-report-cell">
+      ${count > 0 ? `<span>${count}份</span>` : '<span class="detail-empty">未上传</span>'}
+      <button class="btn-text" type="button" data-action="open-quality-report" data-index="${index}">上传</button>
+    </div>`;
+  }
 
   function renderProductImg() {
     return `<div class="detail-product-img">图片</div>`;
@@ -56,7 +72,7 @@
         <td>${escapeHtml(String(item.unitPrice ?? '--'))}</td>
         <td>${escapeHtml(String(item.amount ?? '--'))}</td>
         <td>${escapeHtml(item.productionDate || '--')}</td>
-        <td>${(() => { const c = (item.qualityFiles && item.qualityFiles.length) || 0; return c > 0 ? `${c}份` : '--'; })()}</td>
+        <td data-quality-cell="${index}">${renderQualityReportCell(item, index)}</td>
       </tr>
     `).join('');
 
@@ -115,11 +131,89 @@
           <div class="detail-timeline">${renderOperationLogs(order.operationLogs)}</div>
         </div>
       </div>
+    </div>
+    <div class="qr-modal" id="inboundDetailQrModal" aria-hidden="true">
+      <div class="qr-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="inboundDetailQrTitle">
+        <div class="qr-modal-header">
+          <h2 class="qr-modal-title" id="inboundDetailQrTitle">质检报告</h2>
+          <button class="qr-modal-close" type="button" data-action="close-quality-report" aria-label="关闭">×</button>
+        </div>
+        <div class="qr-modal-body" id="inboundDetailQrBody"></div>
+      </div>
     </div>`;
+  }
+
+  function openQualityReportModal(index) {
+    if (!canUploadQualityReports()) return;
+    const item = order.items?.[index];
+    if (!item) return;
+    qualityRowIndex = index;
+    if (!Array.isArray(item.qualityFiles)) item.qualityFiles = [];
+    const thumbs = item.qualityFiles.map((file) => `
+      <div class="qr-thumb">
+        <div class="qr-thumb-img">${escapeHtml((file.format || file.name?.split('.').pop() || 'FILE').toUpperCase())}</div>
+        <div class="qr-thumb-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+      </div>
+    `).join('');
+    const body = document.getElementById('inboundDetailQrBody');
+    body.innerHTML = `
+      <div class="qr-upload-area">
+        <div class="qr-thumbs">${thumbs || '<span class="detail-empty">暂无已上传文件</span>'}</div>
+        <button class="qr-upload-btn" type="button" data-action="trigger-quality-upload">＋上传文件</button>
+        <input type="file" id="inboundDetailQrFileInput" multiple accept="image/*,.pdf,.doc,.docx" style="display:none">
+      </div>
+      <div class="qr-modal-tip">支持 jpg/png/pdf/doc/docx 格式，单个文件不超过 10M</div>
+    `;
+    const modal = document.getElementById('inboundDetailQrModal');
+    modal.classList.add('is-visible');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeQualityReportModal() {
+    const modal = document.getElementById('inboundDetailQrModal');
+    if (!modal) return;
+    modal.classList.remove('is-visible');
+    modal.setAttribute('aria-hidden', 'true');
+    qualityRowIndex = null;
+  }
+
+  function handleQualityFileUpload(event) {
+    const files = Array.from(event.target.files || []);
+    const item = order.items?.[qualityRowIndex];
+    if (!files.length || !item || !canUploadQualityReports()) return;
+    if (!Array.isArray(item.qualityFiles)) item.qualityFiles = [];
+    files.forEach((file) => {
+      const format = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : 'file';
+      item.qualityFiles.push({ name: file.name, size: file.size, format });
+    });
+    item.qualityReport = item.qualityFiles.map((file) => file.name).join('; ');
+    order = window.InboundService.update(id, { items: order.items }) || order;
+    const cell = document.querySelector(`[data-quality-cell="${qualityRowIndex}"]`);
+    if (cell) cell.innerHTML = renderQualityReportCell(order.items[qualityRowIndex], qualityRowIndex);
+    openQualityReportModal(qualityRowIndex);
   }
 
   window.AppShell.mount({ title: '入库管理', content: render() });
   document.getElementById('pageContent').addEventListener('click', (event) => {
-    if (event.target.closest('[data-action="back-to-list"]')) window.location.href = `./${returnTo}`;
+    const actionEl = event.target.closest('[data-action]');
+    const action = actionEl?.dataset.action;
+    if (action === 'back-to-list') {
+      window.location.href = `./${returnTo}`;
+      return;
+    }
+    if (action === 'open-quality-report') {
+      openQualityReportModal(Number(actionEl.dataset.index));
+      return;
+    }
+    if (action === 'trigger-quality-upload') {
+      document.getElementById('inboundDetailQrFileInput')?.click();
+      return;
+    }
+    if (action === 'close-quality-report' || event.target.id === 'inboundDetailQrModal') {
+      closeQualityReportModal();
+    }
+  });
+  document.getElementById('pageContent').addEventListener('change', (event) => {
+    if (event.target.id === 'inboundDetailQrFileInput') handleQualityFileUpload(event);
   });
 })();

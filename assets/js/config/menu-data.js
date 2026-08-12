@@ -74,6 +74,7 @@
     ] },
     { name: '系统管理', icon: 'settings', children: [
       { name: '系统配置', children: ['审核配置', { name: '业务配置', href: './system-config.html' }] },
+      { name: '下属单位管理', href: './lower-units.html' },
       '用户管理', '角色管理', '基础信息', '个人中心'
     ] }
   ].map((item) => {

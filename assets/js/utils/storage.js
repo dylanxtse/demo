@@ -53,6 +53,115 @@
   const timestamp = () => window.BusinessRules?.now() || new Date().toISOString().slice(0, 19).replace('T', ' ');
   const normalizeDateTime = (value) => window.BusinessRules?.normalizeDateTime(value) || String(value || '');
 
+  function organizationSeed() {
+    const createdAt = '2026-08-12 09:00:00';
+    return {
+      companies: [
+        {
+          id: 'COMP-HEAD-001', code: 'HQ001', name: '产品部学校食材集采供应链有限公司',
+          parentId: '', type: 'HEADQUARTERS', status: 'ENABLE', contact: '总公司管理员', phone: '13800000000', address: '总部', createdAt, updatedAt: createdAt, operator: '总公司管理员'
+        },
+        {
+          id: 'COMP-SUB-001', code: 'SUB001', name: '东城学校食材供应链有限公司',
+          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'PENDING_ENABLE', contact: '张经理', phone: '13800000001', address: '东城区', districts: ['东城区', '通州区'], createdAt, updatedAt: createdAt, operator: '总公司管理员', demoVersion: 2
+        },
+        {
+          id: 'COMP-SUB-002', code: 'SUB002', name: '西城学校食材供应链有限公司',
+          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'ENABLE', contact: '李经理', phone: '13800000002', address: '西城区', districts: ['西城区', '丰台区'], createdAt: '2026-08-11 14:20:00', updatedAt: '2026-08-12 10:10:00', operator: '总公司管理员', demoVersion: 2
+        },
+        {
+          id: 'COMP-SUB-003', code: 'SUB003', name: '北部学校食材供应链有限公司',
+          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'DISABLE', contact: '王经理', phone: '13800000003', address: '昌平区', districts: ['昌平区', '顺义区'], createdAt: '2026-08-10 11:05:00', updatedAt: '2026-08-12 09:45:00', operator: '总公司管理员', demoVersion: 2
+        }
+      ],
+      users: [
+        {
+          id: 'USER-HEAD-ADMIN', companyId: 'COMP-HEAD-001', username: 'admin', displayName: '管理员',
+          role: 'HQ_ADMIN', status: 'ENABLE', password: 'Admin@123', forceChangePassword: false, createdAt
+        },
+        {
+          id: 'USER-SUB-001-ADMIN', companyId: 'COMP-SUB-001', username: 'subadmin', displayName: '子公司管理员',
+          role: 'SUB_COMPANY_ADMIN', status: 'PENDING_ENABLE', password: '1234567Aa', forceChangePassword: false, districts: ['东城区', '通州区'], createdAt, demoVersion: 2
+        },
+        {
+          id: 'USER-SUB-002-ADMIN', companyId: 'COMP-SUB-002', username: 'xicheng_admin', displayName: '子公司管理员',
+          role: 'SUB_COMPANY_ADMIN', status: 'ENABLE', password: '1234567Aa', forceChangePassword: false, districts: ['西城区', '丰台区'], createdAt: '2026-08-11 14:20:00', demoVersion: 2
+        },
+        {
+          id: 'USER-SUB-003-ADMIN', companyId: 'COMP-SUB-003', username: 'north_admin', displayName: '子公司管理员',
+          role: 'SUB_COMPANY_ADMIN', status: 'DISABLE', password: '1234567Aa', forceChangePassword: false, districts: ['昌平区', '顺义区'], createdAt: '2026-08-10 11:05:00', demoVersion: 2
+        }
+      ],
+      session: { companyId: 'COMP-HEAD-001', userId: 'USER-HEAD-ADMIN', username: 'admin', displayName: '管理员', role: 'HQ_ADMIN' }
+    };
+  }
+
+  function ensureOrganizationState(current) {
+    let changed = false;
+    const seed = organizationSeed();
+    if (!Array.isArray(current.companies)) { current.companies = seed.companies; changed = true; }
+    if (!Array.isArray(current.users)) { current.users = seed.users; changed = true; }
+    if (!current.companies.some((company) => company.type === 'HEADQUARTERS')) {
+      current.companies.unshift(seed.companies[0]);
+      changed = true;
+    }
+    if (!current.users.some((user) => user.role === 'HQ_ADMIN')) {
+      current.users.unshift(seed.users[0]);
+      changed = true;
+    }
+    seed.companies.filter((company) => company.type === 'SUBSIDIARY').forEach((seedCompany) => {
+      const existing = current.companies.find((company) => company.id === seedCompany.id);
+      if (!existing) {
+        current.companies.push(clone(seedCompany));
+        changed = true;
+      } else if (existing.demoVersion !== seedCompany.demoVersion) {
+        Object.assign(existing, clone(seedCompany));
+        changed = true;
+      }
+    });
+    seed.users.filter((user) => user.role === 'SUB_COMPANY_ADMIN').forEach((seedUser) => {
+      const existing = current.users.find((user) => user.id === seedUser.id);
+      if (!existing) {
+        current.users.push(clone(seedUser));
+        changed = true;
+      } else if (existing.demoVersion !== seedUser.demoVersion) {
+        Object.assign(existing, clone(seedUser));
+        changed = true;
+      }
+    });
+    current.companies.forEach((company) => {
+      if (!Array.isArray(company.districts)) {
+        company.districts = company.id === 'COMP-SUB-001' ? ['东城区', '通州区'] : [];
+        changed = true;
+      }
+      if (!company.updatedAt) {
+        company.updatedAt = company.createdAt || timestamp();
+        changed = true;
+      }
+      if (!company.operator) {
+        company.operator = '总公司管理员';
+        changed = true;
+      }
+    });
+    current.users.forEach((user) => {
+      if (!Array.isArray(user.districts)) {
+        const company = current.companies.find((item) => item.id === user.companyId);
+        user.districts = company?.districts || [];
+        changed = true;
+      }
+      if (user.role === 'SUB_COMPANY_ADMIN' && (user.password !== '1234567Aa' || user.forceChangePassword)) {
+        user.password = '1234567Aa';
+        user.forceChangePassword = false;
+        changed = true;
+      }
+    });
+    if (!current.session || !current.companies.some((company) => company.id === current.session.companyId)) {
+      current.session = seed.session;
+      changed = true;
+    }
+    return changed;
+  }
+
   function nextOutboundNumber(records, record = {}) {
     return window.BusinessRules.documentNumber('outboundOrders', {
       date: record.outboundTime || record.shippingAt || record.createdAt || timestamp(),
@@ -533,6 +642,16 @@
     return changed;
   }
 
+  function seedProcessingAuditDemo(state) {
+    const demoId = 'JGD202608120300006';
+    if (!Array.isArray(state.processingOrders)) state.processingOrders = [];
+    if (state.processingOrders.some((record) => record.id === demoId)) return false;
+    const source = (window.MockProcessingOrders || []).find((record) => record.id === demoId);
+    if (!source) return false;
+    state.processingOrders.push(clone(source));
+    return true;
+  }
+
   function normalizeProcessingIds(state) {
     let changed = false;
     (state.processingOrders || []).forEach((record) => {
@@ -555,7 +674,7 @@
 
   function normalizeStateContracts(state) {
     const rules = window.BusinessRules;
-    let changed = false;
+    let changed = seedProcessingAuditDemo(state);
     const fixes = [];
     const mark = (resource, field, from, to) => {
       if (String(from ?? '') === String(to ?? '')) return;
@@ -1157,6 +1276,7 @@
     }));
     return {
       version: schemaVersion,
+      ...organizationSeed(),
       settings: { ...defaultSettings },
       products,
       units: clone(window.MockUnitMeasurements || []),
@@ -1241,6 +1361,7 @@
       if (!Array.isArray(state.units) && Array.isArray(legacyUnits)) state.units = clone(legacyUnits);
       if (!Array.isArray(state.goodsReviews) && Array.isArray(legacyReviews)) state.goodsReviews = clone(legacyReviews);
       if (!Array.isArray(state.processingTemplates) && Array.isArray(legacyTemplates)) state.processingTemplates = clone(legacyTemplates);
+      const organizationNormalized = ensureOrganizationState(state);
       const migrated = migrateOutboundNumbers(state);
       const logsAdded = ensureDocumentOperationLogs(state);
       const receiptFieldsNormalized = normalizeReceiptAndSupplement(state);
@@ -1250,10 +1371,11 @@
       const processingIdsNormalized = normalizeProcessingIds(state);
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
       const contractsNormalized = normalizeStateContracts(state);
-      if (source.version !== schemaVersion || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized) persist();
+      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized) persist();
     }
     else {
       state = buildSeed();
+      ensureOrganizationState(state);
       ensureDocumentOperationLogs(state);
       normalizeReceiptAndSupplement(state);
       normalizeStateDateTimes(state);
@@ -1353,6 +1475,13 @@
       persist();
       return clone(state.settings);
     },
+    getSession() { return clone(ensure().session); },
+    setSession(session) {
+      ensure();
+      state.session = clone(session);
+      persist();
+      return clone(state.session);
+    },
     reset() {
       state = buildSeed();
       normalizeStateContracts(state);
@@ -1369,6 +1498,7 @@
         throw error;
       }
       state = parsed;
+      ensureOrganizationState(state);
       normalizeOrderNumbers(state);
       normalizeProcessingIds(state);
       normalizeStateContracts(state);

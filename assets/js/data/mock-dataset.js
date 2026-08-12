@@ -892,6 +892,34 @@
       ]
     },
     {
+      id: 'JGD202608120300006',
+      processingDate: '2026-08-12',
+      customerCode: '03',
+      warehouse: '中心仓',
+      materialWarehouse: '中心仓',
+      outputWarehouse: '北区仓',
+      status: '待审核',
+      operator: '杨师傅',
+      remark: '演示待审核加工单',
+      costMode: 'auto',
+      materials: [
+        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 30 }
+      ],
+      outputs: [
+        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.2, refQty: 36, actualQty: 35, allocatedCost: '14.00', costPrice: '0.40' },
+        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.6, refQty: 18, actualQty: 17, allocatedCost: '136.00', costPrice: '8.00' }
+      ],
+      createTime: '2026-08-12 09:20:00',
+      submittedAt: '2026-08-12 09:25:00',
+      auditedAt: '',
+      auditResult: '',
+      attachments: [],
+      operationLogs: [
+        { action: '创建', operator: '杨师傅', desc: '杨师傅 创建加工单 2026-08-12 09:20:00' },
+        { action: '提交审核', operator: '杨师傅', desc: '杨师傅 提交审核 2026-08-12 09:25:00' }
+      ]
+    },
+    {
       id: 'JGD20260727002',
       processingDate: '2026-07-27',
       warehouse: '主仓库',

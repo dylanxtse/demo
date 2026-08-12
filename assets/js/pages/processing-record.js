@@ -20,7 +20,6 @@
                 <label class="filter-label" for="recStatusFilter">状态</label>
                 <select class="filter-select" id="recStatusFilter">
                 <option>全部</option>
-                <option>待确认</option>
                 <option>待审核</option>
                 <option>已驳回</option>
                 <option>已完成</option>
@@ -104,6 +103,9 @@
         <div class="processing-detail-page-body" id="recDetailBody"></div>
         <div class="processing-form-footer processing-detail-footer" id="recDetailFooter"></div>
     </div>
+    <div class="page-card processing-operation-panel processing-record-edit-page" id="recEditPage" style="display:none;">
+      <div class="operation-form" id="recEditForm"></div>
+    </div>
   `;
 
   const state = {
@@ -114,6 +116,9 @@
     dateEnd: ''
   };
   let recordDatePicker = null;
+  let editOrderId = null;
+  let editDatePicker = null;
+  let editFormState = null;
 
   function escapeHtml(value) {
     return window.DomUtils.escapeHtml(value);
@@ -167,7 +172,6 @@
 
   function getStatusClass(status) {
     if (status === '已完成') return 'online';
-    if (status === '待确认') return 'pending';
     if (status === '待审核') return 'draft';
     if (status === '已驳回') return 'cancelled';
     return 'offline';
@@ -212,8 +216,8 @@
     const id = escapeHtml(order.id);
     const status = getDisplayStatus(order);
     const detailButton = `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">详情</button>`;
-    if (status === '待确认') {
-      return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">确认</button>${detailButton}`;
+    if (status === '已驳回') {
+      return `<button class="btn-text" type="button" data-row-action="edit" data-id="${id}">编辑</button>${detailButton}`;
     }
     if (status === '待审核') {
       return `<button class="btn-text" type="button" data-row-action="detail" data-id="${id}">审核</button>${detailButton}`;
@@ -325,8 +329,8 @@
   function renderDetailFooter(order, displayStatus) {
     const id = escapeHtml(order.id);
     const returnButton = '<button class="btn" type="button" data-action="back-to-list">返回</button>';
-    if (displayStatus === '待确认') {
-      return `<button class="btn btn-primary" type="button" data-action="detail-submit" data-id="${id}">确认保存</button>${returnButton}`;
+    if (displayStatus === '已驳回') {
+      return `<button class="btn btn-primary" type="button" data-action="detail-edit" data-id="${id}">编辑</button>${returnButton}`;
     }
     if (displayStatus === '待审核') {
       return `
@@ -336,6 +340,352 @@
       `;
     }
     return returnButton;
+  }
+
+  function getWarehouseOptions(order) {
+    const values = (window.DemoStore?.get('warehouses') || [])
+      .map((warehouse) => warehouse.warehouseName || warehouse.name || warehouse)
+      .concat([order.materialWarehouse, order.outputWarehouse, order.warehouse])
+      .filter(Boolean);
+    return [...new Set(values)];
+  }
+
+  function getProcessingTemplate(order) {
+    const templates = window.ProcessingTemplateService?.getList?.() || [];
+    const direct = templates.find((template) => template.id === order.templateId);
+    if (direct) return direct;
+    const materialCodes = (order.materials || []).map((item) => item.productCode).filter(Boolean).sort().join('|');
+    const outputCodes = (order.outputs || []).map((item) => item.productCode).filter(Boolean).sort().join('|');
+    return templates.find((template) => {
+      const templateMaterials = (template.materials || []).map((item) => item.productCode).filter(Boolean).sort().join('|');
+      const templateOutputs = (template.outputs || []).map((item) => item.productCode).filter(Boolean).sort().join('|');
+      return materialCodes === templateMaterials && outputCodes === templateOutputs;
+    }) || null;
+  }
+
+  function getEditProductInfo(item = {}) {
+    const products = window.ProductService?.getList?.() || window.MockProducts || [];
+    const product = products.find((candidate) => candidate.code === item.productCode) || {};
+    return {
+      name: product.name || item.productName || '--',
+      unit: product.unit || item.unit || '--',
+      brand: product.brand || item.brand || '--',
+      spec: product.spec || item.spec || '--',
+      marketPrice: Number(product.marketPrice)
+    };
+  }
+
+  function formatEditProduct(item) {
+    const product = getEditProductInfo(item);
+    return `${product.name}（${product.unit}/${product.brand}/${product.spec}）`;
+  }
+
+  function formatEditFileSize(bytes) {
+    if (typeof bytes === 'string') return bytes;
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  }
+
+  function renderEditAttachments() {
+    const container = document.getElementById('recEditAttachmentList');
+    if (!container || !editFormState) return;
+    container.innerHTML = (editFormState.attachments || []).map((file, index) => {
+      const format = file.format || file.name?.split('.').pop() || 'file';
+      return `<div class="remark-attachment-item">
+        <span class="remark-attachment-thumb">${escapeHtml(format.toUpperCase())}</span>
+        <span class="remark-attachment-name">${escapeHtml(file.name || '--')}</span>
+        <span class="remark-attachment-meta">${escapeHtml(formatEditFileSize(file.size || 0))}</span>
+        <button class="remark-attachment-remove" type="button" data-action="edit-remove-attachment" data-index="${index}">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  function calculateEditRefQty() {
+    if (!editFormState) return;
+    const totalConsume = editFormState.materials.reduce((sum, material) => sum + (Number(material.consumeQty) || 0), 0);
+    editFormState.outputs.forEach((output) => {
+      const coefficient = Number(output.refCoefficient) || 0;
+      output.refQty = coefficient > 0 && totalConsume > 0 ? (totalConsume * coefficient).toFixed(2) : '';
+    });
+  }
+
+  function calculateEditAutoAllocations() {
+    if (!editFormState) return [];
+    const materialCost = editFormState.materials.reduce((sum, material) => (
+      sum + (Number(material.consumeQty) || 0) * (Number(material.avgPrice) || 0)
+    ), 0);
+    const metrics = editFormState.outputs.map((output) => {
+      const product = getEditProductInfo(output);
+      const actualQty = Number(output.actualQty);
+      return { actualQty, salesAmount: actualQty * product.marketPrice };
+    });
+    const totalActualQty = metrics.reduce((sum, item) => sum + item.actualQty, 0);
+    const totalSalesAmount = metrics.reduce((sum, item) => sum + (item.salesAmount > 0 ? item.salesAmount : 0), 0);
+    const useSalesWeight = materialCost > 0 && totalSalesAmount > 0 && metrics.every((item) => item.actualQty > 0 && item.salesAmount > 0);
+    let allocatedTotal = 0;
+    return editFormState.outputs.map((output, index) => {
+      if (!(materialCost > 0) || !(metrics[index].actualQty > 0)) {
+        return { allocatedCost: output.allocatedCost || '', costPrice: output.costPrice || '' };
+      }
+      const allocation = useSalesWeight
+        ? materialCost * (metrics[index].salesAmount / totalSalesAmount)
+        : materialCost * (metrics[index].actualQty / totalActualQty);
+      const allocatedCost = index === editFormState.outputs.length - 1
+        ? Math.max(materialCost - allocatedTotal, 0.01)
+        : Math.max(Math.round(allocation * 100) / 100, 0.01);
+      allocatedTotal = Math.round((allocatedTotal + allocatedCost) * 100) / 100;
+      return {
+        allocatedCost: allocatedCost.toFixed(2),
+        costPrice: Math.max(Math.round((allocatedCost / metrics[index].actualQty) * 100) / 100, 0.01).toFixed(2)
+      };
+    });
+  }
+
+  function renderEditMaterialTable() {
+    const body = document.getElementById('recEditMaterialBody');
+    if (!body || !editFormState) return;
+    body.innerHTML = editFormState.materials.map((item, index) => {
+      const product = getEditProductInfo(item);
+      return `<tr data-edit-material-index="${index}">
+        <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(formatEditProduct(item))}</span></td>
+        <td><span class="sub-table-readonly">${escapeHtml(product.unit)}</span></td>
+        <td><span class="sub-table-readonly">${item.stock ?? '--'}</span></td>
+        <td><span class="sub-table-readonly">${item.avgPrice ?? '--'}</span></td>
+        <td><input class="sub-table-input" type="number" min="0" step="0.01" placeholder="请输入" data-edit-material-field="consumeQty" value="${escapeHtml(item.consumeQty ?? '')}"></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderEditOutputTable() {
+    const body = document.getElementById('recEditOutputBody');
+    if (!body || !editFormState) return;
+    const allocations = editFormState.costMode === 'auto' ? calculateEditAutoAllocations() : [];
+    body.innerHTML = editFormState.outputs.map((item, index) => {
+      const product = getEditProductInfo(item);
+      const allocation = allocations[index] || {};
+      const costPrice = editFormState.costMode === 'auto' ? allocation.costPrice || item.costPrice || '' : item.costPrice || '';
+      const orderFields = editFormState.processingMode === 'order'
+        ? `<td><span class="sub-table-readonly">${item.sortingQty ?? '--'}</span></td><td><span class="sub-table-readonly">${item.remainingQty ?? '--'}</span></td>`
+        : '';
+      const costField = editFormState.costMode === 'auto'
+        ? `<div class="unit-price-control unit-price-readonly"><span class="unit-price-value" data-edit-auto-cost-index="${index}">${escapeHtml(costPrice || '--')}</span></div>`
+        : `<div class="unit-price-control"><input class="sub-table-input cost-price-input" type="number" min="0" step="0.01" placeholder="请输入" data-edit-output-field="costPrice" value="${escapeHtml(costPrice)}"></div>`;
+      return `<tr data-edit-output-index="${index}">
+        <td><span class="sub-table-readonly">${productNetTag(item.productCode)}${escapeHtml(formatEditProduct(item))}</span></td>
+        <td><span class="sub-table-readonly">${escapeHtml(product.unit)}</span></td>
+        <td><span class="sub-table-readonly">${item.refCoefficient || '--'}</span></td>
+        <td><span class="sub-table-readonly">${item.refQty || '--'}</span></td>
+        <td><input class="sub-table-input" type="number" min="0" step="0.01" placeholder="请输入" data-edit-output-field="actualQty" value="${escapeHtml(item.actualQty ?? '')}"></td>
+        ${orderFields}
+        <td>${costField}</td>
+      </tr>`;
+    }).join('');
+    const fillButton = document.querySelector('[data-action="edit-fill-reference"]');
+    if (fillButton) fillButton.disabled = !editFormState.outputs.some((output) => output.refQty !== '' && output.refQty != null);
+  }
+
+  function updateEditAutoCostPrices() {
+    if (!editFormState || editFormState.costMode !== 'auto') return;
+    const allocations = calculateEditAutoAllocations();
+    document.querySelectorAll('#recEditOutputBody [data-edit-auto-cost-index]').forEach((node) => {
+      const index = Number(node.dataset.editAutoCostIndex);
+      node.textContent = allocations[index]?.costPrice || '--';
+    });
+  }
+
+  function renderEditForm(order) {
+    editFormState = {
+      processingDate: order.processingDate || '',
+      materialWarehouse: order.materialWarehouse || order.warehouse || '',
+      outputWarehouse: order.outputWarehouse || order.warehouse || '',
+      remark: order.remark || '',
+      attachments: (order.attachments || []).map((file) => ({ ...file })),
+      processingMode: order.processingMode || 'plan',
+      expectedDeliveryStart: order.expectedDeliveryStart || '',
+      expectedDeliveryEnd: order.expectedDeliveryEnd || '',
+      customer: order.customer || '全部',
+      canteen: order.canteen || '全部',
+      costMode: order.costMode || 'auto',
+      materials: (order.materials || []).map((item) => ({ ...item })),
+      outputs: (order.outputs || []).map((item) => ({ ...item }))
+    };
+    calculateEditRefQty();
+    const warehouses = getWarehouseOptions(order);
+    const orderFields = editFormState.processingMode === 'order'
+      ? `<div class="order-processing-query edit-order-context">
+          <div class="order-processing-query-header"><span class="section-title-mark">订单需求查询</span></div>
+          <div class="order-processing-context">
+            <div class="basic-info-field"><label class="field-label">期望送达时间</label><span class="sub-table-readonly">${escapeHtml(editFormState.expectedDeliveryStart || '--')} ~ ${escapeHtml(editFormState.expectedDeliveryEnd || '--')}</span></div>
+            <div class="basic-info-field"><label class="field-label">客户名称</label><span class="sub-table-readonly">${escapeHtml(editFormState.customer)}</span></div>
+            <div class="basic-info-field"><label class="field-label">食堂名称</label><span class="sub-table-readonly">${escapeHtml(editFormState.canteen)}</span></div>
+          </div>
+        </div>`
+      : '';
+    const submitAction = order.status === 'REJECTED' ? 'edit-resubmit' : 'edit-submit-confirm';
+    const submitText = order.status === 'REJECTED' ? '重新提交' : '确认保存';
+    document.getElementById('recEditForm').innerHTML = `
+      <div class="operation-form-header processing-record-edit-header">
+        <button class="back-link" type="button" data-action="cancel-edit">${backIcon}<span>返回</span></button>
+        <h1>编辑加工单</h1>
+      </div>
+      ${orderFields}
+      <div class="operation-form-status" id="recEditStatus" role="status"></div>
+      <div class="operation-form-body" id="recEditBody">
+        <div class="processing-record-edit-order-info basic-info-field">
+          <label class="field-label">加工单号</label>
+          <span class="processing-record-edit-order-value">${escapeHtml(order.id || '--')}</span>
+        </div>
+        <div class="form-section">
+          <div class="form-section-header"><span class="section-title-mark">基本信息</span></div>
+          <div class="form-section-body">
+            <div class="basic-info-grid">
+              <div class="basic-info-field"><label class="field-label required" for="recEditProcessingDate">加工日期</label><div class="date-input-control"><input class="form-control" id="recEditProcessingDate" type="text" readonly placeholder="请选择日期"><span class="date-range-icon" aria-hidden="true">▣</span></div></div>
+              <div class="basic-info-field"><label class="field-label required" for="recEditMaterialWarehouse">原料出库</label><select class="form-control" id="recEditMaterialWarehouse"><option value="">请选择</option>${warehouses.map((warehouse) => `<option value="${escapeHtml(warehouse)}" ${warehouse === editFormState.materialWarehouse ? 'selected' : ''}>${escapeHtml(warehouse)}</option>`).join('')}</select></div>
+              <div class="basic-info-field"><label class="field-label required" for="recEditOutputWarehouse">成品入库</label><select class="form-control" id="recEditOutputWarehouse"><option value="">请选择</option>${warehouses.map((warehouse) => `<option value="${escapeHtml(warehouse)}" ${warehouse === editFormState.outputWarehouse ? 'selected' : ''}>${escapeHtml(warehouse)}</option>`).join('')}</select></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-header"><span class="section-title-mark">加工原料</span></div>
+          <div class="form-section-body" style="padding:0"><table class="processing-sub-table"><thead><tr><th style="width:200px">原料商品</th><th style="width:80px">单位</th><th style="width:90px">当前库存</th><th style="width:90px">库存均价</th><th style="width:120px">消耗量</th></tr></thead><tbody id="recEditMaterialBody"></tbody></table></div>
+        </div>
+        <div class="operation-cost-section"><div class="operation-cost-header"><span class="cost-price-label section-title-mark">成品入库单价</span><div class="cost-mode-row"><label class="radio-option"><input type="radio" name="recEditCostMode" value="auto" ${editFormState.costMode === 'auto' ? 'checked' : ''}>按原料成本及实际获得量计算</label><label class="radio-option"><input type="radio" name="recEditCostMode" value="manual" ${editFormState.costMode === 'manual' ? 'checked' : ''}>手动输入成品入库单价</label></div></div></div>
+        <div class="form-section"><div class="form-section-header"><span class="section-title-mark">加工成品</span><button class="btn btn-sm btn-blue reference-fill-btn" type="button" data-action="edit-fill-reference" ${editFormState.outputs.some((output) => output.refQty !== '' && output.refQty != null) ? '' : 'disabled'}>按参考值填充实际获得量</button></div><div class="form-section-body" style="padding:0"><table class="processing-sub-table"><thead><tr><th style="width:180px">成品商品</th><th style="width:70px">单位</th><th style="width:80px">参考系数</th><th style="width:90px">参考获得量</th><th style="width:90px">实际获得量</th>${editFormState.processingMode === 'order' ? '<th style="width:90px">订单分拣量</th><th style="width:90px">剩余量</th>' : ''}<th style="width:130px">成品入库单价</th></tr></thead><tbody id="recEditOutputBody"></tbody></table></div></div>
+        <div class="form-section operation-remark-section"><div class="form-section-header"><span class="section-title-mark">加工备注</span></div><div class="form-section-body"><div class="operation-remark-field"><div class="remark-input-wrap"><textarea class="form-control" id="recEditRemark" maxlength="200" rows="3" placeholder="请输入">${escapeHtml(editFormState.remark)}</textarea><span class="remark-counter" id="recEditRemarkCounter">${editFormState.remark.length}/200</span></div><div class="remark-upload-area"><button class="btn btn-sm btn-blue remark-upload-btn" type="button" data-action="edit-upload-attachment">上传附件</button><input type="file" id="recEditAttachmentInput" accept="image/*,.txt,.doc,.docx,.pdf,.xls,.xlsx" multiple style="display:none"><div class="remark-attachment-list" id="recEditAttachmentList"></div></div></div></div></div>
+      </div>
+      <div class="processing-form-footer"><button class="btn btn-primary" type="button" data-action="${submitAction}" data-id="${escapeHtml(order.id)}">${submitText}</button><button class="btn" type="button" data-action="cancel-edit">取消编辑</button></div>
+    `;
+    document.getElementById('recEditProcessingDate').value = editFormState.processingDate;
+    editDatePicker?.destroy();
+    editDatePicker = window.DatePicker?.mount?.({
+      input: '#recEditProcessingDate',
+      panelId: 'recEditProcessingDatePickerPanel',
+      onChange: (date) => { editFormState.processingDate = date; }
+    });
+    renderEditMaterialTable();
+    renderEditOutputTable();
+    renderEditAttachments();
+    bindEditFormEvents();
+  }
+
+  function collectEditData(order) {
+    if (!editFormState) return null;
+    const materialWarehouse = document.getElementById('recEditMaterialWarehouse')?.value || editFormState.materialWarehouse;
+    const outputWarehouse = document.getElementById('recEditOutputWarehouse')?.value || editFormState.outputWarehouse;
+    const costMode = editFormState.costMode;
+    const allocations = costMode === 'auto' ? calculateEditAutoAllocations() : [];
+    return {
+      ...order,
+      processingDate: document.getElementById('recEditProcessingDate')?.value || editFormState.processingDate,
+      materialWarehouse,
+      outputWarehouse,
+      warehouse: materialWarehouse,
+      remark: document.getElementById('recEditRemark')?.value.trim() || '',
+      attachments: editFormState.attachments.map((file) => ({ ...file })),
+      costMode,
+      materials: editFormState.materials.map((item) => ({ ...item })),
+      outputs: editFormState.outputs.map((item, index) => ({
+        ...item,
+        allocatedCost: costMode === 'auto' ? allocations[index]?.allocatedCost || item.allocatedCost || '' : item.allocatedCost || '',
+        costPrice: costMode === 'auto' ? allocations[index]?.costPrice || item.costPrice || '' : item.costPrice || ''
+      }))
+    };
+  }
+
+  function showEditStatus(message, type = 'error') {
+    const status = document.getElementById('recEditStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.className = `operation-form-status visible ${type}`;
+  }
+
+  function submitEditedOrder() {
+    const order = state.orders.find((item) => item.id === editOrderId);
+    if (!order) return;
+    const data = collectEditData(order);
+    const errors = window.ProcessingValidator?.validate(data) || {};
+    if (Object.keys(errors).length > 0) {
+      showEditStatus(Object.values(errors)[0]);
+      return;
+    }
+    finishDetailOperation(window.ProcessingService.submitEdited(editOrderId, data));
+  }
+
+  function openEditPage(id) {
+    const order = state.orders.find((item) => item.id === id);
+    if (!order || order.status !== 'REJECTED') return;
+    editOrderId = id;
+    document.querySelector('.processing-record-page').style.display = 'none';
+    document.getElementById('recDetailPage').style.display = 'none';
+    document.getElementById('recEditPage').style.display = 'flex';
+    renderEditForm(order);
+  }
+
+  function closeEditPage(toDetail = true) {
+    editDatePicker?.destroy();
+    editDatePicker = null;
+    document.getElementById('recEditPage').style.display = 'none';
+    const id = editOrderId;
+    editOrderId = null;
+    editFormState = null;
+    if (toDetail && id) showDetail(id);
+    else closeDetail();
+  }
+
+  function bindEditFormEvents() {
+    const form = document.getElementById('recEditForm');
+    if (!form || form.dataset.bound === 'true') return;
+    form.dataset.bound = 'true';
+    form.addEventListener('click', (event) => {
+      const actionEl = event.target.closest('[data-action]');
+      const action = actionEl?.dataset.action;
+      if (action === 'cancel-edit') { closeEditPage(false); return; }
+      if (action === 'edit-submit-confirm' || action === 'edit-resubmit') { submitEditedOrder(); return; }
+      if (action === 'edit-fill-reference') {
+        editFormState.outputs.forEach((output) => { if (output.refQty !== '' && output.refQty != null) output.actualQty = output.refQty; });
+        renderEditOutputTable();
+        return;
+      }
+      if (action === 'edit-upload-attachment') { document.getElementById('recEditAttachmentInput')?.click(); return; }
+      if (action === 'edit-remove-attachment') {
+        editFormState.attachments.splice(Number(actionEl.dataset.index), 1);
+        renderEditAttachments();
+      }
+    });
+    form.addEventListener('change', (event) => {
+      if (event.target.name === 'recEditCostMode') {
+        editFormState.costMode = event.target.value;
+        renderEditOutputTable();
+      }
+      if (event.target.id === 'recEditMaterialWarehouse') editFormState.materialWarehouse = event.target.value;
+      if (event.target.id === 'recEditOutputWarehouse') editFormState.outputWarehouse = event.target.value;
+      if (event.target.id === 'recEditAttachmentInput') {
+        Array.from(event.target.files || []).forEach((file) => editFormState.attachments.push({ name: file.name, format: file.name.split('.').pop().toLowerCase(), size: formatEditFileSize(file.size) }));
+        event.target.value = '';
+        renderEditAttachments();
+      }
+    });
+    form.addEventListener('input', (event) => {
+      const materialInput = event.target.closest('[data-edit-material-field="consumeQty"]');
+      if (materialInput) {
+        const index = Number(materialInput.closest('[data-edit-material-index]').dataset.editMaterialIndex);
+        editFormState.materials[index].consumeQty = materialInput.value;
+        calculateEditRefQty();
+        renderEditOutputTable();
+        return;
+      }
+      const outputInput = event.target.closest('[data-edit-output-field]');
+      if (outputInput) {
+        const index = Number(outputInput.closest('[data-edit-output-index]').dataset.editOutputIndex);
+        editFormState.outputs[index][outputInput.dataset.editOutputField] = outputInput.value;
+        updateEditAutoCostPrices();
+        return;
+      }
+      if (event.target.id === 'recEditRemark') {
+        document.getElementById('recEditRemarkCounter').textContent = `${event.target.value.length}/200`;
+      }
+    });
   }
 
   function showDetail(id) {
@@ -420,8 +770,13 @@
   }
 
   function closeDetail() {
+    editDatePicker?.destroy();
+    editDatePicker = null;
+    editOrderId = null;
+    editFormState = null;
     document.querySelector('.processing-record-page').style.display = '';
     document.getElementById('recDetailPage').style.display = 'none';
+    document.getElementById('recEditPage').style.display = 'none';
     document.getElementById('recDetailFooter').innerHTML = '';
     if (new URLSearchParams(window.location.search).has('id')) {
       window.history.replaceState(null, '', './processing-record.html');
@@ -469,6 +824,10 @@
       const rowAction = event.target.closest('[data-row-action]');
       if (rowAction) {
         const id = rowAction.dataset.id;
+        if (rowAction.dataset.rowAction === 'edit') {
+          openEditPage(id);
+          return;
+        }
         if (rowAction.dataset.rowAction === 'detail') {
           showDetail(id);
           return;
@@ -497,8 +856,8 @@
         return;
       }
       const actionButton = event.target.closest('[data-action]');
-      if (action === 'detail-submit') {
-        finishDetailOperation(window.ProcessingService.submit(actionButton.dataset.id));
+      if (action === 'detail-edit') {
+        openEditPage(actionButton.dataset.id);
         return;
       }
       if (action === 'detail-audit') {
