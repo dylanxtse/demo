@@ -326,7 +326,7 @@
     items: [{
       goodsName: '鸡蛋液',
       isNetVegetable: true,
-      goodsCode: 'SIM-NET-EGG-LIQUID',
+      goodsCode: 'SP0300043',
       unit: 'KG',
       brand: '--',
       spec: '--',
@@ -341,7 +341,7 @@
   const simulatedSortingItem = {
     id: 'SORT-SIM-20260804-001',
     orderId: simulatedOrder.id,
-    goodsCode: 'SIM-NET-EGG-LIQUID',
+    goodsCode: 'SP0300043',
     isNetVegetable: true,
     goodsName: '鸡蛋液',
     customerName: simulatedOrder.customerName,

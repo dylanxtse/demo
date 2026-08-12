@@ -65,20 +65,7 @@
                 <tbody id="reviewTableBody"></tbody>
               </table>
             </div>
-            <div class="pagination">
-              <span class="page-total" id="reviewPageTotal">共 0 条数据</span>
-              <select class="page-size-select" id="reviewPageSize" aria-label="每页数量">
-                <option value="20">20 条/页</option>
-                <option value="50">50 条/页</option>
-                <option value="100">100 条/页</option>
-              </select>
-              <div class="page-btns" id="reviewPageButtons"></div>
-              <div class="page-jump">
-                <span>跳至</span>
-                <input id="reviewPageJump" type="text" value="1" aria-label="跳转页码">
-                <span>页</span>
-              </div>
-            </div>
+            <div class="pagination" id="reviewPagination"></div>
           </div>
         </section>
       </div>
@@ -144,6 +131,7 @@
     page: 1,
     pageSize: 20,
     totalPages: 1,
+    pagination: null,
     category: '全部',
     categorySearch: '',
     categories: [],
@@ -281,15 +269,7 @@
 
   function renderPagination() {
     state.totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
-    document.getElementById('reviewPageTotal').textContent = `共 ${state.total} 条数据`;
-    document.getElementById('reviewPageJump').value = String(state.page);
-    const start = Math.max(1, Math.min(state.page - 2, state.totalPages - 4));
-    const end = Math.min(state.totalPages, start + 4);
-    const buttons = [];
-    for (let page = start; page <= end; page += 1) {
-      buttons.push(`<button class="page-btn ${page === state.page ? 'active' : ''}" type="button" data-page="${page}">${page}</button>`);
-    }
-    document.getElementById('reviewPageButtons').innerHTML = buttons.join('');
+    state.pagination?.update({ page: state.page, pageSize: state.pageSize, total: state.total });
   }
 
   async function loadPage() {
@@ -345,7 +325,6 @@
     state.categorySearch = '';
     state.page = 1;
     state.pageSize = 20;
-    document.getElementById('reviewPageSize').value = '20';
     renderCategories();
     loadPage();
   }
@@ -508,12 +487,6 @@
         await loadPage();
       }
 
-      const pageTarget = event.target.closest('[data-page]');
-      if (pageTarget) {
-        state.page = Number(pageTarget.dataset.page);
-        await loadPage();
-      }
-
       const rowAction = event.target.closest('[data-row-action]');
       if (!rowAction || rowAction.disabled) return;
       const id = rowAction.dataset.id;
@@ -528,17 +501,6 @@
     document.getElementById('reviewCategorySearch').addEventListener('input', (event) => {
       state.categorySearch = event.target.value.trim();
       renderCategories();
-    });
-    document.getElementById('reviewPageSize').addEventListener('change', async (event) => {
-      state.pageSize = Number(event.target.value);
-      state.page = 1;
-      await loadPage();
-    });
-    document.getElementById('reviewPageJump').addEventListener('keydown', async (event) => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      state.page = Math.min(state.totalPages, Math.max(1, Number(event.target.value) || 1));
-      await loadPage();
     });
     ['reviewGoodsName', 'reviewBrand'].forEach((id) => {
       document.getElementById(id).addEventListener('keydown', (event) => {
@@ -557,6 +519,18 @@
 
   async function init() {
     window.AppShell.mount({ title: '商品审核', content: pageContent });
+    state.pagination = window.Pagination.create({
+      container: '#reviewPagination',
+      page: state.page,
+      pageSize: state.pageSize,
+      total: state.total,
+      pageSizeOptions: [20, 50, 100],
+      onChange: async ({ page, pageSize }) => {
+        state.page = page;
+        state.pageSize = pageSize;
+        await loadPage();
+      }
+    });
     bindEvents();
     state.categories = await window.GoodsReviewService.options('category');
     state.categories

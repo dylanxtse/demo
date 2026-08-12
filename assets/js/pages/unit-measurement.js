@@ -39,20 +39,7 @@
             <tbody id="unitTableBody"></tbody>
           </table>
         </div>
-        <div class="pagination">
-          <span class="page-total" id="unitPageTotal">共 0 条数据</span>
-          <select class="page-size-select" id="unitPageSize" aria-label="每页数量">
-            <option value="10">10 条/页</option>
-            <option value="20">20 条/页</option>
-            <option value="50">50 条/页</option>
-          </select>
-          <div class="page-btns" id="unitPageButtons"></div>
-          <div class="page-jump">
-            <span>跳至</span>
-            <input id="unitPageJump" type="text" value="1" aria-label="跳转页码">
-            <span>页</span>
-          </div>
-        </div>
+        <div class="pagination" id="unitPagination"></div>
       </div>
 
       <div class="unit-modal" id="unitFormModal" aria-hidden="true">
@@ -133,6 +120,7 @@
     page: 1,
     pageSize: 10,
     keyword: '',
+    pagination: null,
     editingId: null,
     deletingId: null,
     totalPages: 1,
@@ -198,16 +186,7 @@
 
   function renderPagination() {
     state.totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
-    document.getElementById('unitPageTotal').textContent = `共 ${state.total} 条数据`;
-    document.getElementById('unitPageJump').value = String(state.page);
-    const buttons = document.getElementById('unitPageButtons');
-    const pages = [];
-    const start = Math.max(1, Math.min(state.page - 2, state.totalPages - 4));
-    const end = Math.min(state.totalPages, start + 4);
-    for (let page = start; page <= end; page += 1) {
-      pages.push(`<button class="page-btn ${page === state.page ? 'active' : ''}" type="button" data-page="${page}">${page}</button>`);
-    }
-    buttons.innerHTML = pages.join('');
+    state.pagination?.update({ page: state.page, pageSize: state.pageSize, total: state.total });
   }
 
   async function loadPage() {
@@ -250,7 +229,6 @@
     state.keyword = '';
     state.page = 1;
     state.pageSize = 10;
-    document.getElementById('unitPageSize').value = '10';
     loadPage();
   }
 
@@ -447,12 +425,6 @@
       if (action === 'close-confirm') closeConfirm();
       if (action === 'confirm-delete') confirmDelete();
 
-      const pageButton = event.target.closest('[data-page]');
-      if (pageButton) {
-        state.page = Number(pageButton.dataset.page);
-        await loadPage();
-      }
-
       const rowAction = event.target.closest('[data-row-action]');
       if (!rowAction) return;
       const id = rowAction.dataset.id;
@@ -469,21 +441,21 @@
         query();
       }
     });
-    document.getElementById('unitPageSize').addEventListener('change', async (event) => {
-      state.pageSize = Number(event.target.value);
-      state.page = 1;
-      await loadPage();
-    });
-    document.getElementById('unitPageJump').addEventListener('keydown', async (event) => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      const targetPage = Math.min(state.totalPages, Math.max(1, Number(event.target.value) || 1));
-      state.page = targetPage;
-      await loadPage();
-    });
   }
 
   window.AppShell.mount({ title: '计量单位', content: pageContent });
+  state.pagination = window.Pagination.create({
+    container: '#unitPagination',
+    page: state.page,
+    pageSize: state.pageSize,
+    total: state.total,
+    pageSizeOptions: [10, 20, 50],
+    onChange: async ({ page, pageSize }) => {
+      state.page = page;
+      state.pageSize = pageSize;
+      await loadPage();
+    }
+  });
   bindEvents();
   loadPage();
 })();

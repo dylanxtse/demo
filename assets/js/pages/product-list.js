@@ -96,19 +96,7 @@
                 <tbody id="tableBody"></tbody>
               </table>
             </div>
-            <div class="pagination">
-              <span class="page-total">共 32 条数据</span>
-              <select class="page-size-select" aria-label="每页数量"><option>20 条/页</option><option>50 条/页</option><option>100 条/页</option></select>
-              <div class="page-btns">
-                <button class="page-btn active" type="button">1</button>
-                <button class="page-btn" type="button">2</button>
-              </div>
-              <div class="page-jump">
-                <span>跳至</span>
-                <input type="text" value="1" aria-label="跳转页码">
-                <span>页</span>
-              </div>
-            </div>
+            <div class="pagination" id="productPagination"></div>
           </div>
         </section>
       </div>
@@ -154,7 +142,12 @@
 
   const state = {
     products: window.ProductService.getList(),
+    filteredProducts: [],
     visibleProducts: [],
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    pagination: null,
     tree: JSON.parse(JSON.stringify(treeData)),
     treeSearch: ''
   };
@@ -264,7 +257,16 @@
     });
   }
 
-  function filterProducts() {
+  function renderProductPage() {
+    const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    state.page = Math.min(totalPages, Math.max(1, state.page));
+    const start = (state.page - 1) * state.pageSize;
+    state.visibleProducts = state.filteredProducts.slice(start, start + state.pageSize);
+    renderTable();
+    state.pagination?.update({ page: state.page, pageSize: state.pageSize, total: state.total });
+  }
+
+  function filterProducts(resetPage = false) {
     const value = (id) => document.getElementById(id).value.trim();
     const nameOrCode = value('productNameFilter').toLowerCase();
     const brand = value('brandFilter').toLowerCase();
@@ -280,14 +282,16 @@
       (source === '全部' || product.source === source) &&
       (netVegetable === '全部' || (netVegetable === '净菜' && product.isNetVegetable) || (netVegetable === '非净菜' && !product.isNetVegetable))
     ));
-    renderTable(result);
-    document.querySelector('.page-total').textContent = `共 ${result.length} 条数据`;
+    state.filteredProducts = result;
+    state.total = result.length;
+    if (resetPage) state.page = 1;
+    renderProductPage();
   }
 
   function resetFilters() {
     ['productNameFilter', 'brandFilter'].forEach((id) => { document.getElementById(id).value = ''; });
     ['statusFilter', 'purchaseTypeFilter', 'sourceFilter', 'netVegetableFilter'].forEach((id) => { document.getElementById(id).value = '全部'; });
-    filterProducts();
+    filterProducts(true);
   }
 
   function updateProductStatus(product, status, reason = '') {
@@ -379,7 +383,7 @@
         if (failures.length) window.alert([...new Set(failures)].join('\n'));
         return;
       }
-      if (action === 'query') filterProducts();
+      if (action === 'query') filterProducts(true);
       if (action === 'reset') resetFilters();
       if (action === 'add-product') window.location.href = './goodsAdd.html';
       if (action === 'edit-category') window.alert('编辑商品分类');
@@ -453,14 +457,27 @@
     });
     document.querySelectorAll('#productNameFilter, #brandFilter').forEach((input) => {
       input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') filterProducts();
+        if (event.key === 'Enter') filterProducts(true);
       });
     });
   }
 
   window.AppShell.mount({ title: '商品管理', content: pageContent });
-  state.visibleProducts = [...state.products];
+  state.filteredProducts = [...state.products];
+  state.total = state.filteredProducts.length;
+  state.pagination = window.Pagination.create({
+    container: '#productPagination',
+    page: state.page,
+    pageSize: state.pageSize,
+    total: state.total,
+    pageSizeOptions: [20, 50, 100],
+    onChange: ({ page, pageSize }) => {
+      state.page = page;
+      state.pageSize = pageSize;
+      renderProductPage();
+    }
+  });
   renderTree();
-  renderTable();
+  renderProductPage();
   bindEvents();
 })();

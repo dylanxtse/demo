@@ -5,8 +5,9 @@
 
   function load() {
     if (!window.DemoStore) throw new Error('统一数据仓库未加载');
-    return (window.DemoStore.get('products') || []).filter((product) => product && (product.code || product.id)).map((product) => ({
+    return (window.DemoStore.get('products') || []).filter((product) => product && (product.code || product.id)).map((product, index) => ({
       ...product,
+      seq: product.seq ?? index + 1,
       isNetVegetable: product.isNetVegetable ?? product.name === '土豆丝',
       purchaseType: product.purchaseType,
       defaultSupplier: product.defaultSupplier || '平台默认供应商',

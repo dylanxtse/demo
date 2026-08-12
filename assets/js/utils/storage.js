@@ -539,12 +539,34 @@
 
   function normalizeProductMetadata(state) {
     const seededNetVegetables = new Set(['SP0300039', 'SP0300020', 'SP0300019', 'SP0300034']);
+    const legacyEggLiquidCode = 'SIM-NET-EGG-LIQUID';
+    const eggLiquidCode = 'SP0300043';
     const shouldNormalizeSeedNetVegetables = state.productSeedRevision !== 'products-v4';
     let changed = false;
+    const replaceLegacyEggLiquidCode = (value) => {
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => { value[index] = replaceLegacyEggLiquidCode(item); });
+        return value;
+      }
+      if (value && typeof value === 'object') {
+        Object.keys(value).forEach((key) => { value[key] = replaceLegacyEggLiquidCode(value[key]); });
+        return value;
+      }
+      if (value === legacyEggLiquidCode) {
+        changed = true;
+        return eggLiquidCode;
+      }
+      return value;
+    };
+    replaceLegacyEggLiquidCode(state);
     (state.products || []).forEach((product, index) => {
       const productCode = product.code || product.productId;
       const isSeededNetVegetable = seededNetVegetables.has(productCode);
       const sourceProduct = window.MockProducts?.find((item) => (item.code || item.id) === productCode);
+      if (product.seq == null || product.seq === '') {
+        product.seq = index + 1;
+        changed = true;
+      }
       if (shouldNormalizeSeedNetVegetables && sourceProduct && product.isNetVegetable !== sourceProduct.isNetVegetable) {
         product.isNetVegetable = sourceProduct.isNetVegetable === true;
         changed = true;
@@ -1179,7 +1201,7 @@
       const productId = line.productId || line.goodsCode || '';
       if (!productId || seededProducts.has(productId)) return;
       const product = products.find((item) => item.id === productId);
-      const qty = productId === 'SIM-NET-EGG-LIQUID' ? 0 : Math.max(number(line.quantity) * 2, 100);
+      const qty = productId === 'SP0300043' ? 0 : Math.max(number(line.quantity) * 2, 100);
       ledger.push({
         id: `LEDGER-OPEN-FALLBACK-${String(index + 1).padStart(4, '0')}`,
         type: 'OPENING',

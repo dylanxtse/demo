@@ -43,6 +43,7 @@
     pageSize: 20,
     total: 0,
     items: [],
+    pagination: null,
     selected: new Set(),
     condition: {}
   };
@@ -186,17 +187,7 @@
   }
 
   function renderPagination() {
-    const pages = Math.max(1, Math.ceil(state.total / state.pageSize));
-    $('#pagination').innerHTML = `
-      <span>共 ${state.total} 条数据</span>
-      <select id="pageSize" aria-label="每页条数">
-        ${[10, 20, 50].map((size) => `<option value="${size}" ${size === state.pageSize ? 'selected' : ''}>${size} 条/页</option>`).join('')}
-      </select>
-      <button class="btn btn-sm" id="prevPage" ${state.page <= 1 ? 'disabled' : ''}>上一页</button>
-      <span>${state.page} / ${pages}</span>
-      <button class="btn btn-sm" id="nextPage" ${state.page >= pages ? 'disabled' : ''}>下一页</button>
-      <span>跳至</span><input id="jumpPage" value="${state.page}" aria-label="跳转页码">
-    `;
+    state.pagination?.update({ page: state.page, pageSize: state.pageSize, total: state.total });
   }
 
   function updateSelection() {
@@ -356,14 +347,6 @@
       URL.revokeObjectURL(url);
       return toast('导出成功');
     }
-    if (event.target.id === 'prevPage' && state.page > 1) {
-      state.page -= 1;
-      return load();
-    }
-    if (event.target.id === 'nextPage' && state.page < Math.ceil(state.total / state.pageSize)) {
-      state.page += 1;
-      return load();
-    }
   });
 
   root.addEventListener('change', (event) => {
@@ -377,25 +360,29 @@
       event.target.checked ? state.selected.add(id) : state.selected.delete(id);
       updateSelection();
     }
-    if (event.target.id === 'pageSize') {
-      state.pageSize = Number(event.target.value);
-      state.page = 1;
-      load();
-    }
   });
 
   root.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && event.target.id === 'jumpPage') {
-      const pages = Math.max(1, Math.ceil(state.total / state.pageSize));
-      state.page = Math.min(pages, Math.max(1, Number(event.target.value) || 1));
-      load();
-    }
     if (event.key === 'Enter' && event.target.closest('.operations-filter')) {
       state.condition = collectCondition();
       state.page = 1;
       load();
     }
     if (event.key === 'Escape' && overlay.innerHTML) closeModal();
+  });
+
+  state.pagination = window.Pagination.create({
+    container: '#pagination',
+    mode: 'compact',
+    page: state.page,
+    pageSize: state.pageSize,
+    total: state.total,
+    pageSizeOptions: [10, 20, 50],
+    onChange: ({ page, pageSize }) => {
+      state.page = page;
+      state.pageSize = pageSize;
+      return load();
+    }
   });
 
   load();
