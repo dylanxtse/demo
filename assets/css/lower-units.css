@@ -62,8 +62,8 @@
 .lower-units-form-field.full { grid-column: 1 / -1; }
 .lower-units-form-field label { color: var(--text-secondary); font-size: 13px; }
 .lower-units-form-field label.required::before { content: '*'; margin-right: 4px; color: var(--danger); }
-.lower-units-form-field input { width: 100%; height: 34px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; outline: none; font: inherit; }
-.lower-units-form-field input:focus { border-color: var(--primary); }
+.lower-units-form-field input, .lower-units-form-field select { width: 100%; height: 34px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; outline: none; background: #fff; font: inherit; }
+.lower-units-form-field input:focus, .lower-units-form-field select:focus { border-color: var(--primary); }
 .lower-units-form-field small { color: var(--text-tertiary); font-size: 12px; }
 .district-check-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 3px; }
 .district-check { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; cursor: pointer; }

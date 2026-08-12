@@ -2,8 +2,9 @@
   const escapeHtml = (value) => String(value ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const statusText = (status) => ({ PENDING_ENABLE: '待启用', ENABLE: '启用', DISABLE: '停用' }[status] || status || '--');
-  const statusClass = (status) => status === 'ENABLE' ? 'online' : status === 'PENDING_ENABLE' ? 'pending' : 'offline';
+  const statusText = (status) => ({ ENABLE: '启用', DISABLE: '停用' }[status] || status || '--');
+  const statusClass = (status) => status === 'ENABLE' ? 'online' : 'offline';
+  const defaultUserRole = '下属单位默认管理员';
   const districtOptions = window.OrganizationService.districtOptions;
   let editingId = '';
   let credential = null;
@@ -33,7 +34,7 @@
             <div class="lower-units-filter-main">
               <div class="lower-units-filter-item"><label for="companyKeyword">单位名称/联系人</label><input id="companyKeyword" value="${escapeHtml(filterState.keyword)}" placeholder="请输入单位名称、联系人"></div>
               <div class="lower-units-filter-item"><label for="companyDistrictFilter">负责区域</label><select id="companyDistrictFilter"><option value="">全部区域</option>${districtOptions.map((district) => `<option value="${escapeHtml(district)}" ${district === filterState.district ? 'selected' : ''}>${escapeHtml(district)}</option>`).join('')}</select></div>
-              <div class="lower-units-filter-item"><label for="companyStatusFilter">状态</label><select id="companyStatusFilter"><option value="">全部状态</option><option value="PENDING_ENABLE" ${filterState.status === 'PENDING_ENABLE' ? 'selected' : ''}>待启用</option><option value="ENABLE" ${filterState.status === 'ENABLE' ? 'selected' : ''}>启用</option><option value="DISABLE" ${filterState.status === 'DISABLE' ? 'selected' : ''}>停用</option></select></div>
+              <div class="lower-units-filter-item"><label for="companyStatusFilter">状态</label><select id="companyStatusFilter"><option value="">全部状态</option><option value="ENABLE" ${filterState.status === 'ENABLE' ? 'selected' : ''}>启用</option><option value="DISABLE" ${filterState.status === 'DISABLE' ? 'selected' : ''}>停用</option></select></div>
             </div>
             <div class="lower-units-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="query-companies">查询</button><button class="btn btn-sm" type="button" data-action="reset-company-filter">重置</button></div>
           </div>
@@ -82,6 +83,7 @@
       <div class="lower-units-dialog-body"><div class="lower-units-form-grid">
         <div class="lower-units-form-field full"><label class="required">下级单位名称</label><input id="companyName" value="${escapeHtml(company?.name || '')}" placeholder="请输入下级单位名称"></div>
         <div class="lower-units-form-field full"><label class="required">管理员用户名</label><input id="companyAdminUsername" value="${escapeHtml(window.OrganizationService.getAdmin(company?.id)?.username || '')}" placeholder="请设置管理员用户名"></div>
+        <div class="lower-units-form-field full"><label>用户角色</label><select id="companyUserRole"><option value="${escapeHtml(defaultUserRole)}" selected>${escapeHtml(defaultUserRole)}</option></select></div>
         <div class="lower-units-form-field"><label>联系人</label><input id="companyContact" value="${escapeHtml(company?.contact || '')}" placeholder="请输入联系人"></div>
         <div class="lower-units-form-field"><label>联系电话</label><input id="companyPhone" value="${escapeHtml(company?.phone || '')}" placeholder="请输入联系电话"></div>
         <div class="lower-units-form-field full"><label>地址</label><input id="companyAddress" value="${escapeHtml(company?.address || '')}" placeholder="请输入"></div>
@@ -167,6 +169,7 @@
         const data = {
           name: companyModal?.querySelector('#companyName')?.value ?? currentCompany?.name ?? '',
           adminUsername: companyModal?.querySelector('#companyAdminUsername')?.value ?? '',
+          userRole: companyModal?.querySelector('#companyUserRole')?.value ?? defaultUserRole,
           contact: companyModal?.querySelector('#companyContact')?.value ?? '',
           phone: companyModal?.querySelector('#companyPhone')?.value ?? '',
           address: companyModal?.querySelector('#companyAddress')?.value ?? '',

@@ -63,15 +63,15 @@
         },
         {
           id: 'COMP-SUB-001', code: 'SUB001', name: '东城学校食材供应链有限公司',
-          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'PENDING_ENABLE', contact: '张经理', phone: '13800000001', address: '东城区', districts: ['东城区', '通州区'], createdAt, updatedAt: createdAt, operator: '总公司管理员', demoVersion: 2
+          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'ENABLE', contact: '张经理', phone: '13800000001', address: '东城区', districts: ['东城区', '通州区'], createdAt, updatedAt: createdAt, operator: '总公司管理员', demoVersion: 3
         },
         {
           id: 'COMP-SUB-002', code: 'SUB002', name: '西城学校食材供应链有限公司',
-          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'ENABLE', contact: '李经理', phone: '13800000002', address: '西城区', districts: ['西城区', '丰台区'], createdAt: '2026-08-11 14:20:00', updatedAt: '2026-08-12 10:10:00', operator: '总公司管理员', demoVersion: 2
+          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'ENABLE', contact: '李经理', phone: '13800000002', address: '西城区', districts: ['西城区', '丰台区'], createdAt: '2026-08-11 14:20:00', updatedAt: '2026-08-12 10:10:00', operator: '总公司管理员', demoVersion: 3
         },
         {
           id: 'COMP-SUB-003', code: 'SUB003', name: '北部学校食材供应链有限公司',
-          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'DISABLE', contact: '王经理', phone: '13800000003', address: '昌平区', districts: ['昌平区', '顺义区'], createdAt: '2026-08-10 11:05:00', updatedAt: '2026-08-12 09:45:00', operator: '总公司管理员', demoVersion: 2
+          parentId: 'COMP-HEAD-001', type: 'SUBSIDIARY', status: 'DISABLE', contact: '王经理', phone: '13800000003', address: '昌平区', districts: ['昌平区', '顺义区'], createdAt: '2026-08-10 11:05:00', updatedAt: '2026-08-12 09:45:00', operator: '总公司管理员', demoVersion: 3
         }
       ],
       users: [
@@ -81,15 +81,15 @@
         },
         {
           id: 'USER-SUB-001-ADMIN', companyId: 'COMP-SUB-001', username: 'subadmin', displayName: '子公司管理员',
-          role: 'SUB_COMPANY_ADMIN', status: 'PENDING_ENABLE', password: '1234567Aa', forceChangePassword: false, districts: ['东城区', '通州区'], createdAt, demoVersion: 2
+          role: 'SUB_COMPANY_ADMIN', userRole: '下属单位默认管理员', status: 'ENABLE', password: '1234567Aa', forceChangePassword: false, districts: ['东城区', '通州区'], createdAt, demoVersion: 3
         },
         {
           id: 'USER-SUB-002-ADMIN', companyId: 'COMP-SUB-002', username: 'xicheng_admin', displayName: '子公司管理员',
-          role: 'SUB_COMPANY_ADMIN', status: 'ENABLE', password: '1234567Aa', forceChangePassword: false, districts: ['西城区', '丰台区'], createdAt: '2026-08-11 14:20:00', demoVersion: 2
+          role: 'SUB_COMPANY_ADMIN', userRole: '下属单位默认管理员', status: 'ENABLE', password: '1234567Aa', forceChangePassword: false, districts: ['西城区', '丰台区'], createdAt: '2026-08-11 14:20:00', demoVersion: 3
         },
         {
           id: 'USER-SUB-003-ADMIN', companyId: 'COMP-SUB-003', username: 'north_admin', displayName: '子公司管理员',
-          role: 'SUB_COMPANY_ADMIN', status: 'DISABLE', password: '1234567Aa', forceChangePassword: false, districts: ['昌平区', '顺义区'], createdAt: '2026-08-10 11:05:00', demoVersion: 2
+          role: 'SUB_COMPANY_ADMIN', userRole: '下属单位默认管理员', status: 'DISABLE', password: '1234567Aa', forceChangePassword: false, districts: ['昌平区', '顺义区'], createdAt: '2026-08-10 11:05:00', demoVersion: 3
         }
       ],
       session: { companyId: 'COMP-HEAD-001', userId: 'USER-HEAD-ADMIN', username: 'admin', displayName: '管理员', role: 'HQ_ADMIN' }
@@ -130,6 +130,10 @@
       }
     });
     current.companies.forEach((company) => {
+      if (company.type === 'SUBSIDIARY' && company.status === 'PENDING_ENABLE') {
+        company.status = 'ENABLE';
+        changed = true;
+      }
       if (!Array.isArray(company.districts)) {
         company.districts = company.id === 'COMP-SUB-001' ? ['东城区', '通州区'] : [];
         changed = true;
@@ -144,6 +148,14 @@
       }
     });
     current.users.forEach((user) => {
+      if (user.role === 'SUB_COMPANY_ADMIN' && user.status === 'PENDING_ENABLE') {
+        user.status = 'ENABLE';
+        changed = true;
+      }
+      if (user.role === 'SUB_COMPANY_ADMIN' && user.userRole !== '下属单位默认管理员') {
+        user.userRole = '下属单位默认管理员';
+        changed = true;
+      }
       if (!Array.isArray(user.districts)) {
         const company = current.companies.find((item) => item.id === user.companyId);
         user.districts = company?.districts || [];

@@ -1,5 +1,6 @@
 (function () {
   const DEFAULT_ADMIN_PASSWORD = '1234567Aa';
+  const DEFAULT_USER_ROLE = '下属单位默认管理员';
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -35,7 +36,8 @@
       username: normalizedUsername,
       displayName: '子公司管理员',
       role: 'SUB_COMPANY_ADMIN',
-      status: 'PENDING_ENABLE',
+      userRole: DEFAULT_USER_ROLE,
+      status: 'ENABLE',
       password,
       forceChangePassword: false,
       districts: normalizeDistricts(districts),
@@ -80,7 +82,7 @@
         name,
         parentId: headquarters?.id || '',
         type: 'SUBSIDIARY',
-        status: 'PENDING_ENABLE',
+        status: 'ENABLE',
         contact: String(data.contact || '').trim(),
         phone: String(data.phone || '').trim(),
         address: String(data.address || '').trim(),
@@ -120,6 +122,7 @@
         const admin = state.users.find((user) => user.companyId === id && user.role === 'SUB_COMPANY_ADMIN');
         if (admin) {
           admin.username = adminUsername;
+          admin.userRole = DEFAULT_USER_ROLE;
           admin.districts = districts;
         }
         return clone(company);
