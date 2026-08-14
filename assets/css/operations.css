@@ -369,6 +369,10 @@
   align-items: flex-start;
 }
 
+.operations-form-item.full-row {
+  grid-column: 1 / -1;
+}
+
 .operations-form-item > label,
 .operations-detail-item dt {
   width: 120px;
@@ -376,6 +380,10 @@
   padding-top: 8px;
   color: var(--text-secondary);
   text-align: right;
+}
+
+.operations-form-item > label {
+  margin-right: 8px;
 }
 
 .operations-form-item.required > label::before {
@@ -410,6 +418,52 @@
 .operations-form-control {
   min-width: 0;
   flex: 1;
+}
+
+.operations-multi-select {
+  display: grid;
+  max-height: 128px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 9px 10px;
+  background: #fff;
+}
+
+.operations-form-item.full-row .operations-multi-select {
+  grid-template-columns: 1fr;
+}
+
+.operations-multi-option {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: 22px;
+}
+
+.operations-form-item .operations-multi-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin: 0;
+}
+
+.operations-multi-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operations-form-item.full-row .operations-multi-option span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .operations-field-error {

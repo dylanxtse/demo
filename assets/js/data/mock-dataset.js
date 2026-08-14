@@ -250,9 +250,9 @@
   ];
 
   const warehouses = [
-    { id: 'WH-001', warehouseCode: 'CK0001', warehouseName: '中心仓', address: '上海市浦东新区集采路18号', manager: '周仓管', phone: '13800001001', status: 'ENABLE', referenced: true, createdAt: '2025-10-18 09:30:00' },
-    { id: 'WH-002', warehouseCode: 'CK0002', warehouseName: '北区仓', address: '上海市宝山区配送路6号', manager: '陈仓管', phone: '13800001002', status: 'ENABLE', referenced: true, createdAt: '2025-11-06 14:22:00' },
-    { id: 'WH-003', warehouseCode: 'CK0003', warehouseName: '临时仓', address: '上海市嘉定区临仓路9号', manager: '李仓管', phone: '13800001003', status: 'DISABLE', referenced: false, createdAt: '2026-06-12 11:03:00' }
+    { id: 'WH-001', warehouseCode: 'CK0163824', enterpriseCode: '01', warehouseName: '中心仓', operatingCompanyIds: ['COMP-SUB-001', 'COMP-SUB-002'], address: '上海市浦东新区集采路18号', manager: '周仓管', phone: '13800001001', status: 'ENABLE', referenced: true, createdAt: '2025-10-18 09:30:00' },
+    { id: 'WH-002', warehouseCode: 'CK0148176', enterpriseCode: '01', warehouseName: '北区仓', operatingCompanyIds: ['COMP-SUB-002'], address: '上海市宝山区配送路6号', manager: '陈仓管', phone: '13800001002', status: 'ENABLE', referenced: true, createdAt: '2025-11-06 14:22:00' },
+    { id: 'WH-003', warehouseCode: 'CK0193052', enterpriseCode: '01', warehouseName: '临时仓', operatingCompanyIds: ['COMP-SUB-001'], address: '上海市嘉定区临仓路9号', manager: '李仓管', phone: '13800001003', status: 'DISABLE', referenced: false, createdAt: '2026-06-12 11:03:00' }
   ];
 
   const shippingOrders = [
@@ -357,12 +357,12 @@
     remark: simulatedOrder.remark,
     stock: 0,
     status: 'PENDING',
-    sorter: '',
-    sortingAt: '',
+    sorter: '待分配',
+    sortingAt: '待分拣',
     warehouse: simulatedOrder.warehouse,
     category: '净菜加工',
     shortage: '否',
-    supplier: '--',
+    supplier: '净菜加工演示供应商',
     expectedAt: simulatedOrder.expectedAt
   };
 

@@ -411,14 +411,29 @@
     }
 
     function formControl(field, item) {
-      let value = item?.[field.key] ?? field.defaultValue ?? '';
+      const defaultValue = typeof field.defaultValue === 'function' ? field.defaultValue(item) : field.defaultValue;
+      let value = item?.[field.key] ?? defaultValue ?? '';
       if (field.type === 'datetime-local') value = String(value).replace(' ', 'T');
+      const selectedValues = Array.isArray(value) ? value.map(String) : (value === '' ? [] : [String(value)]);
       const input = field.options
-        ? `<select name="${field.key}"><option value="">请选择</option>${field.options.map((option) => `<option value="${escapeHtml(option)}" ${String(value) === String(option) ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}</select>`
+        ? field.multiple
+          ? `<div class="operations-multi-select" role="group" aria-label="${escapeHtml(field.label)}">${field.options.map((option) => {
+            const optionValue = typeof option === 'string' ? option : option.value;
+            const optionLabel = typeof option === 'string' ? option : option.label;
+            return `<label class="operations-multi-option"><input type="checkbox" name="${escapeHtml(field.key)}" value="${escapeHtml(optionValue)}" ${selectedValues.includes(String(optionValue)) ? 'checked' : ''}><span>${escapeHtml(optionLabel)}</span></label>`;
+          }).join('')}</div>`
+          : `<select name="${field.key}"><option value="">请选择</option>${field.options.map((option) => {
+          const optionValue = typeof option === 'string' ? option : option.value;
+          const optionLabel = typeof option === 'string' ? option : option.label;
+          return `<option value="${escapeHtml(optionValue)}" ${selectedValues.includes(String(optionValue)) ? 'selected' : ''}>${escapeHtml(optionLabel)}</option>`;
+        }).join('')}</select>`
         : field.type === 'textarea'
           ? `<textarea name="${field.key}" placeholder="请输入">${escapeHtml(value)}</textarea>`
-          : `<input name="${field.key}" type="${field.type || 'text'}" value="${escapeHtml(value)}" placeholder="${field.placeholder || '请输入'}">`;
-      return `<div class="operations-form-item ${field.required ? 'required' : ''}"><label>${field.label}</label><div class="operations-form-control">${input}<div class="operations-field-error"></div></div></div>`;
+          : `<input name="${field.key}" type="${field.type || 'text'}" value="${escapeHtml(value)}" placeholder="${field.placeholder || '请输入'}"${field.readonly ? ' readonly' : ''}>`;
+      const itemClass = ['operations-form-item', field.required ? 'required' : '', field.fullRow ? 'full-row' : '']
+        .filter(Boolean)
+        .join(' ');
+      return `<div class="${itemClass}"><label>${field.label}</label><div class="operations-form-control">${input}<div class="operations-field-error"></div></div></div>`;
     }
 
     function showForm(item, overrideFields, overrideTitle) {
@@ -429,15 +444,30 @@
       );
       $('#recordSave').onclick = async () => {
         const form = $('#recordForm');
-        const data = Object.fromEntries(new FormData(form).entries());
+        const data = {};
+        fields.forEach((field) => {
+          if (field.multiple) {
+            data[field.key] = [...form.querySelectorAll(`[name="${field.key}"]`)]
+              .filter((control) => control.checked)
+              .map((control) => control.value);
+          } else {
+            const control = form.elements[field.key];
+            data[field.key] = control?.value ?? '';
+          }
+        });
         fields.forEach((field) => {
           if (field.type === 'number') data[field.key] = Number(data[field.key]);
           if (field.type === 'datetime-local') data[field.key] = data[field.key].replace('T', ' ');
         });
-        const missing = fields.find((field) => field.required && (data[field.key] === '' || data[field.key] == null));
+        const missing = fields.find((field) => field.required && (
+          data[field.key] === '' || data[field.key] == null || (field.multiple && !data[field.key].length)
+        ));
         if (missing) {
-          const input = form.elements[missing.key];
-          input.closest('.operations-form-control').querySelector('.operations-field-error').textContent = '此项必填';
+          const fieldControl = missing.multiple
+            ? form.querySelector(`[name="${missing.key}"]`)?.closest('.operations-multi-select')
+            : form.elements[missing.key];
+          const errorElement = fieldControl?.closest('.operations-form-control')?.querySelector('.operations-field-error');
+          if (errorElement) errorElement.textContent = '此项必填';
           return;
         }
         try {

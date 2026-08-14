@@ -121,6 +121,7 @@
     inboundOrders: ['id', 'entryTime', 'supplierPurchaserCustomerName', 'warehouseName', 'entryAmt', 'status', 'items'],
     outboundOrders: ['id', 'outboundTime', 'supplierPurchaserCustomerName', 'warehouseName', 'outboundAmt', 'status', 'items'],
     processingOrders: ['id', 'processingDate', 'warehouse', 'status', 'materials', 'outputs'],
+    warehouses: ['warehouseCode', 'warehouseName', 'operatingCompanyIds', 'address'],
     returns: ['returnNo', 'customerName', 'canteen', 'reason', 'status', 'items'],
     receiptChanges: ['changeNo', 'customerName', 'canteen', 'orderNo', 'status', 'items']
   });
@@ -191,6 +192,27 @@
   function businessCode(value, fallback = '03') {
     const digits = String(value || '').replace(/\D/g, '');
     return (digits ? digits.slice(-2) : String(fallback || '03').replace(/\D/g, '').slice(-2)).padStart(2, '0');
+  }
+
+  function warehouseEnterpriseCode(value, fallback = '01') {
+    return businessCode(value, fallback);
+  }
+
+  function warehouseCodeRegex(enterpriseCode = '01') {
+    return new RegExp(`^CK${warehouseEnterpriseCode(enterpriseCode, '01')}\\d{5}$`);
+  }
+
+  function createWarehouseCode(records = [], enterpriseCode = '01') {
+    const code = warehouseEnterpriseCode(enterpriseCode, '01');
+    const used = new Set((records || []).map((record) => String(record?.warehouseCode || '')));
+    for (let attempt = 0; attempt < 1000; attempt += 1) {
+      const randomCode = String(Math.floor(Math.random() * 90000) + 10000);
+      const candidate = `CK${code}${randomCode}`;
+      if (!used.has(candidate)) return candidate;
+    }
+    let sequence = 10000;
+    while (used.has(`CK${code}${sequence}`)) sequence += 1;
+    return `CK${code}${String(sequence).padStart(5, '0').slice(-5)}`;
   }
 
   function documentRegex(resourceOrPrefix) {
@@ -294,6 +316,9 @@
     normalizeDateTime,
     datePart,
     businessCode,
+    warehouseEnterpriseCode,
+    warehouseCodeRegex,
+    createWarehouseCode,
     documentRegex,
     documentNumber,
     canonicalDocumentNumber,

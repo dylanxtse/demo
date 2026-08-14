@@ -124,6 +124,7 @@
         return expected.some((candidate) => window.BusinessRules.normalizeStatus(resource, candidate) === actualStatus);
       }
       if (Array.isArray(value)) return value.includes(item[key]);
+      if (Array.isArray(item[key])) return item[key].some((entry) => normalize(entry).includes(normalize(value)));
       return normalize(item[key]).includes(normalize(value));
     });
   }
@@ -148,6 +149,30 @@
       return Math.max(max, match ? Number(match[1]) : 0);
     }, 0);
     return `DD${date}${customerCode}${String(maxSequence + 1).padStart(5, '0').slice(-5)}`;
+  }
+
+  function currentWarehouseEnterpriseCode(data = {}) {
+    const explicitCode = data.enterpriseCode || data.companyCode || data.businessCode;
+    if (explicitCode) return window.BusinessRules.warehouseEnterpriseCode(explicitCode, '01');
+    const session = window.DemoStore?.getSession?.();
+    const company = window.DemoStore?.get('companies')?.find((item) => item.id === session?.companyId);
+    return window.BusinessRules.warehouseEnterpriseCode(company?.code || session?.companyId, '01');
+  }
+
+  function prepareWarehouseData(data, items) {
+    const enterpriseCode = currentWarehouseEnterpriseCode(data);
+    const companyIds = Array.isArray(data.operatingCompanyIds)
+      ? data.operatingCompanyIds
+      : [data.operatingCompanyId || data.companyId].filter(Boolean);
+    const payload = {
+      ...clone(data),
+      enterpriseCode,
+      operatingCompanyIds: [...new Set(companyIds.map(String).filter(Boolean))],
+      warehouseCode: data.warehouseCode || window.BusinessRules.createWarehouseCode(items, enterpriseCode)
+    };
+    ['operatingCompanyId', 'companyId', 'operatorCompanyId', 'responsibleDistricts', 'responsibleArea', 'districts']
+      .forEach((key) => delete payload[key]);
+    return payload;
   }
 
   function statusForAction(action) {
@@ -216,7 +241,7 @@
     const requiredByResource = {
       tags: ['tagName'],
       sorters: ['sorterName', 'username', 'phone', 'warehouse'],
-      warehouses: ['warehouseCode', 'warehouseName', 'address'],
+      warehouses: ['warehouseCode', 'warehouseName', 'operatingCompanyIds', 'address'],
       orders: ['customerName', 'canteen', 'expectedAt', 'orderTag', 'items'],
       returns: ['returnMode', 'customerName', 'canteen', 'reason', 'items'],
       receiptChanges: ['customerName', 'canteen', 'orderNo', 'changeReason', 'items'],
@@ -225,7 +250,9 @@
       qualityReports: ['inboundNo', 'goodsName', 'warehouse']
     };
     (requiredByResource[resource] || []).forEach((key) => {
-      if (data[key] === '' || data[key] == null) throw error('FIELD_REQUIRED', '请完整填写必填项');
+      if (data[key] === '' || data[key] == null || (Array.isArray(data[key]) && data[key].length === 0)) {
+        throw error('FIELD_REQUIRED', '请完整填写必填项');
+      }
     });
     if (resource === 'orders' && (!Array.isArray(data.items) || data.items.length === 0)) {
       throw error('ORDER_GOODS_REQUIRED', '请至少添加一个商品');
@@ -246,6 +273,10 @@
       throw error('INVALID_USERNAME', '请输入6～20位字母或数字组成的用户名');
     }
     if (resource === 'warehouses') {
+      const enterpriseCode = currentWarehouseEnterpriseCode(data);
+      if (!window.BusinessRules.warehouseCodeRegex(enterpriseCode).test(String(data.warehouseCode || ''))) {
+        throw error('INVALID_WAREHOUSE_CODE', '仓库编码必须为CK加两位企业编码和五位随机码');
+      }
       const duplicate = load(resource).some((item) =>
         item.id !== currentId && (
           normalize(item.warehouseCode) === normalize(data.warehouseCode) ||
@@ -280,13 +311,14 @@
     async create(resource, data) {
       if (resource === 'orders' && window.OrderFlowService) return window.OrderFlowService.createOrder(data);
       const items = load(resource);
-      validate(resource, data);
+      const payload = resource === 'warehouses' ? prepareWarehouseData(data, items) : data;
+      validate(resource, payload);
       const now = window.BusinessRules.now();
       const created = {
         id: nextId(resource, items),
-        status: window.BusinessRules.normalizeStatus(resource, data.status || 'PENDING'),
+        status: window.BusinessRules.normalizeStatus(resource, payload.status || 'PENDING'),
         createdAt: now,
-        ...clone(data)
+        ...clone(payload)
       };
       created.status = window.BusinessRules.normalizeStatus(resource, created.status);
       if (resource === 'orders') created.orderNo ||= nextOrderNumber(items, created.customerName);
@@ -347,11 +379,14 @@
       const items = load(resource);
       const index = items.findIndex((item) => item.id === id);
       if (index < 0) throw error('RECORD_NOT_FOUND', '记录不存在或已删除');
-      validate(resource, { ...items[index], ...data }, id);
+      const payload = resource === 'warehouses'
+        ? prepareWarehouseData({ ...items[index], ...data }, items)
+        : data;
+      validate(resource, { ...items[index], ...payload }, id);
       items[index] = {
         ...items[index],
-        ...clone(data),
-        status: window.BusinessRules.normalizeStatus(resource, data.status || items[index].status),
+        ...clone(payload),
+        status: window.BusinessRules.normalizeStatus(resource, payload.status || items[index].status),
         updatedAt: window.BusinessRules.now()
       };
       if (resource === 'openingInventory') {

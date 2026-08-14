@@ -198,8 +198,7 @@
   window.AppSidebar = {
     getVisibleMenu() {
       const menu = window.AppMenuConfig.menu;
-      const session = window.DemoStore?.getSession?.();
-      return session?.role === 'HQ_ADMIN' ? menu : menu.filter((item) => item.name !== '系统管理');
+      return menu;
     },
     render() {
       const menu = this.getVisibleMenu();

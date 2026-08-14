@@ -302,33 +302,100 @@
 
   function sourceWarehouses() {
     const warehouses = window.MockOperations?.warehouses || [];
+    const demoWarehouseSuffixes = ['63824', '48176', '93052', '27419', '80537', '16742', '59208', '71463', '35691', '84205', '21984', '50731', '78614', '46328', '97502', '13067', '62495', '34870', '85921', '24608'];
+    const demoEnterpriseCode = '01';
+    const demoWarehouseCode = (index) => `CK${demoEnterpriseCode}${demoWarehouseSuffixes[index % demoWarehouseSuffixes.length]}`;
     if (warehouses.length) {
       const normalized = clone(warehouses).map((warehouse, index) => ({
-      ...warehouse,
-      id: warehouse.id || `WH-${String(index + 1).padStart(3, '0')}`,
-      warehouseId: warehouse.id || `WH-${String(index + 1).padStart(3, '0')}`,
-      warehouseName: warehouse.warehouseName || warehouse.name || `仓库${index + 1}`
+        ...warehouse,
+        id: warehouse.id || `WH-${String(index + 1).padStart(3, '0')}`,
+        warehouseId: warehouse.id || `WH-${String(index + 1).padStart(3, '0')}`,
+        enterpriseCode: warehouse.enterpriseCode || demoEnterpriseCode,
+        warehouseCode: window.BusinessRules.warehouseCodeRegex(warehouse.enterpriseCode || demoEnterpriseCode).test(String(warehouse.warehouseCode || ''))
+          ? warehouse.warehouseCode
+          : demoWarehouseCode(index),
+        warehouseName: warehouse.warehouseName || warehouse.name || `仓库${index + 1}`,
+        createdAt: warehouse.createdAt || `2026-08-${String((index % 9) + 1).padStart(2, '0')} 09:00:00`
       }));
       return padRecords(normalized, 20, (index) => ({
         id: `WH-${String(index + 1).padStart(3, '0')}`,
         warehouseId: `WH-${String(index + 1).padStart(3, '0')}`,
-        warehouseCode: `CK${String(index + 1).padStart(4, '0')}`,
+        warehouseCode: demoWarehouseCode(index),
+        enterpriseCode: demoEnterpriseCode,
         warehouseName: ['冷链分拨仓', '南区配送仓', '西区周转仓', '东区备货仓', '北门收货仓', '江湾备货仓', '浦东配送仓', '浦西周转仓', '学校专供仓', '果蔬冷藏仓', '粮油仓', '水产暂存仓', '成品待发仓', '退货暂存仓', '应急保供仓', '夜间配送仓', '干货仓', '冷藏二仓', '华东干线仓', '南站中转仓'][index],
         address: `仓储路${index + 1}号`,
-        status: 'ENABLE'
+        status: 'ENABLE',
+        referenced: false,
+        createdAt: `2026-08-${String((index % 9) + 1).padStart(2, '0')} 09:00:00`
       }));
     }
     return padRecords([
-      { id: 'WH-001', warehouseId: 'WH-001', warehouseCode: 'CK0001', warehouseName: '中心仓', address: '集采路18号', status: 'ENABLE' },
-      { id: 'WH-002', warehouseId: 'WH-002', warehouseCode: 'CK0002', warehouseName: '北区仓', address: '配送路6号', status: 'ENABLE' }
+      { id: 'WH-001', warehouseId: 'WH-001', warehouseCode: 'CK0163824', enterpriseCode: demoEnterpriseCode, warehouseName: '中心仓', address: '集采路18号', status: 'ENABLE', createdAt: '2025-10-18 09:30:00' },
+      { id: 'WH-002', warehouseId: 'WH-002', warehouseCode: 'CK0148176', enterpriseCode: demoEnterpriseCode, warehouseName: '北区仓', address: '配送路6号', status: 'ENABLE', createdAt: '2025-11-06 14:22:00' }
     ], 20, (index) => ({
       id: `WH-${String(index + 1).padStart(3, '0')}`,
       warehouseId: `WH-${String(index + 1).padStart(3, '0')}`,
-      warehouseCode: `CK${String(index + 1).padStart(4, '0')}`,
+      warehouseCode: demoWarehouseCode(index + 2),
+      enterpriseCode: demoEnterpriseCode,
       warehouseName: ['冷链分拨仓', '南区配送仓', '西区周转仓', '东区备货仓', '北门收货仓', '江湾备货仓', '浦东配送仓', '浦西周转仓', '学校专供仓', '果蔬冷藏仓', '粮油仓', '水产暂存仓', '成品待发仓', '退货暂存仓', '应急保供仓', '夜间配送仓', '干货仓', '冷藏二仓', '华东干线仓', '南站中转仓'][index],
       address: `仓储路${index + 1}号`,
-      status: 'ENABLE'
+      status: 'ENABLE',
+      referenced: false,
+      createdAt: `2026-08-${String((index % 9) + 1).padStart(2, '0')} 09:00:00`
     }));
+  }
+
+  function normalizeWarehouseCodes(current) {
+    if (!Array.isArray(current.warehouses)) return false;
+    const company = current.companies?.find((item) => item.id === current.session?.companyId);
+    const subsidiaryIds = (current.companies || [])
+      .filter((item) => item.type === 'SUBSIDIARY')
+      .map((item) => item.id);
+    const changedWarehouses = new Set();
+    let changed = false;
+    current.warehouses.forEach((warehouse, index) => {
+      const enterpriseCode = window.BusinessRules.warehouseEnterpriseCode(
+        warehouse.enterpriseCode || warehouse.companyCode || company?.code || current.session?.companyId,
+        '01'
+      );
+      const isValid = window.BusinessRules.warehouseCodeRegex(enterpriseCode).test(String(warehouse.warehouseCode || ''));
+      const duplicate = changedWarehouses.has(String(warehouse.warehouseCode || ''));
+      if (!isValid || duplicate) {
+        warehouse.warehouseCode = window.BusinessRules.createWarehouseCode(current.warehouses, enterpriseCode);
+        changed = true;
+      }
+      changedWarehouses.add(String(warehouse.warehouseCode));
+      if (warehouse.enterpriseCode !== enterpriseCode) {
+        warehouse.enterpriseCode = enterpriseCode;
+        changed = true;
+      }
+      if (!warehouse.warehouseId) {
+        warehouse.warehouseId = warehouse.id || `WH-${String(index + 1).padStart(3, '0')}`;
+        changed = true;
+      }
+      if (!warehouse.createdAt) {
+        warehouse.createdAt = timestamp();
+        changed = true;
+      }
+      const legacyOperatingCompanyIds = Array.isArray(warehouse.operatingCompanyIds)
+        ? warehouse.operatingCompanyIds
+        : [warehouse.operatingCompanyId || warehouse.companyId || warehouse.operatorCompanyId].filter(Boolean);
+      const operatingCompanyIds = [...new Set(legacyOperatingCompanyIds.filter((id) => subsidiaryIds.includes(id)))];
+      if (!operatingCompanyIds.length && subsidiaryIds.length) {
+        operatingCompanyIds.push(subsidiaryIds[index % subsidiaryIds.length]);
+      }
+      if (JSON.stringify(warehouse.operatingCompanyIds || []) !== JSON.stringify(operatingCompanyIds)) {
+        warehouse.operatingCompanyIds = operatingCompanyIds;
+        changed = true;
+      }
+      ['companyId', 'operatorCompanyId', 'operatingCompanyId', 'responsibleDistricts', 'responsibleArea', 'districts'].forEach((key) => {
+        if (key in warehouse) {
+          delete warehouse[key];
+          changed = true;
+        }
+      });
+    });
+    return changed;
   }
 
   function padRecords(records, minimum, factory) {
@@ -1405,7 +1472,8 @@
       const processingIdsNormalized = normalizeProcessingIds(state);
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
       const contractsNormalized = normalizeStateContracts(state);
-      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized) persist();
+      const warehouseCodesNormalized = normalizeWarehouseCodes(state);
+      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized) persist();
     }
     else {
       state = buildSeed();
@@ -1418,6 +1486,7 @@
       normalizeProcessingIds(state);
       normalizeProcessingOutputs(state);
       normalizeStateContracts(state);
+      normalizeWarehouseCodes(state);
       persist();
     }
     return state;
@@ -1519,6 +1588,7 @@
     reset() {
       state = buildSeed();
       normalizeStateContracts(state);
+      normalizeWarehouseCodes(state);
       persist();
       return clone(state);
     },

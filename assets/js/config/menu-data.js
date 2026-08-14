@@ -16,14 +16,14 @@
 
   const menu = [
     { name: '首页', icon: 'home' },
-    { name: '商品档案', icon: 'box', active: true, expanded: true, children: [
+    { name: '商品档案', icon: 'box', active: true, expanded: false, children: [
       { name: '商品管理', selected: true, href: './index.html' },
       { name: '商品审核', href: './goods-review.html' },
       { name: '计量单位', href: './unit-measurement.html' }
     ]},
     { name: '价格管理', icon: 'tag', children: [
       { name: '采购价', children: ['询价报价', '采购协议价'] },
-      '价格执行清单',
+      { name: '价格执行清单', href: './price-execution-list.html' },
       { name: '销售价', children: ['市场询价', '销售协议价', '结算改价'] }
     ] },
     { name: '订单管理', icon: 'cart', children: [

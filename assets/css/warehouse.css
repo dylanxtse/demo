@@ -10,6 +10,10 @@
 .status-tag.rejected { background: #fff1f0; color: var(--danger); }
 .status-tag.closed { background: #f5f5f5; color: var(--text-tertiary); }
 
+.warehouse-archive-page + #recordOverlay .operations-multi-select {
+  border: 0;
+}
+
 /* ===== 列表页容器（复用 .page-card 布局） ===== */
 .warehouse-list-page { /* 视觉与弹性布局由 .page-card 提供 */ }
 
