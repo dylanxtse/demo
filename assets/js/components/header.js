@@ -57,14 +57,45 @@
     },
 
     bind(root) {
-      if (!root || root.dataset.headerBound === 'true') return;
-      root.dataset.headerBound = 'true';
+      const header = root?.querySelector('.app-header');
+      if (!root || !header || header.dataset.headerBound === 'true') return;
+      header.dataset.headerBound = 'true';
+      const closeUserMenus = () => {
+        header.querySelectorAll('.header-user.is-open').forEach((user) => {
+          user.classList.remove('is-open');
+          user.setAttribute('aria-expanded', 'false');
+        });
+      };
       root.addEventListener('click', (event) => {
         const switchButton = event.target.closest('[data-shell-switch]');
-        if (!switchButton) return;
-        window.location.href = switchButton.dataset.shellSwitch === 'education'
-          ? './education.html'
-          : './index.html';
+        if (switchButton) {
+          window.location.href = switchButton.dataset.shellSwitch === 'education'
+            ? './education.html'
+            : './index.html';
+          return;
+        }
+        const user = event.target.closest('.header-user');
+        if (user) {
+          if (event.target.closest('.header-user-menu')) return;
+          const isOpen = user.classList.toggle('is-open');
+          user.setAttribute('aria-expanded', String(isOpen));
+          return;
+        }
+        closeUserMenus();
+      });
+      root.addEventListener('keydown', (event) => {
+        const user = event.target.closest('.header-user');
+        if (!user) return;
+        if (event.key === 'Escape') {
+          closeUserMenus();
+          user.focus();
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          const isOpen = user.classList.toggle('is-open');
+          user.setAttribute('aria-expanded', String(isOpen));
+        }
       });
     }
   };
