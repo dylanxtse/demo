@@ -67,8 +67,8 @@
         jointVenture: false, hideCustomerPrice: false, qualifications: []
       },
       {
-        id: 'SUP-005', name: '待审核示例供应商', username: 'demo_pending', contact: '李老师', phone: '13900000000',
-        cooperationStart: '2026-01-01', cooperationEnd: '2030-12-31', status: '待审核', auditStatus: '待审核',
+        id: 'SUP-005', name: '待审核示例供应商', username: '', contact: '李老师', phone: '13900000000',
+        cooperationStart: '', cooperationEnd: '', status: '待审核', auditStatus: '待审核',
         source: '演示待审核数据', inviteToken: 'demo', inviteExpiresAt: '2030-12-31', submittedAt: '2026-08-15 10:20',
         businessNature: '企业', licenseCode: '91130927MA0A000005', nameFromLicense: '待审核示例供应商',
         capital: '500', businessStart: '2026-01-01', businessEnd: '2030-12-31', isLongTerm: false,
@@ -218,8 +218,10 @@
         if (!Array.isArray(state.suppliers)) state.suppliers = [];
         if (!state.suppliers.some((item) => item.id === 'SUP-005')) {
           state.suppliers.push(seedState().suppliers.find((item) => item.id === 'SUP-005'));
-          writeState(state);
         }
+        const pendingDemo = state.suppliers.find((item) => item.id === 'SUP-005');
+        if (pendingDemo?.auditStatus === '待审核') pendingDemo.username = '';
+        writeState(state);
         return state;
       }
     } catch (error) {

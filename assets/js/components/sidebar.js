@@ -1,5 +1,5 @@
 (function () {
-  function autoSelectByHref(menu, currentPath) {
+  function autoSelectByHref(menu, currentPath, pageKey = '') {
     const routeAliases = {
       'outbound-detail.html': 'outbound.html',
       'inbound-detail.html': 'inbound.html',
@@ -12,11 +12,26 @@
       'bid-management-detail.html': 'bid-management.html',
       'bid-management-detail': 'bid-management.html'
     };
-    const cleanPath = (routeAliases[currentPath] || currentPath).replace(/\.html$/, '');
+    const pageAliases = {
+      'bid-management': 'bid-management.html',
+      'bid-management-detail': 'bid-management.html',
+      'bid-form': 'bid-management.html',
+      'rules-management': 'bid-rules-management.html',
+      'rules-form': 'bid-rules-management.html',
+      'limit-management': 'auction-limit-price.html',
+      'limit-form': 'auction-limit-price.html',
+      'wasted-management': 'wasted-bid-management.html',
+      'segment-management': 'segment-management.html',
+      'relationship-management': 'supplier-relationship-management.html',
+      'supplier-management': 'supplier-archive.html',
+      'supplier-form': 'supplier-editor.html'
+    };
+    const targetPath = pageAliases[pageKey] || currentPath;
+    const cleanPath = (routeAliases[targetPath] || targetPath).replace(/\.html$/, '');
     function hrefMatches(href) {
       if (!href) return false;
       const cleanHref = href.replace(/^\.?\//, '').replace(/\.html$/, '');
-      return cleanHref === cleanPath || href === currentPath || href.endsWith(currentPath);
+      return cleanHref === cleanPath;
     }
     let foundPath = null;
     function findInChildren(items, path) {
@@ -226,7 +241,9 @@
       const sidebar = root.querySelector('.sidebar');
       const menu = this.getVisibleMenu(options);
       const config = options.variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
-      autoSelectByHref(menu, window.location.pathname.split('/').pop() || 'index.html');
+      const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+      const pageKey = root.querySelector('#app')?.dataset.page || '';
+      autoSelectByHref(menu, currentPath, pageKey);
       if (sidebar) {
         sidebar.innerHTML = `<div class="sidebar-logo">
             <img src="./sidebar-logo.png" alt="校园集采企业版">

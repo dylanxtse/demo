@@ -188,6 +188,9 @@
 .bidding-status.active::before { background: var(--success); }
 .bidding-status.pending::before { background: var(--warning); }
 .bidding-status.danger::before { background: var(--danger); }
+.bidding-status-tag { min-width: 52px; text-align: center; }
+.status-tag.pending { background: #fff3cd; color: #8a5a00; }
+.status-tag.danger { background: #fff1f0; color: var(--danger); }
 
 .bidding-pagination {
   display: flex;
@@ -322,6 +325,7 @@
 .supplier-form-grid .supplier-basic-field .bidding-control-stack > input { width: 100%; }
 .supplier-form-grid .supplier-username-field { padding-bottom: 40px; }
 .supplier-form-grid .supplier-phone-field { padding-bottom: 36px; border-bottom: 1px solid var(--border-light); }
+.supplier-form-grid input::placeholder { color: var(--text-tertiary); opacity: 1; }
 .supplier-form-grid .supplier-license-field { padding: 24px 0 14px; }
 .supplier-form-grid .supplier-license-field .bidding-control-stack { max-width: none; }
 .supplier-upload-tile {
@@ -434,6 +438,8 @@
 .supplier-invite-expire-field input { width: 180px; height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; background: #fff; }
 .supplier-invite-footer { justify-content: space-between; align-items: center; }
 .supplier-invite-footer-actions { display: inline-flex; align-items: center; gap: 8px; }
+.supplier-demo-button { border: 1px dashed #e2a13b; background: #fff7e8; color: #b66a12; }
+.supplier-demo-button:hover { border-color: #c77b18; background: #ffefd0; color: #9b5607; }
 .supplier-invite-result-page,
 .supplier-invite-expired { display: flex; min-height: 360px; align-items: center; justify-content: center; }
 .supplier-invite-result { min-width: min(460px, 100%); padding: 46px 24px; text-align: center; }
@@ -481,6 +487,13 @@
   padding: 0 40px;
   gap: 16px;
   background: #fff;
+}
+.supplier-editor-form-page .bidding-form-title-row {
+  position: sticky;
+  top: -16px;
+  z-index: 5;
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 var(--border-light);
 }
 .bidding-form-page .bidding-form-title-row h2 {
   font-size: 16px;

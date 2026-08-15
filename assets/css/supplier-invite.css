@@ -45,6 +45,12 @@ button { cursor: pointer; }
   display: flex;
   align-items: center;
 }
+.supplier-register-section--basic .supplier-register-section-inner { padding: 26px 0 10px; }
+.register-basic-fields { width: min(560px, 100%); }
+.register-basic-field { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.register-basic-field:last-child { margin-bottom: 0; }
+.register-basic-field .register-field-label { flex-basis: 120px; }
+.register-basic-field .register-field-control { min-width: 0; flex: 1; }
 .supplier-register-section--uploads .supplier-register-section-inner { padding: 26px 0 28px; }
 .supplier-register-section--qualifications .supplier-register-section-inner { padding: 27px 0 30px; }
 .supplier-register-section--contact .supplier-register-section-inner {
@@ -138,6 +144,8 @@ button { cursor: pointer; }
 }
 .register-info-field { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .register-info-field.wide { grid-column: 1 / -1; }
+.register-license-info-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.register-license-info-grid .register-info-field { grid-column: 1 / -1; }
 .register-field-label {
   flex: 0 0 148px;
   color: var(--register-text);
@@ -202,6 +210,7 @@ button { cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   border-top: 1px solid var(--register-border);
 }
 .register-submit-button {
@@ -214,6 +223,16 @@ button { cursor: pointer; }
   font-size: 16px;
 }
 .register-submit-button:hover { background: #1948b4; }
+.register-demo-button {
+  width: 140px;
+  height: 34px;
+  border: 1px dashed #e2a13b;
+  border-radius: 4px;
+  background: #fff7e8;
+  color: #b66a12;
+  font-size: 14px;
+}
+.register-demo-button:hover { border-color: #c77b18; background: #ffefd0; color: #9b5607; }
 .register-message-page { min-height: 460px; display: flex; align-items: center; justify-content: center; }
 .register-message { width: min(460px, calc(100% - 40px)); padding: 64px 24px; text-align: center; }
 .register-message h2 { margin: 0 0 14px; color: #20242b; font-size: 22px; font-weight: 600; }
@@ -248,6 +267,8 @@ button { cursor: pointer; }
   .supplier-register-section--nature .supplier-register-section-inner,
   .supplier-register-section--contact .supplier-register-section-inner,
   .register-upload-row, .register-qualification-row { display: block; padding-top: 22px; padding-bottom: 22px; }
+  .register-basic-field { display: block; }
+  .register-basic-field .register-field-label { display: block; margin-bottom: 8px; text-align: left; }
   .register-section-label { display: block; margin-bottom: 16px; padding-right: 0; text-align: left; }
   .register-info-grid { padding: 16px 12px; }
   .register-info-field, .register-contact-field { display: block; }

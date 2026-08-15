@@ -46,7 +46,7 @@
               <span class="header-user-name">${escapeHtml(userName)}</span>
               ${arrowIcon}
               <div class="header-user-menu" role="menu">
-                <button type="button" role="menuitem" data-shell-switch="${switchTarget}">${switchLabel}</button>
+                <button class="demo-shell-switch" type="button" role="menuitem" data-shell-switch="${switchTarget}">${switchLabel}</button>
                 <button type="button" role="menuitem">个人中心</button>
                 <button type="button" role="menuitem">退出登录</button>
               </div>

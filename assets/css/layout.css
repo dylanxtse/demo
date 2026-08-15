@@ -223,6 +223,18 @@
 }
 .header-user-menu button:hover { background: var(--primary-light); color: var(--primary); }
 .header-user-menu button[data-shell-switch] { color: var(--primary); font-weight: 500; }
+.header-user-menu button.demo-shell-switch {
+  width: calc(100% - 16px);
+  height: 32px;
+  margin: 4px 8px;
+  padding: 0 10px;
+  border: 1px dashed #e2a13b;
+  border-radius: 4px;
+  background: #fff7e8;
+  color: #b66a12;
+  font-size: 14px;
+}
+.header-user-menu button.demo-shell-switch:hover { border-color: #c77b18; background: #ffefd0; color: #9b5607; }
 .breadcrumb-bar {
   height: 49px;
   background: var(--bg-white);

@@ -48,6 +48,17 @@
   }
 
   function mount(title, content) {
+    // 以实际渲染的业务页面同步入口标识，避免旧入口或缓存导致内容与左侧菜单错位。
+    const activePageByTitle = {
+      '竞价管理': 'bid-management',
+      '竞价规则管理': 'rules-management',
+      '竞价限价管理': 'limit-management',
+      '废标管理': 'wasted-management',
+      '标段管理': 'segment-management',
+      '供货关系管理': 'relationship-management',
+      '供应商档案': 'supplier-management'
+    };
+    if (activePageByTitle[title]) app.dataset.page = activePageByTitle[title];
     AppShell.mount({ title, content, variant: 'education', emptyText: title });
     const root = document.getElementById('pageContent');
     syncNativeDateInputs(root);
@@ -73,14 +84,14 @@
   }
 
   function statusClass(status) {
-    if (['已开标', '启用'].includes(status)) return 'active';
-    if (['待开标', '需求提报中', '待审核'].includes(status)) return 'pending';
+    if (['已开标', '启用'].includes(status)) return 'online';
+    if (['暂存', '待开标', '需求提报中', '待审核'].includes(status)) return 'pending';
     if (['已停止', '禁用', '已驳回'].includes(status)) return 'danger';
-    return '';
+    return 'offline';
   }
 
   function statusTag(status) {
-    return `<span class="bidding-status ${statusClass(status)}">${esc(status)}</span>`;
+    return `<span class="status-tag bidding-status-tag ${statusClass(status)}">${esc(status)}</span>`;
   }
 
   function categoriesOptions(selected = []) {
@@ -757,7 +768,7 @@
             <div class="supplier-invite-field"><label for="supplierInviteLink">邀请链接</label><div class="supplier-invite-link-row"><input id="supplierInviteLink" class="bidding-readonly" type="text" readonly><button class="btn btn-primary btn-sm" type="button" data-action="copy-invite">复制链接</button></div></div>
             <div class="supplier-invite-field supplier-invite-expire-field"><label for="supplierInviteExpire">链接失效时间</label><input id="supplierInviteExpire" type="date" min="${dateNow()}" value="${dateAfter(7)}"></div>
           </div>
-          <div class="bidding-dialog-footer supplier-invite-footer"><button class="btn btn-sm" type="button" data-action="view-invite-prototype">查看邀请页面原型</button><div class="supplier-invite-footer-actions"><button class="btn btn-sm" type="button" data-action="close-invite">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="copy-invite">复制邀请链接</button></div></div>
+          <div class="bidding-dialog-footer supplier-invite-footer"><button class="btn btn-sm supplier-demo-button" type="button" data-action="view-invite-prototype">查看邀请页面原型</button><div class="supplier-invite-footer-actions"><button class="btn btn-sm" type="button" data-action="close-invite">取消</button></div></div>
         </div>
       </div>`);
     const state = { rows: service.get('suppliers'), filtered: [], pager: null };
@@ -804,7 +815,15 @@
       const name = valueOf(root, '[data-filter="name"]').toLowerCase(); const contact = valueOf(root, '[data-filter="contact"]').toLowerCase(); const status = valueOf(root, '[data-filter="status"]');
       state.filtered = state.rows.filter((row) => (!name || row.name.toLowerCase().includes(name)) && (!contact || row.contact.toLowerCase().includes(contact)) && (!status || row.status === status));
       const page = state.pager?.getState() || { page: 1, pageSize: 20 }; const start = (page.page - 1) * page.pageSize;
-      root.querySelector('#suppliersBody').innerHTML = state.filtered.slice(start, start + page.pageSize).map((row, index) => `<tr><td>${start + index + 1}</td><td>${esc(row.name)}</td><td>${esc(row.contact)}</td><td>${esc(row.phone)}</td><td>${row.cooperationStart ? `${esc(row.cooperationStart)} ~ ${esc(row.cooperationEnd)}` : '--'}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell"><button class="bidding-link" type="button" data-action="edit-supplier" data-id="${row.id}">编辑</button><button class="bidding-link" type="button" data-action="toggle-supplier" data-id="${row.id}">${row.status === '启用' ? '禁用' : '启用'}</button><button class="bidding-link danger" type="button" data-action="delete-supplier" data-id="${row.id}">删除</button><button class="bidding-link" type="button" data-action="audit-supplier" data-id="${row.id}" ${row.status === '待审核' ? '' : 'disabled'}>审核</button></div></td></tr>`).join('') || '<tr><td class="empty-row" colspan="7">暂无符合条件的数据</td></tr>';
+      const supplierRows = state.filtered.slice(start, start + page.pageSize).map((row, index) => {
+        const isPendingAudit = row.auditStatus === '待审核' || row.status === '待审核';
+        const canEdit = row.status === '启用' && (!row.auditStatus || row.auditStatus === '已通过');
+        const toggleButton = row.status === '启用' && !isPendingAudit ? `<button class="bidding-link" type="button" data-action="toggle-supplier" data-id="${row.id}">禁用</button>` : '';
+        const auditButton = isPendingAudit ? `<button class="bidding-link" type="button" data-action="audit-supplier" data-id="${row.id}">审核</button>` : '';
+        const editButton = canEdit ? `<button class="bidding-link" type="button" data-action="edit-supplier" data-id="${row.id}">编辑</button>` : '';
+        return `<tr><td>${start + index + 1}</td><td>${esc(row.name)}</td><td>${esc(row.contact)}</td><td>${esc(row.phone)}</td><td>${row.cooperationStart ? `${esc(row.cooperationStart)} ~ ${esc(row.cooperationEnd)}` : '--'}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell">${editButton}${toggleButton}<button class="bidding-link danger" type="button" data-action="delete-supplier" data-id="${row.id}">删除</button>${auditButton}</div></td></tr>`;
+      }).join('');
+      root.querySelector('#suppliersBody').innerHTML = supplierRows || '<tr><td class="empty-row" colspan="7">暂无符合条件的数据</td></tr>';
       state.pager?.update({ total: state.filtered.length });
     }
     state.pager = createPager('suppliersPagination', state.rows.length, render); render();
@@ -830,15 +849,6 @@
     inviteModal.addEventListener('click', (event) => {
       if (event.target === inviteModal) closeInviteModal();
     });
-    const feedback = new URLSearchParams(window.location.search);
-    const feedbackMessage = feedback.get('submitted') === '1'
-      ? '供应商信息已提交，待教育局审核'
-      : feedback.get('audit') === 'approved'
-        ? '供应商审核已通过'
-        : feedback.get('audit') === 'rejected'
-          ? '供应商审核已驳回'
-          : '';
-    if (feedbackMessage) window.setTimeout(() => showToast(feedbackMessage), 40);
   }
 
   function renderSupplierForm() {
@@ -847,6 +857,8 @@
     const id = params.get('id') || '';
     const isInvite = mode === 'invite';
     const isAudit = mode === 'audit';
+    const isSelfManaged = !isInvite && !isAudit;
+    const showManagedSettings = !isInvite;
     const inviteExpires = params.get('expires') || '';
     const inviteToken = params.get('invite') || 'demo';
     const existing = isInvite ? null : service.get('suppliers').find((row) => row.id === id);
@@ -860,29 +872,26 @@
     if (isInvite && params.get('submitted') === '1') {
       const resultRoot = mount('供应商信息填写', `<div class="page-card bidding-form-page supplier-invite-result-page"><div class="supplier-invite-result"><h2>供应商信息已提交</h2><p>信息已提交至教育局端，等待审核。</p><button class="btn btn-primary btn-sm" type="button" data-action="view-audit-list">查看教育局审核列表</button></div></div>`);
       resultRoot.addEventListener('click', (event) => {
-        if (event.target.closest('[data-action="view-audit-list"]')) go('./supplier-archive.html?submitted=1');
+        if (event.target.closest('[data-action="view-audit-list"]')) go('./supplier-archive.html');
       });
       return;
     }
 
     const readOnly = isAudit ? 'readonly' : '';
-    const disabled = isAudit ? 'disabled' : '';
+    const uploadDisabled = isAudit ? 'disabled' : '';
     const root = mount(title, `
-      <div class="page-card bidding-form-page ${isAudit ? 'supplier-audit-form-page' : ''}" id="supplierFormPage">
+      <div class="page-card bidding-form-page supplier-editor-form-page ${isAudit ? 'supplier-audit-form-page' : ''}" id="supplierFormPage">
         <div class="bidding-form-title-row"><button class="btn btn-sm bidding-back-button" type="button" data-action="back"><span class="bidding-back-icon" aria-hidden="true"></span><span>返回</span></button><h2>${title}</h2></div>
         <div class="bidding-form-grid supplier-form-grid">
           <div class="bidding-form-field required supplier-basic-field"><label>供应商名称</label><input data-field="name" placeholder="请输入供应商名称" value="${inputValue(existing?.name)}" ${readOnly}></div>
-          <div class="bidding-form-field required supplier-basic-field supplier-username-field"><label>用户名</label><div class="bidding-control-stack"><input data-field="username" placeholder="请输入用户名" value="${inputValue(existing?.username)}" ${readOnly}><div class="field-hint">请输入6~20位由字母、数字组成的用户名。</div><div class="field-hint">默认密码：1234567Aa，需供应商用户登录系统自行修改。</div></div></div>
+          ${showManagedSettings ? `<div class="bidding-form-field required supplier-basic-field supplier-username-field"><label>用户名</label><div class="bidding-control-stack"><input data-field="username" placeholder="请输入用户名" value="${inputValue(existing?.username)}"><div class="field-hint">请输入6~20位由字母、数字组成的用户名。</div><div class="field-hint">默认密码：1234567Aa，需供应商用户登录系统自行修改。</div></div></div>` : ''}
           <div class="bidding-form-field required supplier-basic-field"><label>联系人</label><input data-field="contact" placeholder="请输入供应商联系人" value="${inputValue(existing?.contact)}" ${readOnly}></div>
           <div class="bidding-form-field required supplier-basic-field supplier-phone-field"><label>联系电话</label><input data-field="phone" placeholder="请输入联系电话" value="${inputValue(existing?.phone)}" ${readOnly}></div>
-          ${isAudit ? `<div class="bidding-form-field supplier-audit-registration-field"><label>供应商性质</label><input value="${inputValue(existing?.businessNature || '企业')}" readonly></div><div class="bidding-form-field supplier-audit-registration-field"><label>注册资本</label><input value="${inputValue(existing?.capital)}${existing?.capital ? ' 万元' : ''}" readonly></div><div class="bidding-form-field supplier-audit-registration-field"><label>经营场所</label><input value="${inputValue(existing?.businessPlace || existing?.address)}" readonly></div><div class="bidding-form-field supplier-audit-registration-field"><label>营业期限</label><input value="${inputValue(existing?.isLongTerm ? '长期' : `${existing?.businessStart || existing?.cooperationStart || ''} 至 ${existing?.businessEnd || existing?.cooperationEnd || ''}`)}" readonly></div><div class="bidding-form-field supplier-audit-registration-field"><label>法人姓名</label><input value="${inputValue(existing?.representativeName)}" readonly></div><div class="bidding-form-field supplier-audit-registration-field"><label>法人身份证号</label><input value="${inputValue(existing?.representativeIdNo)}" readonly></div><div class="bidding-form-field supplier-audit-registration-field"><label>身份证件</label><div class="bidding-control-stack"><div class="bidding-asset-list"><span class="bidding-asset-chip">${esc(existing?.idCardFrontFileName || '未上传人像')}</span><span class="bidding-asset-chip">${esc(existing?.idCardBackFileName || '未上传国徽像')}</span></div></div></div>` : ''}
-          <div class="bidding-form-field supplier-license-field"><label>营业执照</label><div class="bidding-control-stack"><div class="bidding-file-row"><button class="supplier-upload-tile" type="button" data-action="choose-license" ${disabled}><span class="upload-plus">+</span><span>选择文件</span></button><span class="bidding-file-name" id="licenseFileName">${esc(existing?.licenseFileName || '未选择文件')}</span><input id="licenseFile" type="file" accept=".png,.jpg,.jpeg" hidden ${disabled}></div><div class="field-hint">支持png、jpg、jpeg图片格式，单张图片不超过5M</div><div class="field-hint">请仔细核对营业执照信息，若信息不符，请手动修改。</div></div></div>
+          <div class="bidding-form-field supplier-license-field"><label>营业执照</label><div class="bidding-control-stack"><div class="bidding-file-row"><button class="supplier-upload-tile" type="button" data-action="choose-license" ${uploadDisabled}><span class="upload-plus">+</span><span>选择文件</span></button><span class="bidding-file-name" id="licenseFileName">${esc(existing?.licenseFileName || '未选择文件')}</span><input id="licenseFile" type="file" accept=".png,.jpg,.jpeg" hidden ${uploadDisabled}></div><div class="field-hint">支持png、jpg、jpeg图片格式，单张图片不超过5M</div><div class="field-hint">请仔细核对营业执照信息，若信息不符，请手动修改。</div></div></div>
           <div class="bidding-form-field supplier-license-meta"><label>统一社会信用代码</label><input data-field="licenseCode" placeholder="请输入统一社会信用代码" value="${inputValue(existing?.licenseCode)}" ${readOnly}></div>
           <div class="bidding-form-field supplier-license-meta"><label>住所</label><input data-field="address" placeholder="请输入住所" value="${inputValue(existing?.address)}" ${readOnly}></div>
-          <div class="bidding-form-field supplier-qualification-field"><label>其他资质</label><div class="bidding-control-stack"><div class="bidding-file-row"><button class="btn btn-sm supplier-add-qualification" type="button" data-action="choose-qualification" ${disabled}>+</button><input id="qualificationFile" type="file" accept=".png,.jpg,.jpeg" hidden ${disabled}></div><div class="bidding-asset-list" id="qualificationNames">${(existing?.qualifications || []).map((item) => `<span class="bidding-asset-chip">${esc(item)}</span>`).join('')}</div><div class="field-hint">支持上传食品经营许可证、质量检测报告等资质图片，单张图片不超过5M</div></div></div>
-          <div class="bidding-form-field supplier-date-field"><label>合作期限</label><div class="bidding-range"><input type="date" data-field="cooperationStart" value="${inputValue(existing?.cooperationStart)}" ${readOnly}><span>至</span><input type="date" data-field="cooperationEnd" value="${inputValue(existing?.cooperationEnd)}" ${readOnly}></div></div>
-          <div class="bidding-form-field"><label>联营供应商</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.jointVenture ? 'on' : ''}" type="button" data-switch="jointVenture" aria-pressed="${Boolean(existing?.jointVenture)}" ${disabled}></button><span class="bidding-switch-label">保存后无法编辑</span></div></div>
-          <div class="bidding-form-field"><label>隐藏客户价格</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.hideCustomerPrice ? 'on' : ''}" type="button" data-switch="hideCustomerPrice" aria-pressed="${Boolean(existing?.hideCustomerPrice)}" ${disabled}></button><span class="bidding-switch-label">开启后，该供应商端将不显示客户的单价和金额</span></div></div>
+          <div class="bidding-form-field supplier-qualification-field"><label>其他资质</label><div class="bidding-control-stack"><div class="bidding-file-row"><button class="btn btn-sm supplier-add-qualification" type="button" data-action="choose-qualification" ${uploadDisabled}>+</button><input id="qualificationFile" type="file" accept=".png,.jpg,.jpeg" hidden ${uploadDisabled}></div><div class="bidding-asset-list" id="qualificationNames">${(existing?.qualifications || []).map((item) => `<span class="bidding-asset-chip">${esc(item)}</span>`).join('')}</div><div class="field-hint">支持上传食品经营许可证、质量检测报告等资质图片，单张图片不超过5M</div></div></div>
+          ${showManagedSettings ? `<div class="bidding-form-field supplier-date-field"><label>合作期限</label><div class="bidding-range"><input type="date" data-field="cooperationStart" value="${inputValue(existing?.cooperationStart)}" placeholder="请选择日期"><span>至</span><input type="date" data-field="cooperationEnd" value="${inputValue(existing?.cooperationEnd)}" placeholder="请选择日期"></div></div><div class="bidding-form-field"><label>联营供应商</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.jointVenture ? 'on' : ''}" type="button" data-switch="jointVenture" aria-pressed="${Boolean(existing?.jointVenture)}"></button><span class="bidding-switch-label">保存后无法编辑</span></div></div><div class="bidding-form-field"><label>隐藏客户价格</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.hideCustomerPrice ? 'on' : ''}" type="button" data-switch="hideCustomerPrice" aria-pressed="${Boolean(existing?.hideCustomerPrice)}"></button><span class="bidding-switch-label">开启后，该供应商端将不显示客户的单价和金额</span></div></div>` : ''}
         </div>
         <div class="bidding-form-actions">${isAudit ? '<button class="btn btn-sm" type="button" data-action="cancel">返回</button><button class="btn btn-danger btn-sm" type="button" data-action="reject-supplier">审核驳回</button><button class="btn btn-primary btn-sm" type="button" data-action="approve-supplier">审核通过</button>' : isInvite ? '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="submit-invite">提交信息</button>' : '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-supplier">保存</button>'}</div>
       </div>`);
@@ -909,7 +918,13 @@
         showToast('审核已驳回'); window.setTimeout(() => go('./supplier-archive.html?audit=rejected'), 450); return;
       }
       if (action === 'approve-supplier' && isAudit && existing) {
-        service.update('suppliers', existing.id, { status: '启用', auditStatus: '已通过', auditRemark: '', auditedAt: dateTimeNow() });
+        const username = valueOf(root, '[data-field="username"]');
+        const cooperationStart = valueOf(root, '[data-field="cooperationStart"]');
+        const cooperationEnd = valueOf(root, '[data-field="cooperationEnd"]');
+        if (!/^[A-Za-z0-9]{6,20}$/.test(username)) { showToast('用户名需为6~20位字母或数字', true); root.querySelector('[data-field="username"]')?.focus(); return; }
+        if (!cooperationStart || !cooperationEnd) { showToast('请设置合作期限', true); return; }
+        if (cooperationStart > cooperationEnd) { showToast('合作期限开始日期不能晚于结束日期', true); return; }
+        service.update('suppliers', existing.id, { username, cooperationStart, cooperationEnd, jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice, status: '启用', auditStatus: '已通过', auditRemark: '', auditedAt: dateTimeNow() });
         showToast('审核已通过'); window.setTimeout(() => go('./supplier-archive.html?audit=approved'), 450); return;
       }
       if (action === 'back' || action === 'cancel') { go('./supplier-archive.html'); return; }
@@ -917,13 +932,16 @@
       if (action === 'choose-qualification') { root.querySelector('#qualificationFile').click(); return; }
       if (action !== 'save-supplier' && action !== 'submit-invite') return;
       const get = (key) => valueOf(root, `[data-field="${key}"]`);
-      const payload = { name: get('name'), username: get('username'), contact: get('contact'), phone: get('phone'), licenseCode: get('licenseCode'), address: get('address'), cooperationStart: get('cooperationStart'), cooperationEnd: get('cooperationEnd'), jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice, qualifications: qualificationNames, licenseFileName: root.querySelector('#licenseFileName').textContent };
-      if (!payload.name || !payload.username || !payload.contact || !payload.phone) { showToast('请完善供应商名称、用户名、联系人和联系电话', true); return; }
-      if (!/^[A-Za-z0-9]{6,20}$/.test(payload.username)) { showToast('用户名需为6~20位字母或数字', true); return; }
-      if (payload.cooperationStart && payload.cooperationEnd && payload.cooperationStart > payload.cooperationEnd) { showToast('合作期限开始日期不能晚于结束日期', true); return; }
+      const payload = { name: get('name'), contact: get('contact'), phone: get('phone'), licenseCode: get('licenseCode'), address: get('address'), qualifications: qualificationNames, licenseFileName: root.querySelector('#licenseFileName').textContent };
+      if (isSelfManaged) {
+        Object.assign(payload, { username: get('username'), cooperationStart: get('cooperationStart'), cooperationEnd: get('cooperationEnd'), jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice });
+      }
+      if (!payload.name || !payload.contact || !payload.phone || (isSelfManaged && !payload.username)) { showToast(isSelfManaged ? '请完善供应商名称、用户名、联系人和联系电话' : '请完善供应商名称、联系人和联系电话', true); return; }
+      if (isSelfManaged && !/^[A-Za-z0-9]{6,20}$/.test(payload.username)) { showToast('用户名需为6~20位字母或数字', true); return; }
+      if (isSelfManaged && payload.cooperationStart && payload.cooperationEnd && payload.cooperationStart > payload.cooperationEnd) { showToast('合作期限开始日期不能晚于结束日期', true); return; }
       if (isInvite && action === 'submit-invite') {
-        service.add('suppliers', { ...payload, status: '待审核', auditStatus: '待审核', source: '供应商邀请', inviteToken, inviteExpiresAt: inviteExpires, submittedAt: dateTimeNow() }, 'SUP');
-        showToast('供应商信息已提交，等待教育局审核'); window.setTimeout(() => go('./supplier-invite.html?mode=invite&submitted=1'), 450); return;
+        service.add('suppliers', { ...payload, username: '', cooperationStart: '', cooperationEnd: '', jointVenture: false, hideCustomerPrice: false, status: '待审核', auditStatus: '待审核', source: '供应商邀请', inviteToken, inviteExpiresAt: inviteExpires, submittedAt: dateTimeNow() }, 'SUP');
+        showToast('供应商信息已提交，等待教育局审核'); window.setTimeout(() => go('./supplier-archive.html'), 450); return;
       }
       if (existing) service.update('suppliers', existing.id, payload); else service.add('suppliers', { ...payload, status: '启用' }, 'SUP');
       showToast('保存成功'); window.setTimeout(() => go('./supplier-archive.html'), 450);
