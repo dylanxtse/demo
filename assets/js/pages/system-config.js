@@ -28,8 +28,8 @@
     regularTempMax: '',
     regularHumidityMin: '',
     regularHumidityMax: '',
-    amountDecimal: '4',
-    quantityDecimal: '4'
+    amountDecimal: '2',
+    quantityDecimal: '0'
   };
 
   const selectOptions = {
@@ -189,6 +189,28 @@
     window.DemoStore.updateSettings(normalizedSettings);
   }
   let savedSettings = { ...defaults, ...persistedSettings, ...normalizedSettings };
+  let pendingScrollPosition = null;
+
+  function readScrollPosition() {
+    const scroll = root.querySelector('.system-config-scroll');
+    return {
+      scrollTop: scroll?.scrollTop || 0,
+      pageTop: window.scrollY || 0
+    };
+  }
+
+  function restoreScrollPosition(position) {
+    if (!position) return;
+    const scroll = root.querySelector('.system-config-scroll');
+    if (scroll) scroll.scrollTop = position.scrollTop;
+    if (typeof window.scrollTo === 'function') window.scrollTo(0, position.pageTop);
+    const restore = () => {
+      if (scroll) scroll.scrollTop = position.scrollTop;
+      if (typeof window.scrollTo === 'function') window.scrollTo(0, position.pageTop);
+    };
+    if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(restore);
+    else window.setTimeout(restore, 0);
+  }
 
   function applySettingsToForm() {
     root.querySelectorAll('[data-config]').forEach((element) => {
@@ -214,9 +236,12 @@
   }
 
   function persistSettings() {
+    const scrollPosition = pendingScrollPosition || readScrollPosition();
     const next = readFormSettings();
     window.DemoStore.updateSettings(next);
     savedSettings = Object.assign(savedSettings, next);
+    restoreScrollPosition(scrollPosition);
+    pendingScrollPosition = null;
     const status = root.querySelector('#configStatus');
     status.hidden = false;
     window.clearTimeout(status._hideTimer);
@@ -224,6 +249,17 @@
   }
 
   applySettingsToForm();
+
+  root.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('[data-config], [data-radio-config], .config-radio, .config-checkbox, [data-clear]')) {
+      pendingScrollPosition = readScrollPosition();
+    }
+  }, true);
+  root.addEventListener('focusin', (event) => {
+    if (!pendingScrollPosition && event.target.matches('[data-config], [data-radio-config]')) {
+      pendingScrollPosition = readScrollPosition();
+    }
+  }, true);
 
   root.addEventListener('change', (event) => {
     if (event.target.matches('[data-config], [data-radio-config]')) persistSettings();

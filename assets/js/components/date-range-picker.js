@@ -86,11 +86,16 @@
       if (now.getMonth() === 11) state.rightYear += 1;
       state.startDate = startInput?.value || state.startDate;
       state.endDate = endInput?.value || state.endDate;
-      const rect = displayInput.getBoundingClientRect();
-      panel.style.top = `${rect.bottom + 4}px`;
-      panel.style.left = `${rect.left}px`;
       panel.classList.add('is-visible');
       render();
+      const rect = displayInput.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const gap = 4;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - panelRect.width - 8));
+      const openUp = rect.bottom + panelRect.height + gap > window.innerHeight && rect.top > panelRect.height + gap;
+      const top = openUp ? rect.top - panelRect.height - gap : rect.bottom + gap;
+      panel.style.top = `${Math.max(8, top)}px`;
+      panel.style.left = `${left}px`;
     }
 
     function close() { panel.classList.remove('is-visible'); }
@@ -180,11 +185,16 @@
         state.month = now.getMonth();
       }
       if (!state.date) state.date = value;
-      const rect = input.getBoundingClientRect();
-      panel.style.top = `${rect.bottom + 4}px`;
-      panel.style.left = `${rect.left}px`;
       panel.classList.add('is-visible');
       render();
+      const rect = input.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const gap = 4;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - panelRect.width - 8));
+      const openUp = rect.bottom + panelRect.height + gap > window.innerHeight && rect.top > panelRect.height + gap;
+      const top = openUp ? rect.top - panelRect.height - gap : rect.bottom + gap;
+      panel.style.top = `${Math.max(8, top)}px`;
+      panel.style.left = `${left}px`;
     }
 
     function close() { panel.classList.remove('is-visible'); }

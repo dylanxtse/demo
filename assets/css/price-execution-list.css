@@ -174,11 +174,32 @@
   background: #fbfcfe;
 }
 
+.price-data-table tbody tr:nth-child(odd) td {
+  background: #fff;
+}
+
+.price-data-table tbody tr:nth-child(even) td {
+  background: #fbfcfe;
+}
+
 .price-data-table tbody tr:hover {
   background: #f3f7ff;
 }
 
-.price-data-table th:last-child,
+.price-data-table tbody tr:hover td,
+.price-data-table tbody tr:hover td:last-child {
+  background: #f3f7ff;
+}
+
+.price-data-table th:last-child {
+  position: sticky;
+  top: 0;
+  right: auto;
+  z-index: 1;
+  background: #f7f8fb;
+  box-shadow: none;
+}
+
 .price-data-table td:last-child {
   position: static;
   z-index: auto;

@@ -8,7 +8,9 @@
       'order-detail.html': 'order-management.html',
       'order-detail': 'order-management',
       'order-add.html': 'order-management.html',
-      'order-add': 'order-management'
+      'order-add': 'order-management',
+      'bid-management-detail.html': 'bid-management.html',
+      'bid-management-detail': 'bid-management.html'
     };
     const cleanPath = (routeAliases[currentPath] || currentPath).replace(/\.html$/, '');
     function hrefMatches(href) {
@@ -77,9 +79,9 @@
 
   function renderMenu(menu, icons) {
     return menu.map((item, itemIndex) => `
-      <div class="menu-item ${item.active ? 'active' : ''} ${item.expanded ? 'expanded' : ''}" data-menu-index="${itemIndex}">
+      <div class="menu-item ${item.active ? 'active' : ''} ${item.expanded ? 'expanded' : ''} ${item.children ? '' : 'menu-leaf'}" data-menu-index="${itemIndex}">
         <button class="menu-item-header" type="button" data-menu-toggle="${itemIndex}"
-          ${item.children ? `aria-expanded="${item.expanded}"` : ''}>
+          ${item.children ? `aria-expanded="${item.expanded}"` : ''} ${item.href ? `data-menu-link="${item.href}"` : ''}>
           <span class="menu-icon">${icons[item.icon] || ''}</span>
           <span>${item.name}</span>
           ${item.children ? '<svg class="menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>' : ''}
@@ -138,13 +140,17 @@
 
     sidebar.addEventListener('click', (event) => {
       const toggle = event.target.closest('[data-menu-toggle]');
-      if (toggle) {
+      if (toggle && menu[Number(toggle.dataset.menuToggle)]?.children) {
         const index = Number(toggle.dataset.menuToggle);
-        if (menu[index]?.children) {
-          const expanded = !menu[index].expanded;
-          const container = sidebar.querySelector(`[data-menu-index="${index}"]`);
-          toggleNode(menu[index], [index], container, expanded);
-        }
+        const expanded = !menu[index].expanded;
+        const container = sidebar.querySelector(`[data-menu-index="${index}"]`);
+        toggleNode(menu[index], [index], container, expanded);
+        return;
+      }
+
+      const topLevelLink = event.target.closest('[data-menu-link]');
+      if (topLevelLink) {
+        window.location.href = topLevelLink.dataset.menuLink;
         return;
       }
 
@@ -196,13 +202,14 @@
   }
 
   window.AppSidebar = {
-    getVisibleMenu() {
-      const menu = window.AppMenuConfig.menu;
-      return menu;
+    getVisibleMenu({ variant = 'enterprise' } = {}) {
+      const config = variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
+      return config?.menu || [];
     },
-    render() {
-      const menu = this.getVisibleMenu();
-      const { icons } = window.AppMenuConfig;
+    render(options = {}) {
+      const menu = this.getVisibleMenu(options);
+      const config = options.variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
+      const { icons } = config;
       return `
         <aside class="sidebar">
           <div class="sidebar-logo">
@@ -215,15 +222,16 @@
         </aside>
       `;
     },
-    bind(root) {
+    bind(root, options = {}) {
       const sidebar = root.querySelector('.sidebar');
-      const menu = this.getVisibleMenu();
+      const menu = this.getVisibleMenu(options);
+      const config = options.variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
       autoSelectByHref(menu, window.location.pathname.split('/').pop() || 'index.html');
       if (sidebar) {
         sidebar.innerHTML = `<div class="sidebar-logo">
             <img src="./sidebar-logo.png" alt="校园集采企业版">
           </div>
-          <nav class="sidebar-menu">${renderMenu(menu, window.AppMenuConfig.icons)}</nav>
+          <nav class="sidebar-menu">${renderMenu(menu, config.icons)}</nav>
           <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="切换侧边栏折叠">
             <svg class="icon-svg toggle-icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="15 6 9 12 15 18"/></svg>
           </button>`;

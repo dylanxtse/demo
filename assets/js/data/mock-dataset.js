@@ -1003,8 +1003,8 @@
         { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', stock: 50, avgPrice: 22.00, consumeQty: 15 }
       ],
       outputs: [
-        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.5, refQty: 22.5, actualQty: 22, allocatedCost: '25.74', costPrice: '1.17' },
-        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.9, refQty: 13.5, actualQty: 13, allocatedCost: '304.26', costPrice: '23.40' }
+        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.5, refQty: 23, actualQty: 22, allocatedCost: '25.74', costPrice: '1.17' },
+        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.9, refQty: 14, actualQty: 13, allocatedCost: '304.26', costPrice: '23.40' }
       ],
       createTime: '2026-07-24 11:15:00',
       attachments: [

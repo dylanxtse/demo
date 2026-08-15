@@ -258,8 +258,93 @@
     enterpriseOrderAuditEnabled: true,
     sortingInventoryThresholdEnabled: true,
     outboundAuditEnabled: true,
-    defaultWarehouseId: 'WH-001'
+    defaultWarehouseId: 'WH-001',
+    amountDecimal: '2',
+    quantityDecimal: '0',
+    decimalSettingsVersion: '20260815-default-decimals'
   };
+
+  const decimalOptions = new Set(['0', '1', '2', '4']);
+  const quantityFields = new Set([
+    'acceptedQty', 'actualQty', 'applyQty', 'availableStock', 'bookQty', 'consumeQty', 'countQty',
+    'currentStock', 'damageQty', 'differenceQty', 'expectedQty', 'openingQty', 'orderCount', 'orderQty',
+    'outboundQty', 'pendingOutbound', 'productCount', 'qty', 'quantity', 'reconciliationQty', 'refQty',
+    'reservedStock', 'returnQty', 'returnedQty', 'shippedQty', 'shippingQty', 'shortageQty', 'sortedCount',
+    'sortingQty', 'stock', 'stockQty', 'transitStock'
+  ]);
+  const amountFields = new Set([
+    'acceptedAmount', 'afterAmount', 'allocatedCost', 'amount', 'applyAmount', 'applyPrice', 'avgPrice',
+    'averageCost', 'beforeAmount', 'costPrice', 'differenceAmount', 'entryAmt', 'lossAmount', 'marketPrice',
+    'openingAmount', 'openingPrice', 'orderAmount', 'orderPrice', 'outboundAmt', 'overflowAmount', 'price',
+    'reconciliationAmount', 'refundAmount', 'returnAmount', 'shippedAmount', 'shippingAmount', 'subtotal',
+    'totalAmount', 'unitPrice'
+  ]);
+
+  function decimalPlaces(value, fallback) {
+    const source = String(value ?? '');
+    return decimalOptions.has(source) ? Number(source) : fallback;
+  }
+
+  function normalizeDecimalValue(value, places) {
+    if (value === '' || value == null) return value;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return value;
+    const factor = 10 ** places;
+    const rounded = Math.round((parsed + Number.EPSILON) * factor) / factor;
+    return typeof value === 'string' ? rounded.toFixed(places) : rounded;
+  }
+
+  function normalizeSettings(current) {
+    const before = current.settings && typeof current.settings === 'object'
+      ? JSON.stringify(current.settings)
+      : '';
+    const existing = current.settings && typeof current.settings === 'object' ? current.settings : {};
+    current.settings = { ...defaultSettings, ...existing };
+
+    // 旧版配置没有精度版本，首次升级时按新的默认规则迁移；之后保留用户的切换结果。
+    if (existing.decimalSettingsVersion !== defaultSettings.decimalSettingsVersion) {
+      current.settings.amountDecimal = defaultSettings.amountDecimal;
+      current.settings.quantityDecimal = defaultSettings.quantityDecimal;
+      current.settings.decimalSettingsVersion = defaultSettings.decimalSettingsVersion;
+    }
+    if (!decimalOptions.has(String(current.settings.amountDecimal))) current.settings.amountDecimal = defaultSettings.amountDecimal;
+    if (!decimalOptions.has(String(current.settings.quantityDecimal))) current.settings.quantityDecimal = defaultSettings.quantityDecimal;
+    return before !== JSON.stringify(current.settings);
+  }
+
+  function normalizeStateDecimals(current) {
+    const amountDecimal = decimalPlaces(current.settings?.amountDecimal, Number(defaultSettings.amountDecimal));
+    const quantityDecimal = decimalPlaces(current.settings?.quantityDecimal, Number(defaultSettings.quantityDecimal));
+    let changed = false;
+
+    const walk = (node) => {
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      if (!node || typeof node !== 'object') return;
+      Object.entries(node).forEach(([key, value]) => {
+        if (quantityFields.has(key)) {
+          const next = normalizeDecimalValue(value, quantityDecimal);
+          if (next !== value) {
+            node[key] = next;
+            changed = true;
+          }
+        } else if (amountFields.has(key)) {
+          const next = normalizeDecimalValue(value, amountDecimal);
+          if (next !== value) {
+            node[key] = next;
+            changed = true;
+          }
+        } else {
+          walk(value);
+        }
+      });
+    };
+
+    walk(current);
+    return changed;
+  }
 
   let state = null;
 
@@ -1305,9 +1390,9 @@
     const generatedStatus = ['COMPLETED', 'PENDING', 'CONFIRMED', 'COMPLETED', 'PENDING', 'COMPLETED', 'PENDING_AUDIT', 'COMPLETED', 'CONFIRMED', 'CLOSED'];
     while (orders.length < 40) {
       const index = orders.length;
-      const generatedIndex = index - 11;
+      const generatedIndex = Math.max(0, index - 11);
       const product = products[index % products.length];
-      const customerName = customerNames[generatedIndex % customerNames.length];
+      const customerName = customerNames[generatedIndex % customerNames.length] || customerNames[0];
       const status = generatedIndex < 18 ? 'COMPLETED' : generatedStatus[generatedIndex % generatedStatus.length];
       orders.push({
         id: `ORD-DEMO-${String(index + 1).padStart(3, '0')}`, orderNo: `DD202608${String(5 + (generatedIndex % 20)).padStart(2, '0')}03${String(index + 1).padStart(5, '0')}`,
@@ -1473,7 +1558,9 @@
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
       const contractsNormalized = normalizeStateContracts(state);
       const warehouseCodesNormalized = normalizeWarehouseCodes(state);
-      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized) persist();
+      const settingsNormalized = normalizeSettings(state);
+      const decimalsNormalized = normalizeStateDecimals(state);
+      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized) persist();
     }
     else {
       state = buildSeed();
@@ -1487,6 +1574,8 @@
       normalizeProcessingOutputs(state);
       normalizeStateContracts(state);
       normalizeWarehouseCodes(state);
+      normalizeSettings(state);
+      normalizeStateDecimals(state);
       persist();
     }
     return state;
@@ -1562,12 +1651,14 @@
       ensure();
       const key = resource === 'sortingItems' ? 'sortingTasks' : resource;
       state[key] = clone(value);
+      normalizeStateDecimals(state);
       persist();
       return clone(state[key]);
     },
     transact(mutator) {
       ensure();
       const result = mutator(state);
+      normalizeStateDecimals(state);
       persist();
       return result === undefined ? undefined : clone(result);
     },
@@ -1575,6 +1666,8 @@
     updateSettings(values) {
       ensure();
       state.settings = { ...state.settings, ...clone(values) };
+      normalizeSettings(state);
+      normalizeStateDecimals(state);
       persist();
       return clone(state.settings);
     },
@@ -1589,6 +1682,8 @@
       state = buildSeed();
       normalizeStateContracts(state);
       normalizeWarehouseCodes(state);
+      normalizeSettings(state);
+      normalizeStateDecimals(state);
       persist();
       return clone(state);
     },
@@ -1606,6 +1701,8 @@
       normalizeOrderNumbers(state);
       normalizeProcessingIds(state);
       normalizeStateContracts(state);
+      normalizeSettings(state);
+      normalizeStateDecimals(state);
       persist();
       return clone(state);
     }

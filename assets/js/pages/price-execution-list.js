@@ -103,8 +103,8 @@
   };
 
   const priceTypeOptions = {
-    purchase: ['手动订价', '协议价', '近一次采购价', '供应商报价', '市场价', '中标价'],
-    sales: ['手动订价', '协议价', '近一次销售价', '市场价']
+    purchase: ['手动定价', '协议价', '近一次采购价', '供应商报价', '市场价', '中标价'],
+    sales: ['手动定价', '协议价', '近一次销售价', '市场价']
   };
 
   function escapeHtml(value) {
@@ -167,8 +167,8 @@
 
   function priceTypeMatches(row, type) {
     const map = state.mode === 'purchase'
-      ? { '手动订价': 'manualPrice', '协议价': 'agreementPrice', '近一次采购价': 'recentPrice', '供应商报价': 'supplierQuote', '市场价': 'marketPrice', '中标价': 'bidPrice' }
-      : { '手动订价': 'manualPrice', '协议价': 'agreementPrice', '近一次销售价': 'recentPrice', '市场价': 'marketPrice' };
+      ? { '手动定价': 'manualPrice', '协议价': 'agreementPrice', '近一次采购价': 'recentPrice', '供应商报价': 'supplierQuote', '市场价': 'marketPrice', '中标价': 'bidPrice' }
+      : { '手动定价': 'manualPrice', '协议价': 'agreementPrice', '近一次销售价': 'recentPrice', '市场价': 'marketPrice' };
     return row[map[type]] && row[map[type]] !== '--';
   }
 
@@ -181,9 +181,21 @@
     return '<span class="price-empty" aria-hidden="true"></span>';
   }
 
+  const priceSourceShortLabels = {
+    手动定价: '手',
+    协议价: '协',
+    近一次采购价: '近',
+    近一次销售价: '近',
+    供应商报价: '供',
+    市场价: '市',
+    中标价: '中'
+  };
+
   function renderCurrentPrice(row) {
+    const source = String(row.currentSource || '');
+    const shortSource = priceSourceShortLabels[source] || source.slice(0, 1);
     return `<button class="price-current-link" type="button" data-action="show-current-price" data-price-id="${escapeHtml(row.id)}" aria-label="查看${escapeHtml(row.name)}执行价格">
-      <span class="price-source-tag">${escapeHtml(row.currentSource)}</span>
+      <span class="price-source-tag" title="${escapeHtml(source)}" aria-label="${escapeHtml(source)}">${escapeHtml(shortSource)}</span>
       <span class="price-current-value">${escapeHtml(row.currentPrice)}</span>
     </button>`;
   }
@@ -202,7 +214,7 @@
     return `<tr>
       <th class="price-seq-col">序号</th><th class="price-image-col">图片</th><th class="price-code-col">商品编号</th>
       <th class="price-name-col">商品名称（计量单位/品牌/规格）</th><th class="price-category-col">分类</th><th class="price-unit-col">计量单位</th>
-      <th class="price-partner-col">供应商/采购员</th><th class="price-current-col">当前执行价格</th><th>手动订价</th><th>协议价</th>
+      <th class="price-partner-col">供应商/采购员</th><th class="price-current-col">当前执行价格</th><th>手动定价</th><th>协议价</th>
       <th>近一次采购价</th><th>供应商报价</th><th>市场价</th><th>中标价</th>
     </tr>`;
   }
@@ -211,7 +223,7 @@
     return `<tr>
       <th class="price-seq-col">序号</th><th class="price-image-col">图片</th><th class="price-code-col">商品编号</th>
       <th class="price-partner-col">客户名称</th><th class="price-name-col">商品名称（计量单位/品牌/规格）</th><th class="price-category-col">商品分类</th>
-      <th class="price-unit-col">计量单位</th><th class="price-current-col">当前执行价格</th><th>手动订价</th><th>协议价</th>
+      <th class="price-unit-col">计量单位</th><th class="price-current-col">当前执行价格</th><th>手动定价</th><th>协议价</th>
       <th>近一次销售价</th><th>市场价</th>
     </tr>`;
   }
@@ -328,7 +340,7 @@
       row.manualPrice = next;
       if (state.mode === 'sales' && next !== '--') {
         row.currentPrice = next;
-        row.currentSource = '手';
+        row.currentSource = '手动定价';
       }
     });
     state.editing = false;
@@ -338,8 +350,8 @@
 
   function exportRows() {
     const headers = state.mode === 'purchase'
-      ? ['序号', '商品编号', '商品名称', '分类', '计量单位', '供应商/采购员', '当前执行价格', '手动订价', '协议价', '近一次采购价', '供应商报价', '市场价', '中标价']
-      : ['序号', '商品编号', '客户名称', '商品名称', '商品分类', '计量单位', '当前执行价格', '手动订价', '协议价', '近一次销售价', '市场价'];
+      ? ['序号', '商品编号', '商品名称', '分类', '计量单位', '供应商/采购员', '当前执行价格', '手动定价', '协议价', '近一次采购价', '供应商报价', '市场价', '中标价']
+      : ['序号', '商品编号', '客户名称', '商品名称', '商品分类', '计量单位', '当前执行价格', '手动定价', '协议价', '近一次销售价', '市场价'];
     const rows = state.filteredRows.map((row, index) => state.mode === 'purchase'
       ? [index + 1, row.code, row.name, row.category, row.unit, row.supplier, row.currentPrice, row.manualPrice, row.agreementPrice, row.recentPrice, row.supplierQuote, row.marketPrice, row.bidPrice]
       : [index + 1, row.code, row.customerName, row.name, row.category, row.unit, row.currentPrice, row.manualPrice, row.agreementPrice, row.recentPrice, row.marketPrice]);
