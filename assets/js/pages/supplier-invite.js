@@ -62,7 +62,7 @@
         <section class="supplier-register-section supplier-register-section--uploads">
           <div class="supplier-register-section-inner">
             <div class="register-upload-row">
-              <div class="register-section-label required">营业执照</div>
+              <div class="register-section-label">营业执照</div>
               <div class="register-upload-content">
                 <div class="register-upload-tiles">
                   <button class="register-upload-tile" type="button" data-upload-trigger="license"><span class="upload-plus">+</span><span class="upload-title">选择文件</span></button>
