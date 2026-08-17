@@ -381,11 +381,10 @@
 .bidding-quote-modal-table th:nth-child(1) { width: 76px; }
 .bidding-quote-modal-table th:nth-child(2) { width: 150px; }
 .bidding-quote-modal-table th:nth-child(3) { width: 75px; }
-.bidding-quote-modal-table th:nth-child(4) { width: 88px; }
-.bidding-quote-modal-table th:nth-child(5) { width: 90px; }
-.bidding-quote-modal-table th:nth-child(6) { width: 110px; }
-.bidding-quote-modal-table th:nth-child(7) { width: 90px; }
-.bidding-quote-modal-table th:nth-child(8) { width: 100px; }
+.bidding-quote-modal-table th:nth-child(4) { width: 90px; }
+.bidding-quote-modal-table th:nth-child(5) { width: 110px; }
+.bidding-quote-modal-table th:nth-child(6) { width: 90px; }
+.bidding-quote-modal-table th:nth-child(7) { width: 100px; }
 
 .bidding-quote-modal-table td:nth-child(2) {
   text-align: left;
