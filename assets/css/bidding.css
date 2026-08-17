@@ -434,8 +434,9 @@
 .supplier-invite-link-row { display: flex; gap: 8px; align-items: center; }
 .supplier-invite-link-row input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; }
 .supplier-invite-link-row .btn { flex: 0 0 auto; white-space: nowrap; }
+.supplier-invite-hint { color: var(--text-secondary); font-size: 12px; line-height: 18px; }
 .supplier-invite-expire-field { flex-direction: row; align-items: center; margin-top: 18px; }
-.supplier-invite-expire-field input { width: 180px; height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; background: #fff; }
+.supplier-invite-expire-field input { width: 220px; height: 32px; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 3px; background: #fff; }
 .supplier-invite-footer { justify-content: space-between; align-items: center; }
 .supplier-invite-footer-actions { display: inline-flex; align-items: center; gap: 8px; }
 .supplier-demo-button { border: 1px dashed #e2a13b; background: #fff7e8; color: #b66a12; }

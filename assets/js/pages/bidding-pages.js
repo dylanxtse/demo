@@ -13,6 +13,19 @@
     date.setDate(date.getDate() + Number(days || 0));
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
+  const localDateTimeValue = (date, separator = 'T') => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}${separator}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+  const dateTimeAfter = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + Number(days || 0));
+    date.setHours(23, 59, 59, 0);
+    return localDateTimeValue(date);
+  };
+  const isExpiredDateTime = (value) => {
+    const parts = String(value || '').trim().replace('T', ' ').split(/[-\s:]/).map(Number);
+    if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return String(value || '') < dateNow();
+    const date = new Date(parts[0], parts[1] - 1, parts[2], parts[3] ?? 23, parts[4] ?? 59, parts[5] ?? 59);
+    return date.getTime() <= Date.now();
+  };
   const dateTimeNow = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
 
   function syncNativeDateInput(input) {
@@ -40,7 +53,11 @@
       input.readOnly = true;
       input.classList.remove('bidding-date-empty');
       input.classList.add('bidding-date-picker-input');
-      const picker = window.DatePicker.create({ input, withTime: nativeType === 'datetime-local' });
+      const picker = window.DatePicker.create({
+        input,
+        withTime: nativeType === 'datetime-local',
+        onChange: () => input.dispatchEvent(new Event('change', { bubbles: true }))
+      });
       if (!picker) return;
       input.dataset.biddingDatePickerBound = '1';
       input._biddingDatePicker = picker;
@@ -763,25 +780,27 @@
     root.insertAdjacentHTML('beforeend', `
       <div class="bidding-modal-mask" id="supplierInviteModal" aria-hidden="true">
         <div class="bidding-dialog supplier-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="supplierInviteTitle">
-          <div class="bidding-dialog-header"><h2 id="supplierInviteTitle">邀请供应商</h2><button class="bidding-dialog-close" type="button" data-action="close-invite" aria-label="关闭">关闭</button></div>
+          <div class="bidding-dialog-header"><h2 id="supplierInviteTitle">邀请供应商</h2><button class="bidding-dialog-close" type="button" data-action="close-invite" aria-label="关闭">×</button></div>
           <div class="bidding-dialog-body">
-            <div class="supplier-invite-field"><label for="supplierInviteLink">邀请链接</label><div class="supplier-invite-link-row"><input id="supplierInviteLink" class="bidding-readonly" type="text" readonly><button class="btn btn-primary btn-sm" type="button" data-action="copy-invite">复制链接</button></div></div>
-            <div class="supplier-invite-field supplier-invite-expire-field"><label for="supplierInviteExpire">链接失效时间</label><input id="supplierInviteExpire" type="date" min="${dateNow()}" value="${dateAfter(7)}"></div>
+            <div class="supplier-invite-field"><label for="supplierInviteLink">邀请链接</label><div class="supplier-invite-link-row"><input id="supplierInviteLink" class="bidding-readonly" type="text" readonly><button class="btn btn-primary btn-sm" type="button" data-action="copy-invite">复制链接</button></div><div class="supplier-invite-hint">链接失效前，供应商可通过此链接申请加入。</div></div>
+            <div class="supplier-invite-field supplier-invite-expire-field"><label for="supplierInviteExpire">链接失效时间</label><input id="supplierInviteExpire" type="datetime-local" min="${localDateTimeValue(new Date())}" step="1" value="${dateTimeAfter(7)}"></div>
           </div>
           <div class="bidding-dialog-footer supplier-invite-footer"><button class="btn btn-sm supplier-demo-button" type="button" data-action="view-invite-prototype">查看邀请页面原型</button><div class="supplier-invite-footer-actions"><button class="btn btn-sm" type="button" data-action="close-invite">取消</button></div></div>
         </div>
       </div>`);
+    syncNativeDateInputs(root);
+    mountBiddingDatePickers(root);
     const state = { rows: service.get('suppliers'), filtered: [], pager: null };
     const inviteModal = root.querySelector('#supplierInviteModal');
     const inviteLink = root.querySelector('#supplierInviteLink');
 
-    function createInviteLink(expireDate = valueOf(root, '#supplierInviteExpire') || dateAfter(7)) {
+    function createInviteLink(expireDate = valueOf(root, '#supplierInviteExpire') || dateTimeAfter(7)) {
       const token = `INV${Date.now().toString(36).toUpperCase()}`;
       return `./supplier-invite.html?mode=invite&invite=${token}&expires=${encodeURIComponent(expireDate)}`;
     }
 
     function openInviteModal() {
-      if (!inviteLink.value) root.querySelector('#supplierInviteExpire').value ||= dateAfter(7);
+      if (!inviteLink.value) root.querySelector('#supplierInviteExpire').value ||= dateTimeAfter(7);
       inviteLink.value = createInviteLink();
       inviteModal.classList.add('open');
       inviteModal.setAttribute('aria-hidden', 'false');
@@ -864,7 +883,7 @@
     const existing = isInvite ? null : service.get('suppliers').find((row) => row.id === id);
     const title = isAudit ? '审核供应商' : isInvite ? '供应商信息填写' : mode === 'edit' ? '编辑供应商' : '添加供应商';
 
-    if (isInvite && inviteExpires && inviteExpires < dateNow()) {
+    if (isInvite && inviteExpires && isExpiredDateTime(inviteExpires)) {
       mount('供应商信息填写', `<div class="page-card bidding-form-page supplier-invite-expired"><div class="supplier-invite-result"><h2>邀请链接已失效</h2><p>请联系教育局重新获取邀请链接。</p></div></div>`);
       return;
     }
