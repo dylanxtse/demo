@@ -193,10 +193,16 @@
 
   function renderCurrentPrice(row) {
     const source = String(row.currentSource || '');
+    const currentPrice = String(row.currentPrice || '').trim();
+    if (!currentPrice || currentPrice === '--') {
+      const hasFuturePrice = Array.isArray(row.futureExecutionRecords) && row.futureExecutionRecords.length > 0;
+      if (!hasFuturePrice) return '<span class="price-current-no-price">暂无执行价格</span>';
+      return `<button class="price-current-link price-current-link-pending" type="button" data-action="show-current-price" data-price-id="${escapeHtml(row.id)}" aria-label="查看${escapeHtml(row.name)}未来执行价格" title="当前暂无中标价，存在未来执行价格">待生效</button>`;
+    }
     const shortSource = priceSourceShortLabels[source] || source.slice(0, 1);
     return `<button class="price-current-link" type="button" data-action="show-current-price" data-price-id="${escapeHtml(row.id)}" aria-label="查看${escapeHtml(row.name)}执行价格">
       <span class="price-source-tag" title="${escapeHtml(source)}" aria-label="${escapeHtml(source)}">${escapeHtml(shortSource)}</span>
-      <span class="price-current-value">${escapeHtml(row.currentPrice)}</span>
+      <span class="price-current-value">${escapeHtml(currentPrice)}</span>
     </button>`;
   }
 
@@ -307,7 +313,9 @@
   function openCurrentPrice(id) {
     const row = state.rows.find((item) => item.id === id);
     if (!row) return;
-    const records = Array.isArray(row.executionRecords) ? row.executionRecords : [];
+    const records = Array.isArray(row.availableExecutionRecords)
+      ? row.availableExecutionRecords
+      : (Array.isArray(row.executionRecords) ? row.executionRecords : []);
     document.getElementById('priceDetailTitle').textContent = '执行价格';
     document.getElementById('priceDetailBody').innerHTML = records.length
       ? records.map((record) => `<tr><td>${escapeHtml(record.executionCycle)}</td><td>${escapeHtml(record.supplier)}</td><td>${escapeHtml(record.price)}</td></tr>`).join('')

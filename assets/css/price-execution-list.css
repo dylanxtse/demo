@@ -326,6 +326,19 @@
   text-decoration: underline;
 }
 
+.price-current-link-pending {
+  color: var(--primary);
+}
+
+.price-current-link-pending:hover {
+  text-decoration: underline;
+}
+
+.price-current-no-price {
+  color: #b3b8c0;
+  white-space: nowrap;
+}
+
 .price-current-value {
   color: var(--primary);
 }

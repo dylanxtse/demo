@@ -914,6 +914,27 @@
         </div>
         <div class="bidding-form-actions">${isAudit ? '<button class="btn btn-sm" type="button" data-action="cancel">返回</button><button class="btn btn-danger btn-sm" type="button" data-action="reject-supplier">审核驳回</button><button class="btn btn-primary btn-sm" type="button" data-action="approve-supplier">审核通过</button>' : isInvite ? '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="submit-invite">提交信息</button>' : '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-supplier">保存</button>'}</div>
       </div>`);
+    if (isAudit) {
+      root.insertAdjacentHTML('beforeend', `
+        <div class="bidding-modal-mask" id="supplierRejectConfirmModal" aria-hidden="true">
+          <div class="bidding-dialog supplier-reject-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="supplierRejectConfirmTitle">
+            <div class="bidding-dialog-header"><h2 id="supplierRejectConfirmTitle">审核驳回</h2><button class="bidding-dialog-close" type="button" data-action="close-reject-confirm" aria-label="关闭">×</button></div>
+            <div class="bidding-dialog-body"><p class="supplier-reject-confirm-message">确定要驳回该供应商申请吗？</p><p class="supplier-reject-confirm-supplier">供应商名称：<strong>${esc(existing?.name || '--')}</strong></p></div>
+            <div class="bidding-dialog-footer"><button class="btn btn-sm" type="button" data-action="close-reject-confirm">取消</button><button class="btn btn-danger btn-sm" type="button" data-action="confirm-reject-supplier">确认</button></div>
+          </div>
+        </div>`);
+    }
+    const rejectConfirmModal = root.querySelector('#supplierRejectConfirmModal');
+    const closeRejectConfirm = () => {
+      if (!rejectConfirmModal) return;
+      rejectConfirmModal.classList.remove('open');
+      rejectConfirmModal.setAttribute('aria-hidden', 'true');
+    };
+    const openRejectConfirm = () => {
+      if (!rejectConfirmModal) return;
+      rejectConfirmModal.classList.add('open');
+      rejectConfirmModal.setAttribute('aria-hidden', 'false');
+    };
     const switches = { jointVenture: Boolean(existing?.jointVenture), hideCustomerPrice: Boolean(existing?.hideCustomerPrice) };
     const qualificationNames = [...(existing?.qualifications || [])];
     root.addEventListener('change', (event) => {
@@ -932,7 +953,11 @@
       const action = event.target.closest('[data-action]')?.dataset.action;
       const switchKey = event.target.closest('[data-switch]')?.dataset.switch;
       if (switchKey) { switches[switchKey] = !switches[switchKey]; const node = event.target.closest('[data-switch]'); node.classList.toggle('on', switches[switchKey]); node.setAttribute('aria-pressed', String(switches[switchKey])); return; }
-      if (action === 'reject-supplier' && isAudit && existing) {
+      if (event.target === rejectConfirmModal) { closeRejectConfirm(); return; }
+      if (action === 'reject-supplier' && isAudit && existing) { openRejectConfirm(); return; }
+      if (action === 'close-reject-confirm') { closeRejectConfirm(); return; }
+      if (action === 'confirm-reject-supplier' && isAudit && existing) {
+        closeRejectConfirm();
         service.update('suppliers', existing.id, { status: '已驳回', auditStatus: '已驳回', auditRemark: '教育局审核驳回', auditedAt: dateTimeNow() });
         showToast('审核已驳回'); window.setTimeout(() => go('./supplier-archive.html?audit=rejected'), 450); return;
       }

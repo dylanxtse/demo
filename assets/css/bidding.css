@@ -426,6 +426,11 @@
 .bidding-dialog-filter input, .bidding-dialog-filter select { width: 210px; }
 .bidding-dialog .bidding-table { min-width: 900px; }
 .bidding-dialog .bidding-form-grid { grid-template-columns: 1fr; gap: 12px; }
+.supplier-reject-confirm-dialog { width: min(420px, 100%); }
+.supplier-reject-confirm-message,
+.supplier-reject-confirm-supplier { margin: 0; color: var(--text-primary); line-height: 22px; text-align: center; }
+.supplier-reject-confirm-supplier { margin-top: 10px; color: var(--text-secondary); word-break: break-all; }
+.supplier-reject-confirm-supplier strong { color: var(--text-primary); font-weight: 500; }
 
 .supplier-invite-dialog { width: min(620px, 100%); }
 .supplier-invite-description { margin: 0 0 22px; color: var(--text-primary); line-height: 22px; }

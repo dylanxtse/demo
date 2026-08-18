@@ -32,9 +32,12 @@
   const customerNames = ['第一实验学校', '阳光幼儿园', '育才中学', '第三小学', '机关第二食堂', '实验幼儿园'];
   const customerTypes = ['学校', '幼儿园', '学校', '学校', '机关单位', '幼儿园'];
   const districts = ['东城区', '南城区', '北城区', '东城区', '西城区', '南城区'];
+  const purchaseFutureOnlyIndexes = new Set([1, 7]);
+  const purchaseNoExecutionIndexes = new Set([5]);
 
-  function buildExecutionRecords(index, basePrice, supplierOffset = 0) {
-    const month = String(8 + (index % 3)).padStart(2, '0');
+  function buildExecutionRecords(index, basePrice, supplierOffset = 0, options = {}) {
+    if (options.noExecution) return [];
+    const month = options.month || String(8 + (index % 3)).padStart(2, '0');
     const base = Number(basePrice) || 0;
     const periods = [
       `2026-${month}-01 至 2026-${month}-07`,
@@ -50,6 +53,31 @@
 
   function money(value) {
     return value == null || value === '' ? '--' : Number(value).toFixed(4);
+  }
+
+  function executionRange(executionCycle) {
+    const match = String(executionCycle || '').match(/(\d{4}-\d{2}-\d{2})\s*至\s*(\d{4}-\d{2}-\d{2})/);
+    if (!match) return null;
+    return {
+      start: new Date(`${match[1]}T00:00:00`),
+      end: new Date(`${match[2]}T23:59:59.999`)
+    };
+  }
+
+  function resolveExecutionState(records, now = new Date()) {
+    const current = records.find((record) => {
+      const range = executionRange(record.executionCycle);
+      return range && now >= range.start && now <= range.end;
+    }) || null;
+    const future = records.filter((record) => {
+      const range = executionRange(record.executionCycle);
+      return range && range.start > now;
+    });
+    return {
+      current,
+      future,
+      available: [current, ...future].filter(Boolean)
+    };
   }
 
   function productFromSeed(seed, index) {
@@ -68,23 +96,30 @@
     return purchaseProducts.map((seed, index) => {
       const product = productFromSeed(seed, index);
       const market = [8, 6.8, 5, 5, 5, 10, 20, 55, 15, 1, 19, 10, 1, 20, 8, 22, 50, 30, 30, 23, 23, 12, 11, 19][index] || 10;
-      const executionRecords = buildExecutionRecords(index, market - 1);
-      const currentExecution = executionRecords[executionRecords.length - 1];
-      const bidPrice = currentExecution.price;
+      const executionRecords = buildExecutionRecords(index, market - 1, 0, {
+        month: purchaseFutureOnlyIndexes.has(index) ? '09' : '08',
+        noExecution: purchaseNoExecutionIndexes.has(index)
+      });
+      const executionState = resolveExecutionState(executionRecords);
+      const currentExecution = executionState.current;
+      const bidPrice = currentExecution?.price || '';
       return {
         id: `PUR-${String(index + 1).padStart(4, '0')}`,
         ...product,
         purchaseType: purchaseTypes[index % purchaseTypes.length],
-        supplier: currentExecution.supplier,
+        supplier: currentExecution?.supplier || '--',
         currentPrice: bidPrice,
-        currentSource: '中标价',
+        currentSource: currentExecution ? '中标价' : '',
         manualPrice: '',
         agreementPrice: '',
         recentPrice: '',
         supplierQuote: '',
         marketPrice: '',
         bidPrice,
-        executionRecords
+        executionRecords,
+        currentExecution,
+        futureExecutionRecords: executionState.future,
+        availableExecutionRecords: executionState.available
       };
     });
   }
@@ -94,7 +129,8 @@
       const product = productFromSeed(seed, index);
       const market = [8, 7.2, 5.5, 5.8, 6.5, 11, 22, 58, 16, 1.2, 19.5, 10.5, 1.5, 20, 8.5, 22.5, 51, 31][index] || 10;
       const executionRecords = buildExecutionRecords(index, market - 0.5, 1);
-      const currentExecution = executionRecords[executionRecords.length - 1];
+      const executionState = resolveExecutionState(executionRecords);
+      const currentExecution = executionState.current || executionRecords[executionRecords.length - 1];
       const manualPrice = currentExecution.price;
       return {
         id: `SAL-${String(index + 1).padStart(4, '0')}`,
