@@ -6,7 +6,6 @@
     <div class="page-card price-execution-page" id="priceExecutionPage">
       <div class="price-mode-tabs" role="tablist" aria-label="价格执行清单类型">
         <button class="price-mode-tab active" type="button" role="tab" aria-selected="true" data-price-mode="purchase">采购价执行清单</button>
-        <button class="price-mode-tab" type="button" role="tab" aria-selected="false" data-price-mode="sales">销售价执行清单</button>
       </div>
 
       <section class="price-query-panel" aria-label="价格执行清单查询">
