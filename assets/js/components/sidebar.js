@@ -79,10 +79,11 @@
     return items.map((child, childIndex) => {
       const path = `${parentPath}:${childIndex}`;
       const hasChildren = Array.isArray(child.children) && child.children.length > 0;
+      const isDisabled = child.available === false || (!child.href && !hasChildren);
       return `
         <div class="menu-sub-group ${child.expanded ? 'expanded' : ''}" style="--menu-level:${level}">
-          <button class="menu-sub-item ${child.selected ? 'selected' : ''}" type="button"
-            data-menu-item="${path}" ${hasChildren ? `data-menu-toggle-path="${path}" aria-expanded="${child.expanded}"` : ''}>
+          <button class="menu-sub-item ${child.selected ? 'selected' : ''} ${isDisabled ? 'menu-item-disabled' : ''}" type="button"
+            data-menu-item="${path}" ${isDisabled ? 'aria-disabled="true" data-menu-disabled="true"' : ''} ${hasChildren ? `data-menu-toggle-path="${path}" aria-expanded="${child.expanded}"` : ''}>
             <span>${child.name}</span>
             ${hasChildren ? '<svg class="menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>' : ''}
           </button>
@@ -93,21 +94,25 @@
   }
 
   function renderMenu(menu, icons) {
-    return menu.map((item, itemIndex) => `
-      <div class="menu-item ${item.active ? 'active' : ''} ${item.expanded ? 'expanded' : ''} ${item.children ? '' : 'menu-leaf'}" data-menu-index="${itemIndex}">
+    return menu.map((item, itemIndex) => {
+      const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+      const isDisabled = item.available === false || (!item.href && !hasChildren);
+      return `
+      <div class="menu-item ${item.active ? 'active' : ''} ${item.expanded ? 'expanded' : ''} ${hasChildren ? '' : 'menu-leaf'} ${isDisabled ? 'menu-item-disabled' : ''}" data-menu-index="${itemIndex}">
         <button class="menu-item-header" type="button" data-menu-toggle="${itemIndex}"
-          ${item.children ? `aria-expanded="${item.expanded}"` : ''} ${item.href ? `data-menu-link="${item.href}"` : ''}>
+          ${hasChildren ? `aria-expanded="${item.expanded}"` : ''} ${item.href ? `data-menu-link="${item.href}"` : ''} ${isDisabled ? 'aria-disabled="true" data-menu-disabled="true"' : ''}>
           <span class="menu-icon">${icons[item.icon] || ''}</span>
           <span>${item.name}</span>
-          ${item.children ? '<svg class="menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>' : ''}
+          ${hasChildren ? '<svg class="menu-arrow" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>' : ''}
         </button>
-        ${item.children ? `
+        ${hasChildren ? `
           <div class="menu-sub">
             ${renderSubItems(item.children, String(itemIndex))}
           </div>
         ` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function bind(sidebar, menu) {
@@ -155,7 +160,7 @@
 
     sidebar.addEventListener('click', (event) => {
       const toggle = event.target.closest('[data-menu-toggle]');
-      if (toggle && menu[Number(toggle.dataset.menuToggle)]?.children) {
+      if (toggle && toggle.dataset.menuDisabled !== 'true' && menu[Number(toggle.dataset.menuToggle)]?.children) {
         const index = Number(toggle.dataset.menuToggle);
         const expanded = !menu[index].expanded;
         const container = sidebar.querySelector(`[data-menu-index="${index}"]`);
@@ -164,13 +169,14 @@
       }
 
       const topLevelLink = event.target.closest('[data-menu-link]');
-      if (topLevelLink) {
-        window.location.href = topLevelLink.dataset.menuLink;
+      if (topLevelLink && topLevelLink.dataset.menuDisabled !== 'true') {
+        if (window.AppNavigationGuard?.navigate) window.AppNavigationGuard.navigate(topLevelLink.dataset.menuLink);
+        else window.location.href = topLevelLink.dataset.menuLink;
         return;
       }
 
       const nestedToggle = event.target.closest('[data-menu-toggle-path]');
-      if (nestedToggle && nestedToggle.querySelector('.menu-arrow')) {
+      if (nestedToggle && nestedToggle.dataset.menuDisabled !== 'true' && nestedToggle.querySelector('.menu-arrow')) {
         const path = nestedToggle.dataset.menuTogglePath.split(':').map(Number);
         const current = getMenuNode(path);
         if (current?.children) {
@@ -181,6 +187,7 @@
 
       const subItem = event.target.closest('[data-menu-item]');
       if (subItem) {
+        if (subItem.dataset.menuDisabled === 'true') return;
         const path = subItem.dataset.menuItem.split(':').map(Number);
         const itemIndex = path[0];
         const clearSelected = (children) => children?.forEach((child) => {
@@ -203,9 +210,10 @@
           const ancestorPath = path.slice(0, index + 2).join(':');
           sidebar.querySelector(`[data-menu-toggle-path="${ancestorPath}"]`)?.parentElement.classList.add('expanded');
         });
-        if (selected?.href) {
+        if (selected?.href && selected.available !== false) {
           event.preventDefault();
-          window.location.href = selected.href;
+          if (window.AppNavigationGuard?.navigate) window.AppNavigationGuard.navigate(selected.href);
+          else window.location.href = selected.href;
         }
         return;
       }
@@ -218,17 +226,36 @@
 
   window.AppSidebar = {
     getVisibleMenu({ variant = 'enterprise' } = {}) {
-      const config = variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
+      const config = variant === 'education'
+        ? window.EducationMenuConfig
+        : variant === 'supplier'
+          ? window.SupplierMenuConfig
+        : variant === 'operations'
+          ? window.OperationsMenuConfig
+          : variant === 'school'
+            ? window.SchoolMenuConfig
+          : window.AppMenuConfig;
       return config?.menu || [];
     },
     render(options = {}) {
       const menu = this.getVisibleMenu(options);
-      const config = options.variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
+      const config = options.variant === 'education'
+        ? window.EducationMenuConfig
+        : options.variant === 'supplier'
+          ? window.SupplierMenuConfig
+        : options.variant === 'operations'
+          ? window.OperationsMenuConfig
+          : options.variant === 'school'
+            ? window.SchoolMenuConfig
+          : window.AppMenuConfig;
       const { icons } = config;
+      const isOperations = options.variant === 'operations';
+      const logoSrc = isOperations ? './assets/images/operations-logo.png' : './sidebar-logo.png';
+      const logoAlt = isOperations ? '校园集采管理平台' : '校园集采企业版';
       return `
         <aside class="sidebar">
           <div class="sidebar-logo">
-            <img src="./sidebar-logo.png" alt="校园集采企业版">
+            <img src="${logoSrc}" alt="${logoAlt}">
           </div>
           <nav class="sidebar-menu">${renderMenu(menu, icons)}</nav>
           <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="切换侧边栏折叠">
@@ -240,13 +267,24 @@
     bind(root, options = {}) {
       const sidebar = root.querySelector('.sidebar');
       const menu = this.getVisibleMenu(options);
-      const config = options.variant === 'education' ? window.EducationMenuConfig : window.AppMenuConfig;
+      const config = options.variant === 'education'
+        ? window.EducationMenuConfig
+        : options.variant === 'supplier'
+          ? window.SupplierMenuConfig
+        : options.variant === 'operations'
+          ? window.OperationsMenuConfig
+          : options.variant === 'school'
+            ? window.SchoolMenuConfig
+          : window.AppMenuConfig;
       const currentPath = window.location.pathname.split('/').pop() || 'index.html';
       const pageKey = root.querySelector('#app')?.dataset.page || '';
       autoSelectByHref(menu, currentPath, pageKey);
       if (sidebar) {
+        const isOperations = options.variant === 'operations';
+        const logoSrc = isOperations ? './assets/images/operations-logo.png' : './sidebar-logo.png';
+        const logoAlt = isOperations ? '校园集采管理平台' : '校园集采企业版';
         sidebar.innerHTML = `<div class="sidebar-logo">
-            <img src="./sidebar-logo.png" alt="校园集采企业版">
+            <img src="${logoSrc}" alt="${logoAlt}">
           </div>
           <nav class="sidebar-menu">${renderMenu(menu, config.icons)}</nav>
           <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="切换侧边栏折叠">

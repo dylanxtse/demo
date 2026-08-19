@@ -41,8 +41,10 @@
 
   function normalize(entry) {
     const normalized = typeof entry === 'string' ? { name: entry } : entry;
+    const hasChildren = Array.isArray(normalized.children) && normalized.children.length > 0;
     return {
       ...normalized,
+      available: normalized.available ?? Boolean(normalized.href || hasChildren),
       expanded: Boolean(normalized.expanded),
       children: normalized.children?.map(normalize)
     };

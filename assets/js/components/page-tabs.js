@@ -1,6 +1,10 @@
 (function () {
   const storageKey = 'procurement-open-page-tabs';
 
+  function scopedStorageKey(variant = 'enterprise') {
+    return `${storageKey}-${variant}`;
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -15,32 +19,42 @@
     return `./${fileName}${window.location.search || ''}`;
   }
 
-  function readTabs() {
+  function readTabs(variant = 'enterprise') {
+    const key = scopedStorageKey(variant);
+    const normalizeTabs = (tabs) => {
+      const seen = new Set();
+      return (Array.isArray(tabs) ? tabs : []).filter((tab) => {
+        if (!tab || !tab.href || !tab.title || seen.has(tab.href)) return false;
+        seen.add(tab.href);
+        return true;
+      });
+    };
     try {
-      const tabs = JSON.parse(window.sessionStorage.getItem(storageKey) || '[]');
-      return Array.isArray(tabs) ? tabs.filter((tab) => tab && tab.href && tab.title) : [];
+      const tabs = JSON.parse(window.sessionStorage.getItem(key) || '[]');
+      return normalizeTabs(tabs);
     } catch (error) {
-      const tabs = window.AppStorage?.read(storageKey, []);
-      return Array.isArray(tabs) ? tabs.filter((tab) => tab && tab.href && tab.title) : [];
+      const tabs = window.AppStorage?.read(key, []);
+      return normalizeTabs(tabs);
     }
   }
 
-  function writeTabs(tabs) {
+  function writeTabs(tabs, variant = 'enterprise') {
+    const key = scopedStorageKey(variant);
     try {
-      window.sessionStorage.setItem(storageKey, JSON.stringify(tabs));
+      window.sessionStorage.setItem(key, JSON.stringify(tabs));
     } catch (error) {
       // file:// 页面可能禁用 sessionStorage，退回项目现有的本地存储封装。
-      window.AppStorage?.write(storageKey, tabs);
+      window.AppStorage?.write(key, tabs);
     }
   }
 
-  function register(title) {
+  function register(title, variant = 'enterprise') {
     const href = currentHref();
-    const tabs = readTabs();
+    const tabs = readTabs(variant);
     const existing = tabs.find((tab) => tab.href === href);
     if (existing) existing.title = title;
     else tabs.push({ title, href });
-    writeTabs(tabs);
+    writeTabs(tabs, variant);
     return { tabs, href };
   }
 
@@ -54,8 +68,8 @@
   }
 
   window.AppPageTabs = {
-    render(title) {
-      const { tabs, href } = register(title);
+    render(title, { variant = 'enterprise' } = {}) {
+      const { tabs, href } = register(title, variant);
       return `
         <div class="breadcrumb-bar" aria-label="已打开页面">
           <div class="page-tabs">
@@ -65,7 +79,7 @@
       `;
     },
 
-    bind(root) {
+    bind(root, { variant = 'enterprise' } = {}) {
       const tabsRoot = root.querySelector('.page-tabs');
       if (!tabsRoot) return;
       let draggedTab = null;
@@ -73,8 +87,8 @@
       const persistDomOrder = () => {
         const orderedHrefs = Array.from(tabsRoot.querySelectorAll('[data-tab-href]'))
           .map((element) => element.dataset.tabHref);
-        const tabsByHref = new Map(readTabs().map((tab) => [tab.href, tab]));
-        writeTabs(orderedHrefs.map((href) => tabsByHref.get(href)).filter(Boolean));
+        const tabsByHref = new Map(readTabs(variant).map((tab) => [tab.href, tab]));
+        writeTabs(orderedHrefs.map((href) => tabsByHref.get(href)).filter(Boolean), variant);
       };
 
       tabsRoot.addEventListener('dragstart', (event) => {
@@ -118,11 +132,13 @@
         const tabElement = closeButton.closest('[data-tab-href]');
         const href = tabElement?.dataset.tabHref;
         if (!href) return;
-        const tabs = readTabs().filter((tab) => tab.href !== href);
-        writeTabs(tabs);
+        const tabs = readTabs(variant).filter((tab) => tab.href !== href);
+        writeTabs(tabs, variant);
         if (href === currentHref()) {
           const fallback = tabs[tabs.length - 1];
-          window.location.href = fallback?.href || './index.html';
+          const target = fallback?.href || './index.html';
+          if (window.AppNavigationGuard?.navigate) window.AppNavigationGuard.navigate(target);
+          else window.location.href = target;
         } else {
           tabElement.remove();
         }

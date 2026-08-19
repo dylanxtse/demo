@@ -1,6 +1,7 @@
 (function () {
   const bellIcon = '<svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
   const arrowIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:12px;height:12px;"><polyline points="6 9 12 15 18 9"/></svg>';
+  const operationsUserIcon = '<svg class="operations-user-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.7-3.6 3.3-5.5 8-5.5s7.3 1.9 8 5.5"></path></svg>';
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -14,10 +15,21 @@
   window.AppHeader = {
     render({ variant = 'enterprise' } = {}) {
       const isEducation = variant === 'education';
+      const isSupplier = variant === 'supplier';
+      const isOperations = variant === 'operations';
+      const isSchool = variant === 'school';
       const session = window.DemoStore?.getSession?.() || { displayName: '管理员', companyId: '' };
       const company = window.DemoStore?.get?.('companies')?.find((item) => item.id === session.companyId);
-      const companyName = isEducation ? '南皮县教育局' : (company?.name || '产品部学校食材集采供应链有限公司');
-      const userName = session.displayName || session.username || '管理员';
+      const companyName = isEducation
+        ? '南皮县教育局'
+        : isSupplier
+          ? '南皮供应商01'
+          : isOperations
+            ? '学校食材集采平台'
+            : isSchool
+              ? '黄骅市智美学校'
+              : (company?.name || '产品部学校食材集采供应链有限公司');
+      const userName = isOperations ? 'admin' : (session.displayName || session.username || '管理员');
       const platformSwitcher = `
         <div class="education-platform-switcher" aria-label="平台切换">
           <button type="button" class="education-platform-button">食品安全平台</button>
@@ -25,28 +37,51 @@
           <button type="button" class="education-platform-button">膳食经费平台</button>
         </div>
       `;
-      const headerRight = isEducation ? platformSwitcher : `
+      const headerRight = isEducation ? platformSwitcher : isOperations ? '' : isSchool ? `
+        <button type="button" class="school-platform-switch" data-school-platform-switch>切换平台</button>
         <div class="header-msg">
           ${bellIcon}
           <span>消息中心</span>
-          <span class="msg-badge">84</span>
+          <span class="msg-badge">5</span>
+        </div>
+      ` : `
+        <div class="header-msg">
+          ${bellIcon}
+          <span>消息中心</span>
+          <span class="msg-badge">${isSupplier ? '3' : '84'}</span>
         </div>
       `;
-      const switchTarget = isEducation ? 'enterprise' : 'education';
-      const switchLabel = isEducation ? '切换至企业端' : '切换至教育局端';
+      const shellSwitches = (isSupplier
+        ? [['enterprise', '切换至企业端'], ['education', '切换至教育局端'], ['operations', '切换至运维管理平台'], ['school', '切换至学校端']]
+        : isEducation
+          ? [['enterprise', '切换至企业端'], ['supplier', '切换至供应商端'], ['operations', '切换至运维管理平台'], ['school', '切换至学校端']]
+          : isOperations
+            ? [['enterprise', '切换至企业端'], ['education', '切换至教育局端'], ['supplier', '切换至供应商端'], ['school', '切换至学校端']]
+            : isSchool
+              ? [['enterprise', '切换至企业端'], ['education', '切换至教育局端'], ['supplier', '切换至供应商端'], ['operations', '切换至运维管理平台']]
+              : [['education', '切换至教育局端'], ['supplier', '切换至供应商端'], ['operations', '切换至运维管理平台'], ['school', '切换至学校端']]
+      ).map(([target, label]) => `<button class="demo-shell-switch" type="button" role="menuitem" data-shell-switch="${target}">${label}</button>`).join('');
+      const avatar = isSupplier
+        ? `<div class="user-avatar supplier-user-avatar" aria-hidden="true">${window.AppMenuConfig?.icons?.users || ''}</div>`
+        : isOperations
+          ? `<div class="user-avatar operations-user-avatar" aria-hidden="true">${operationsUserIcon}</div>`
+        : isSchool
+          ? `<div class="user-avatar school-user-avatar" aria-hidden="true">${window.AppMenuConfig?.icons?.users || ''}</div>`
+          : `<div class="user-avatar">${escapeHtml(userName.slice(0, 1))}</div>`;
       return `
-        <header class="app-header ${isEducation ? 'education-header' : ''}">
+        <header class="app-header ${isEducation ? 'education-header' : ''} ${isSupplier ? 'supplier-header' : ''} ${isOperations ? 'operations-header' : ''} ${isSchool ? 'school-header' : ''}">
           <div class="header-left">
+            ${isOperations ? '<button type="button" class="operations-header-menu-toggle" data-operations-sidebar-toggle aria-label="展开或收起菜单">☰</button>' : ''}
             <span class="header-company" style="font-size:18px">${escapeHtml(companyName)}</span>
           </div>
           <div class="header-right">
             ${headerRight}
             <div class="header-user" tabindex="0" aria-haspopup="menu" aria-label="用户菜单">
-              <div class="user-avatar">${escapeHtml(userName.slice(0, 1))}</div>
-              <span class="header-user-name">${escapeHtml(userName)}</span>
-              ${arrowIcon}
+              ${avatar}
+              <span class="header-user-name ${isSupplier || isSchool ? 'supplier-user-name-hidden' : ''}">${escapeHtml(userName)}</span>
+              ${isOperations ? '' : arrowIcon}
               <div class="header-user-menu" role="menu">
-                <button class="demo-shell-switch" type="button" role="menuitem" data-shell-switch="${switchTarget}">${switchLabel}</button>
+                ${shellSwitches}
                 <button type="button" role="menuitem">个人中心</button>
                 <button type="button" role="menuitem">退出登录</button>
               </div>
@@ -69,9 +104,27 @@
       root.addEventListener('click', (event) => {
         const switchButton = event.target.closest('[data-shell-switch]');
         if (switchButton) {
-          window.location.href = switchButton.dataset.shellSwitch === 'education'
-            ? './education.html'
-            : './index.html';
+          const routes = {
+            enterprise: './index.html',
+            education: './education.html',
+            supplier: './supplier-bidding-quotation.html',
+            operations: './operations.html',
+            school: './school-product-management.html'
+          };
+          const target = routes[switchButton.dataset.shellSwitch];
+          if (target) {
+            if (window.AppNavigationGuard?.switchTo) window.AppNavigationGuard.switchTo(switchButton.dataset.shellSwitch);
+            else window.location.href = target;
+          }
+          return;
+        }
+        const schoolPlatformButton = event.target.closest('[data-school-platform-switch]');
+        if (schoolPlatformButton) {
+          const toast = document.createElement('div');
+          toast.className = 'operations-toast';
+          toast.textContent = '平台切换演示操作已触发';
+          root.appendChild(toast);
+          window.setTimeout(() => toast.remove(), 1800);
           return;
         }
         const user = event.target.closest('.header-user');

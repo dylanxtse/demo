@@ -24,14 +24,6 @@
     { name: '价格管理', icon: 'tag', children: [
       { name: '采购价', children: ['询价报价', '采购协议价'] },
       { name: '价格执行清单', href: './price-execution-list.html' },
-      { name: '采购竞价', children: [
-        { name: '竞价管理', href: './bid-management.html' },
-        { name: '竞价规则管理', href: './bid-rules-management.html' },
-        { name: '竞价限价管理', href: './auction-limit-price.html' },
-        { name: '废标管理', href: './wasted-bid-management.html' },
-        { name: '标段管理', href: './segment-management.html' },
-        { name: '供货关系管理', href: './supplier-relationship-management.html' }
-      ] },
       { name: '销售价', children: ['市场询价', '销售协议价', '结算改价'] }
     ] },
     { name: '订单管理', icon: 'cart', children: [
@@ -40,7 +32,7 @@
       { name: '订单标签', href: './order-tag.html' },
       { name: '实收变更', href: './receipt-change.html' }
     ] },
-    { name: '采购管理', icon: 'truck', children: ['采购任务', '采购单', '采购退货', { name: '供应商档案', href: './supplier-archive.html' }, '采购员'] },
+    { name: '采购管理', icon: 'truck', children: ['采购任务', '采购单', '采购退货', { name: '供应商档案', available: false }, '采购员'] },
     { name: '分拣管理', icon: 'layers', children: [
       { name: '分拣管理', href: './sorting-management.html' },
       { name: '分拣进度', href: './sorting-progress.html' },
@@ -88,8 +80,10 @@
   ].map((item) => {
     const normalize = (entry) => {
       const normalized = typeof entry === 'string' ? { name: entry } : entry;
+      const hasChildren = Array.isArray(normalized.children) && normalized.children.length > 0;
       return {
         ...normalized,
+        available: normalized.available ?? Boolean(normalized.href || hasChildren),
         expanded: Boolean(normalized.expanded),
         children: normalized.children?.map(normalize)
       };
