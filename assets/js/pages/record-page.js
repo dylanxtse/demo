@@ -169,7 +169,10 @@
       annotation.id || `annotation-${annotation.number || 1}`,
       annotation
     ]));
-    const annotationOverlay = window.AnnotationOverlay.mount(root, annotationById);
+    // AppShell 的公共兜底标注挂载点是 #pageContent；业务页也必须复用同一挂载点，
+    // 否则 #app 和 #pageContent 会各自创建一套覆盖层，导致标注模式按钮重复。
+    const annotationRoot = root.querySelector('#pageContent') || root;
+    const annotationOverlay = window.AnnotationOverlay.mount(annotationRoot, annotationById);
     const syncAnnotationOverlay = () => annotationOverlay.sync();
     const datePickers = new Map();
 
