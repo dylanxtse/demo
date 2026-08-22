@@ -307,9 +307,21 @@
       options.onError?.(error, { phase: 'load', scope });
     }
 
-    const projectData = options.data || (options.syncGlobalData === false ? null : sourceData());
+    const projectData = options.data || (options.syncGlobalData === false
+      ? null
+      : (window.ProjectIterationData && sourceData()));
+    const hasProjectRecords = Boolean(projectData && Array.isArray(projectData.records));
     const projectRecords = normaliseRecords(projectData?.records);
-    if (projectRecords.length) return projectRecords;
+    if (hasProjectRecords) {
+      if (!projectRecords.length) {
+        try {
+          window.localStorage?.removeItem(getStorageKey(options));
+        } catch (error) {
+          // 代码数据仍然是权威来源，缓存不可用时无需阻断页面加载。
+        }
+      }
+      return projectRecords;
+    }
     if (options.storage) return normaliseRecords(fallbackRecords);
     try {
       const stored = window.localStorage?.getItem(getStorageKey(options));
