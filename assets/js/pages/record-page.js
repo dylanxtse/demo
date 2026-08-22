@@ -35,20 +35,11 @@
       .replace(/'/g, '&#039;');
   }
 
-  function renderAnnotationMarker(annotation, instance = '', isEntry = false) {
-    const baseId = annotation.id || `annotation-${annotation.number || 1}`;
-    const id = escapeHtml(instance ? `${baseId}-${instance}` : baseId);
-    const placementClass = annotation.placement === 'right' ? ' is-right' : annotation.placement === 'left' ? ' is-left' : '';
-    const entryClass = isEntry ? ' is-entry' : '';
-    return `<span class="record-annotation-placeholder${placementClass}${entryClass}" data-annotation-placeholder="${id}" data-annotation-base="${escapeHtml(baseId)}" data-annotation-target="${escapeHtml(annotation.target || '')}" aria-hidden="true"></span>`;
-  }
+  const renderAnnotationMarker = (...args) => window.AnnotationOverlay.renderPlaceholder(...args);
 
   function mount(config) {
     const statusMap = { ...defaultStatusMap, ...(config.statusMap || {}) };
-    const annotations = (config.annotations || []).filter(Boolean).map((annotation, index) => ({
-      ...annotation,
-      number: String(index + 1)
-    }));
+    const annotations = (config.annotations || []).filter(Boolean);
     const state = {
       page: 1,
       pageSize: config.pageSize || 20,
@@ -84,6 +75,9 @@
     const addModalAnnotation = annotations.find((annotation) => annotation.target === 'add-modal');
     const toolbarActionAnnotations = annotations.filter((annotation) => annotation.target === 'toolbar-action');
     const detailModalAnnotation = annotations.find((annotation) => annotation.target === 'detail-modal');
+    const columnHeaderAnnotations = new Map(annotations
+      .filter((annotation) => annotation.headerColumn)
+      .map((annotation) => [annotation.headerColumn, annotation]));
     const advancedFilterToggle = config.enableAdvancedFilter === false
       ? ''
       : '<button class="operations-filter-toggle" type="button" data-operations-filter-toggle hidden>高级筛选<span class="toggle-arrow">▾</span></button>';
@@ -171,15 +165,12 @@
     const root = window.AppShell.mount({ title: config.title, content });
     const $ = (selector) => root.querySelector(selector);
     const overlay = $('#recordOverlay');
-    const annotationOverlay = document.createElement('div');
-    annotationOverlay.className = 'record-annotation-overlay';
-    annotationOverlay.setAttribute('aria-label', '页面标注');
-    document.body.appendChild(annotationOverlay);
-    const annotationAnchors = new Map();
     const annotationById = new Map(annotations.map((annotation) => [
       annotation.id || `annotation-${annotation.number || 1}`,
       annotation
     ]));
+    const annotationOverlay = window.AnnotationOverlay.mount(root, annotationById);
+    const syncAnnotationOverlay = () => annotationOverlay.sync();
     const datePickers = new Map();
 
     function updateFilterLayout() {
@@ -247,158 +238,6 @@
       }
     }
     window.requestAnimationFrame?.(updateFilterLayout);
-
-    function findAnnotationPlaceholder(id) {
-      return [...root.querySelectorAll('[data-annotation-placeholder]')]
-        .find((placeholder) => placeholder.dataset.annotationPlaceholder === id);
-    }
-
-    function createAnnotationAnchor(annotation, placeholder) {
-      const id = placeholder.dataset.annotationPlaceholder;
-      const number = escapeHtml(annotation.number || '1');
-      const title = escapeHtml(annotation.title || `标注${number}`);
-      const content = escapeHtml(annotation.content || '');
-      const placementClass = annotation.placement === 'right' ? ' is-right' : annotation.placement === 'left' ? ' is-left' : '';
-      const entryClass = placeholder.classList.contains('is-entry') ? ' is-entry' : '';
-      const anchor = document.createElement('span');
-      anchor.className = `record-annotation-anchor${placementClass}${entryClass}`;
-      anchor.dataset.annotationOverlayId = id;
-      anchor.dataset.annotationPlacement = annotation.placement || '';
-      anchor.innerHTML = `<button class="record-annotation-marker" type="button" data-annotation-toggle="${escapeHtml(id)}" aria-expanded="false" aria-label="查看标注${number}">${number}</button>
-        <span class="record-annotation-popover" data-annotation-popover="${escapeHtml(id)}" role="note" aria-hidden="true"><strong>${title}</strong><span>${content}</span></span>`;
-      return anchor;
-    }
-
-    function positionAnnotation(anchor) {
-      const id = anchor.dataset.annotationOverlayId;
-      const placeholder = findAnnotationPlaceholder(id);
-      const marker = anchor.querySelector('[data-annotation-toggle]');
-      const popover = anchor.querySelector('[data-annotation-popover]');
-      if (!placeholder || !marker || !popover || !placeholder.getClientRects().length) {
-        anchor.hidden = true;
-        return;
-      }
-      anchor.hidden = false;
-      const markerSize = 22;
-      const placeholderRect = placeholder.getBoundingClientRect();
-      const entryHost = placeholder.closest('.record-annotation-entry');
-      const cornerHost = placeholder.closest('.record-annotation-corner');
-      const hostRect = (entryHost || cornerHost || placeholder.parentElement)?.getBoundingClientRect() || placeholderRect;
-      const isEntry = anchor.classList.contains('is-entry');
-      const isRight = anchor.dataset.annotationPlacement === 'right';
-      const queryButton = placeholder.dataset.annotationTarget === 'filter'
-        ? root.querySelector('#recordQuery')
-        : null;
-      const queryRect = queryButton?.getBoundingClientRect();
-      let markerLeft = placeholderRect.left;
-      let markerTop = hostRect.top + ((hostRect.height - markerSize) / 2);
-      if (queryRect && queryRect.width && queryRect.height) {
-        markerLeft = queryRect.left + ((queryRect.width - markerSize) / 2);
-        markerTop = queryRect.bottom + 6;
-      } else if (isEntry) {
-        markerLeft = isRight
-          ? hostRect.right + 4
-          : hostRect.left - markerSize - 4;
-      }
-      else if (cornerHost && isRight) markerLeft = placeholderRect.right - markerSize;
-      if (!queryRect && !hostRect.height) markerTop = placeholderRect.top;
-      const viewportPadding = 8;
-      markerLeft = Math.max(viewportPadding, Math.min(markerLeft, window.innerWidth - markerSize - viewportPadding));
-      markerTop = Math.max(viewportPadding, Math.min(markerTop, window.innerHeight - markerSize - viewportPadding));
-      anchor.style.left = `${Math.round(markerLeft)}px`;
-      anchor.style.top = `${Math.round(markerTop)}px`;
-      anchor.style.zIndex = anchor.classList.contains('is-open') ? '3' : '1';
-
-      const markerRect = marker.getBoundingClientRect();
-      const gap = 8;
-      const popoverWidth = Math.min(popover.offsetWidth || 340, window.innerWidth - 32);
-      const popoverHeight = popover.offsetHeight || 0;
-      const preferredLeft = isRight && !isEntry ? markerRect.right - popoverWidth : markerRect.left;
-      const popoverLeft = Math.max(16, Math.min(preferredLeft, window.innerWidth - popoverWidth - 16));
-      let popoverTop = markerRect.bottom + gap;
-      if (popoverHeight && popoverTop + popoverHeight > window.innerHeight - 16) {
-        popoverTop = markerRect.top - gap - popoverHeight;
-      }
-      popoverTop = Math.max(16, Math.min(popoverTop, window.innerHeight - popoverHeight - 16));
-      popover.style.left = `${Math.round(popoverLeft)}px`;
-      popover.style.top = `${Math.round(popoverTop)}px`;
-      popover.style.right = 'auto';
-    }
-
-    function repositionAnnotations() {
-      annotationAnchors.forEach((anchor) => positionAnnotation(anchor));
-    }
-
-    function closeAnnotation(anchor) {
-      anchor.classList.remove('is-open');
-      anchor.style.zIndex = '1';
-      anchor.querySelector('[data-annotation-toggle]')?.setAttribute('aria-expanded', 'false');
-      anchor.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', 'true');
-    }
-
-    function closeAllAnnotations(except = null) {
-      annotationAnchors.forEach((anchor) => {
-        if (anchor !== except && anchor.classList.contains('is-open')) closeAnnotation(anchor);
-      });
-    }
-
-    function syncAnnotationOverlay() {
-      const placeholders = [...root.querySelectorAll('[data-annotation-placeholder]')];
-      const activeIds = new Set();
-      placeholders.forEach((placeholder) => {
-        const id = placeholder.dataset.annotationPlaceholder;
-        const annotation = annotationById.get(placeholder.dataset.annotationBase);
-        if (!id || !annotation) return;
-        activeIds.add(id);
-        let anchor = annotationAnchors.get(id);
-        if (!anchor) {
-          anchor = createAnnotationAnchor(annotation, placeholder);
-          annotationAnchors.set(id, anchor);
-          annotationOverlay.appendChild(anchor);
-        }
-      });
-      [...annotationAnchors.entries()].forEach(([id, anchor]) => {
-        if (!activeIds.has(id)) {
-          closeAnnotation(anchor);
-          anchor.remove();
-          annotationAnchors.delete(id);
-        }
-      });
-      repositionAnnotations();
-    }
-
-    function toggleAnnotation(annotationToggle) {
-      const anchor = annotationToggle.closest('.record-annotation-anchor');
-      if (!anchor) return;
-      const expanded = !anchor.classList.contains('is-open');
-      closeAllAnnotations(anchor);
-      anchor.classList.toggle('is-open', expanded);
-      annotationToggle.setAttribute('aria-expanded', String(expanded));
-      anchor.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', String(!expanded));
-      if (expanded) positionAnnotation(anchor);
-    }
-
-    annotationOverlay.addEventListener('click', (event) => {
-      const annotationToggle = event.target.closest('[data-annotation-toggle]');
-      if (annotationToggle) toggleAnnotation(annotationToggle);
-    });
-    annotationOverlay.addEventListener('pointerover', (event) => {
-      const anchor = event.target.closest('.record-annotation-anchor');
-      if (anchor) positionAnnotation(anchor);
-    });
-    annotationOverlay.addEventListener('focusin', (event) => {
-      const anchor = event.target.closest('.record-annotation-anchor');
-      if (anchor) positionAnnotation(anchor);
-    });
-    annotationOverlay.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeAllAnnotations();
-    });
-    document.addEventListener('click', (event) => {
-      if (event.target.closest?.('.record-annotation-anchor')) return;
-      closeAllAnnotations();
-    });
-    document.addEventListener('scroll', repositionAnnotations, true);
-    window.addEventListener('resize', repositionAnnotations);
 
     function currentResource() {
       const active = config.tabs?.find((tab) => tab.key === state.activeTab);
@@ -490,7 +329,13 @@
           : '<th><input type="checkbox" id="recordSelectAll" aria-label="选择全部"></th>';
       $('#recordHead').innerHTML = `<tr>
         ${selectionHeader}
-        <th>序号</th>${currentColumns().map((column) => `<th>${column.label}</th>`).join('')}<th>操作</th>
+        <th>序号</th>${currentColumns().map((column) => {
+          const annotation = columnHeaderAnnotations.get(column.key);
+          const marker = annotation
+            ? renderAnnotationMarker(annotation, `${column.key}-header`, true)
+            : '';
+          return `<th><span class="record-annotation-header-label">${column.label}</span>${marker}</th>`;
+        }).join('')}<th>操作</th>
       </tr>`;
     }
 
@@ -530,7 +375,7 @@
               return `<td><button class="cell-link" type="button" data-cell-href="${escapeHtml(href)}" onclick="window.location.href=this.dataset.cellHref">${cell}</button></td>`;
             }
             if (!column.link) return `<td>${cell}</td>`;
-            const entryAnnotation = detailModalAnnotation && index === 0
+            const entryAnnotation = detailModalAnnotation && !detailModalAnnotation.headerColumn && index === 0
               ? renderAnnotationMarker(detailModalAnnotation, 'view-entry', true)
               : '';
             return `<td><span class="record-annotation-entry"><button class="cell-link" data-row-action="view">${cell}</button>${entryAnnotation}</span></td>`;
@@ -633,9 +478,9 @@
       syncAnnotationOverlay();
     }
 
-    function modal(title, body, footer, detail = false, variant = '', annotation = null) {
+    function modal(title, body, footer, detail = false, variant = '') {
       overlay.innerHTML = `<div class="operations-modal-backdrop"><section class="operations-modal ${detail ? 'is-detail' : ''} ${variant}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3>${annotation ? renderAnnotationMarker(annotation) : ''}<button data-record-close aria-label="关闭">×</button></header>
+        <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3><button data-record-close aria-label="关闭">×</button></header>
         <div class="operations-modal-body">${body}</div><footer class="operations-modal-footer">${footer}</footer>
       </section></div>`;
       syncAnnotationOverlay();
@@ -649,7 +494,7 @@
       modal(detailTitle, `<dl class="operations-detail-grid">${detailColumns.map((column) => {
         const value = formatCell(item, column);
         return `<div class="operations-detail-item"><dt>${column.label}</dt><dd>${value || '--'}</dd></div>`;
-      }).join('')}</dl>`, '<button class="btn btn-primary" data-record-close>关闭</button>', true, config.detailVariant || '', detailModalAnnotation);
+      }).join('')}</dl>`, '<button class="btn btn-primary" data-record-close>关闭</button>', true, config.detailVariant || '');
     }
 
     async function showRelatedDetail(item, action) {
@@ -704,8 +549,7 @@
         `<form id="recordForm"><div class="operations-form-grid">${fields.map((field) => formControl(field, item)).join('')}</div></form>`,
         '<button class="btn" data-record-close>取消</button><button class="btn btn-primary" id="recordSave">保存</button>',
         false,
-        '',
-        item ? null : addModalAnnotation
+        ''
       );
       $('#recordSave').onclick = async () => {
         const form = $('#recordForm');

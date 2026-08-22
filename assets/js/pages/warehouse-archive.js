@@ -58,6 +58,11 @@
     render: formatAddedAt,
     exportValue: getAddedAtValue
   };
+  const openWarehouseExportTemplate = () => {
+    const templateUrl = './warehouse-export-template.html';
+    const templateWindow = window.open(templateUrl, '_blank', 'noopener');
+    if (!templateWindow) window.location.href = templateUrl;
+  };
 
   window.RecordPageConfig = {
     title: '仓库档案',
@@ -94,6 +99,7 @@
         target: 'detail-modal',
         placement: 'right',
         title: '查看仓库弹窗',
+        headerColumn: 'warehouseCode',
         content: '新增显示：\n1、仓库编码\n2、负责人\n3、联系电话\n4、运营分公司\n5、添加时间。'
       },
       {
@@ -102,7 +108,15 @@
         actionKey: 'export',
         placement: 'left',
         title: '列表新增',
-        content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的仓库”。'
+        content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的仓库”。',
+        popoverActions: [{
+          key: 'view-warehouse-export-template',
+          label: '查看导出模版',
+          className: 'btn btn-sm record-annotation-demo-action record-annotation-action'
+        }],
+        onAction: ({ key }) => {
+          if (key === 'view-warehouse-export-template') openWarehouseExportTemplate();
+        }
       }
     ],
     filters: [
@@ -134,15 +148,6 @@
     ],
     toolbar: [
       { key: 'add', label: '添加', primary: true },
-      {
-        key: 'view-export-template',
-        label: '查看导出模版',
-        side: true,
-        className: 'warehouse-template-button',
-        tooltip: '此按钮仅为演示按钮，非真实需求',
-        ariaLabel: '查看导出模版',
-        href: './warehouse-export-template.html'
-      },
       {
         key: 'export',
         label: '导出',

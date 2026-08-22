@@ -112,135 +112,8 @@
     return `<span class="status-tag bidding-status-tag ${statusClass(status)}">${esc(status)}</span>`;
   }
 
-  function renderAnnotationMarker(annotation, instance = '', isEntry = false) {
-    const baseId = annotation.id || 'supplier-list-header';
-    const id = instance ? `${baseId}-${instance}` : baseId;
-    const placementClass = annotation.placement === 'right' ? ' is-right' : annotation.placement === 'left' ? ' is-left' : '';
-    const entryClass = isEntry ? ' is-entry' : '';
-    return `<span class="record-annotation-placeholder${placementClass}${entryClass}" data-annotation-placeholder="${esc(id)}" data-annotation-base="${esc(baseId)}" aria-hidden="true"></span>`;
-  }
-
-  function mountAnnotationOverlay(root, definitions) {
-    const annotationOverlay = document.createElement('div');
-    annotationOverlay.className = 'record-annotation-overlay';
-    annotationOverlay.setAttribute('aria-label', '页面标注');
-    document.body.appendChild(annotationOverlay);
-    const anchors = new Map();
-
-    const findPlaceholder = (id) => all(root, '[data-annotation-placeholder]')
-      .find((placeholder) => placeholder.dataset.annotationPlaceholder === id);
-    const close = (anchor) => {
-      anchor.classList.remove('is-open');
-      anchor.style.zIndex = '1';
-      anchor.querySelector('[data-annotation-toggle]')?.setAttribute('aria-expanded', 'false');
-      anchor.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', 'true');
-    };
-    const closeAll = (except = null) => anchors.forEach((anchor) => {
-      if (anchor !== except && anchor.classList.contains('is-open')) close(anchor);
-    });
-    const position = (anchor) => {
-      const placeholder = findPlaceholder(anchor.dataset.annotationOverlayId);
-      const marker = anchor.querySelector('[data-annotation-toggle]');
-      const popover = anchor.querySelector('[data-annotation-popover]');
-      if (!placeholder || !marker || !popover || !placeholder.getClientRects().length) {
-        anchor.hidden = true;
-        return;
-      }
-      anchor.hidden = false;
-      const markerSize = 22;
-      const placeholderRect = placeholder.getBoundingClientRect();
-      const entryHost = placeholder.closest('.record-annotation-entry');
-      const cornerHost = placeholder.closest('.record-annotation-corner');
-      const hostRect = (entryHost || cornerHost || placeholder.parentElement)?.getBoundingClientRect() || placeholderRect;
-      const isEntry = anchor.classList.contains('is-entry');
-      const isRight = anchor.dataset.annotationPlacement === 'right';
-      let markerLeft;
-      if (isEntry) {
-        // entry 标注按配置放在业务按钮左侧或右侧，标注本身始终在覆盖层中定位。
-        markerLeft = isRight
-          ? hostRect.right + 4
-          : hostRect.left - markerSize - 4;
-      } else {
-        markerLeft = placeholderRect.left;
-      }
-      if (cornerHost && isRight) markerLeft = placeholderRect.right - markerSize;
-      let markerTop = hostRect.top + ((hostRect.height - markerSize) / 2);
-      if (!hostRect.height) markerTop = placeholderRect.top;
-      markerLeft = Math.max(8, Math.min(markerLeft, window.innerWidth - markerSize - 8));
-      markerTop = Math.max(8, Math.min(markerTop, window.innerHeight - markerSize - 8));
-      anchor.style.left = `${Math.round(markerLeft)}px`;
-      anchor.style.top = `${Math.round(markerTop)}px`;
-      anchor.style.zIndex = anchor.classList.contains('is-open') ? '3' : '1';
-
-      const markerRect = marker.getBoundingClientRect();
-      const popoverWidth = Math.min(popover.offsetWidth || 340, window.innerWidth - 32);
-      const popoverHeight = popover.offsetHeight || 0;
-      const preferredLeft = isRight && !isEntry ? markerRect.right - popoverWidth : markerRect.left;
-      const popoverLeft = Math.max(16, Math.min(preferredLeft, window.innerWidth - popoverWidth - 16));
-      let popoverTop = markerRect.bottom + 8;
-      if (popoverHeight && popoverTop + popoverHeight > window.innerHeight - 16) popoverTop = markerRect.top - 8 - popoverHeight;
-      popoverTop = Math.max(16, Math.min(popoverTop, window.innerHeight - popoverHeight - 16));
-      popover.style.left = `${Math.round(popoverLeft)}px`;
-      popover.style.top = `${Math.round(popoverTop)}px`;
-      popover.style.right = 'auto';
-    };
-    const reposition = () => anchors.forEach(position);
-    const sync = () => {
-      const placeholders = all(root, '[data-annotation-placeholder]');
-      const activeIds = new Set();
-      placeholders.forEach((placeholder) => {
-        const id = placeholder.dataset.annotationPlaceholder;
-        const definition = definitions.get(placeholder.dataset.annotationBase);
-        if (!id || !definition) return;
-        activeIds.add(id);
-        if (anchors.has(id)) return;
-        const number = esc(definition.number || '1');
-        const title = esc(definition.title || `标注${number}`);
-        const content = esc(definition.content || '');
-        const placementClass = definition.placement === 'right' ? ' is-right' : definition.placement === 'left' ? ' is-left' : '';
-        const entryClass = placeholder.classList.contains('is-entry') ? ' is-entry' : '';
-        const anchor = document.createElement('span');
-        anchor.className = `record-annotation-anchor${placementClass}${entryClass}`;
-        anchor.dataset.annotationOverlayId = id;
-        anchor.dataset.annotationPlacement = definition.placement || '';
-        anchor.innerHTML = `<button class="record-annotation-marker" type="button" data-annotation-toggle="${esc(id)}" aria-expanded="false" aria-label="查看标注${number}">${number}</button><span class="record-annotation-popover" data-annotation-popover="${esc(id)}" role="note" aria-hidden="true"><strong>${title}</strong><span>${content}</span></span>`;
-        anchors.set(id, anchor);
-        annotationOverlay.appendChild(anchor);
-      });
-      [...anchors.entries()].forEach(([id, anchor]) => {
-        if (activeIds.has(id)) return;
-        close(anchor);
-        anchor.remove();
-        anchors.delete(id);
-      });
-      reposition();
-    };
-    annotationOverlay.addEventListener('click', (event) => {
-      const toggle = event.target.closest('[data-annotation-toggle]');
-      if (!toggle) return;
-      const anchor = toggle.closest('.record-annotation-anchor');
-      const expanded = !anchor?.classList.contains('is-open');
-      closeAll(anchor);
-      anchor?.classList.toggle('is-open', expanded);
-      toggle.setAttribute('aria-expanded', String(expanded));
-      anchor?.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', String(!expanded));
-      if (expanded && anchor) position(anchor);
-    });
-    annotationOverlay.addEventListener('pointerover', (event) => {
-      const anchor = event.target.closest('.record-annotation-anchor');
-      if (anchor) position(anchor);
-    });
-    annotationOverlay.addEventListener('focusin', (event) => {
-      const anchor = event.target.closest('.record-annotation-anchor');
-      if (anchor) position(anchor);
-    });
-    document.addEventListener('click', (event) => {
-      if (!event.target.closest?.('.record-annotation-anchor')) closeAll();
-    });
-    document.addEventListener('scroll', reposition, true);
-    window.addEventListener('resize', reposition);
-    return { sync };
-  }
+  const renderAnnotationMarker = (...args) => window.AnnotationOverlay.renderPlaceholder(...args);
+  const mountAnnotationOverlay = (root, definitions) => window.AnnotationOverlay.mount(root, definitions);
 
   function categoriesOptions(selected = []) {
     return service.categories.map((category) => `<label class="bidding-category-option"><input type="checkbox" value="${esc(category)}" ${selected.includes(category) ? 'checked' : ''}>${esc(category)}</label>`).join('');
@@ -902,12 +775,32 @@
   }
 
   function renderSupplierManagement() {
-    const supplierExportAnnotation = { id: 'supplier-export-button', number: '2', placement: 'left', title: '列表新增', content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的供应商”。' };
-    const supplierHeaderAnnotation = { id: 'supplier-list-header', number: '1', placement: 'right', title: '列表新增', content: '1、勾选框（固定显示）；\n2、用户名字段；\n列表操作项固定显示' };
+    const openSupplierExportTemplate = () => {
+      const templateUrl = './supplier-export-template.html';
+      const templateWindow = window.open(templateUrl, '_blank', 'noopener');
+      if (!templateWindow) go(templateUrl);
+    };
+    const supplierExportAnnotation = {
+      id: 'supplier-export-button',
+      placement: 'left',
+      actionKey: 'export',
+      entryMarkerPosition: 'left',
+      title: '按钮新增',
+      content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的供应商”。',
+      popoverActions: [{
+        key: 'view-supplier-export-template',
+        label: '查看导出模版',
+        className: 'btn btn-sm record-annotation-demo-action record-annotation-action'
+      }],
+      onAction: ({ key }) => {
+        if (key === 'view-supplier-export-template') openSupplierExportTemplate();
+      }
+    };
+    const supplierHeaderAnnotation = { id: 'supplier-list-header', placement: 'right', title: '列表新增', content: '1、勾选框（固定显示）；\n2、用户名字段；\n列表操作项固定显示' };
     const root = mount('供应商档案', `
       <div class="page-card bidding-page supplier-archive-page" id="supplierManagementPage">
         <section class="bidding-filter-panel"><div class="bidding-filter-grid"><div class="bidding-filter-item"><label>供应商名称</label><input data-filter="name" placeholder="请输入"></div><div class="bidding-filter-item"><label>供应商联系人</label><input data-filter="contact" placeholder="请输入"></div><div class="bidding-filter-item"><label>状态</label><select data-filter="status"><option value="">全部</option><option value="启用">启用</option><option value="待审核">待审核</option><option value="已驳回">已驳回</option><option value="禁用">禁用</option></select></div></div><div class="bidding-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="query">查询</button><button class="btn btn-sm" type="button" data-action="reset">重置</button></div></section>
-        <div class="bidding-toolbar"><div class="bidding-toolbar-left"><button class="btn btn-primary btn-sm" type="button" data-action="add-supplier">添加供应商</button><button class="btn btn-primary btn-sm" type="button" data-action="invite-supplier">邀请供应商</button></div><div class="bidding-toolbar-right"><button class="btn btn-sm supplier-demo-button supplier-template-button" type="button" data-action="view-supplier-export-template" data-tooltip="此按钮仅为演示按钮，非真实需求" aria-label="查看导出模版">查看导出模版</button><span class="record-annotation-entry"><button class="btn btn-sm supplier-export-button" type="button" data-action="export-suppliers">${downloadIcon}导出</button>${renderAnnotationMarker(supplierExportAnnotation, 'export-entry', true)}</span></div></div>
+        <div class="bidding-toolbar"><div class="bidding-toolbar-left"><button class="btn btn-primary btn-sm" type="button" data-action="add-supplier">添加供应商</button><button class="btn btn-primary btn-sm" type="button" data-action="invite-supplier">邀请供应商</button></div><div class="bidding-toolbar-right"><span class="record-annotation-entry"><button class="btn btn-sm supplier-export-button" type="button" data-action="export-suppliers">${downloadIcon}导出</button>${renderAnnotationMarker(supplierExportAnnotation, 'export-entry', true)}</span></div></div>
         <div class="supplier-table-annotation-surface">
           <div class="record-annotation-corner record-table-annotation-corner supplier-table-annotation-corner is-right">
             ${renderAnnotationMarker(supplierHeaderAnnotation)}
@@ -919,8 +812,8 @@
         </div>
       </div>`);
     const annotationOverlay = mountAnnotationOverlay(root, new Map([
-      [supplierExportAnnotation.id, supplierExportAnnotation],
-      [supplierHeaderAnnotation.id, supplierHeaderAnnotation]
+      [supplierHeaderAnnotation.id, supplierHeaderAnnotation],
+      [supplierExportAnnotation.id, supplierExportAnnotation]
     ]));
     root.insertAdjacentHTML('beforeend', `
       <div class="bidding-modal-mask" id="supplierInviteModal" aria-hidden="true">
@@ -1061,9 +954,7 @@
         return;
       }
       if (action === 'view-supplier-export-template') {
-        const templateUrl = './supplier-export-template.html';
-        const templateWindow = window.open(templateUrl, '_blank', 'noopener');
-        if (!templateWindow) go(templateUrl);
+        openSupplierExportTemplate();
         return;
       }
       if (action === 'export-suppliers') { exportSuppliers(); return; }

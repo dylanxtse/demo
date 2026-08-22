@@ -106,10 +106,7 @@
 
 .record-annotation-entry {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  vertical-align: middle;
+  display: contents;
 }
 
 .record-annotation-overlay {
@@ -167,7 +164,7 @@
   position: fixed;
   top: -10000px;
   left: -10000px;
-  z-index: 2;
+  z-index: 2147483647;
   display: flex;
   width: 340px;
   max-width: min(340px, calc(100vw - 32px));
@@ -191,10 +188,10 @@
   text-align: left;
 }
 
-.record-annotation-anchor:hover .record-annotation-popover,
-.record-annotation-anchor:focus-within .record-annotation-popover,
-.record-annotation-anchor.is-open .record-annotation-popover {
-  z-index: 4;
+.record-annotation-anchor:hover + .record-annotation-popover,
+.record-annotation-anchor:focus-within + .record-annotation-popover,
+.record-annotation-anchor.is-open + .record-annotation-popover,
+.record-annotation-popover:hover {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -210,8 +207,28 @@
   white-space: pre-line;
 }
 
-.record-annotation-anchor.is-open .record-annotation-popover {
-  z-index: 2147483647;
+.record-annotation-popover-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.record-annotation-action {
+  position: relative;
+  white-space: nowrap;
+}
+
+.record-annotation-demo-action {
+  border: 1px dashed #e2a13b;
+  background: #fff7e8;
+  color: #b66a12;
+}
+
+.record-annotation-demo-action:hover {
+  border-color: #c77b18;
+  background: #ffefd0;
+  color: #9b5607;
 }
 
 .btn-sm { height: 28px; padding: 0 12px; font-size: 13px; }

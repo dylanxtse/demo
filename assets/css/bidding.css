@@ -293,30 +293,6 @@
   transform: none;
 }
 .supplier-archive-page .supplier-custom-checkbox.is-disabled { opacity: .55; cursor: not-allowed; }
-.supplier-archive-page .supplier-template-button { position: relative; white-space: nowrap; }
-.supplier-archive-page .supplier-template-button::after {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 20;
-  width: max-content;
-  max-width: 260px;
-  padding: 7px 10px;
-  border-radius: 4px;
-  background: #26364f;
-  color: #fff;
-  content: attr(data-tooltip);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 18px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-3px);
-  transition: opacity .15s ease, transform .15s ease;
-  white-space: nowrap;
-}
-.supplier-archive-page .supplier-template-button:hover::after,
-.supplier-archive-page .supplier-template-button:focus-visible::after { opacity: 1; transform: translateY(0); }
 .supplier-archive-page .supplier-export-button { width: var(--query-action-width); justify-content: center; }
 
 .bidding-pagination {
