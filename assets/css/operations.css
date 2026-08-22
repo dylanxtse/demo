@@ -78,7 +78,23 @@
   content: "";
 }
 
-.operations-filter { padding: 18px 18px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: #fff; }
+.operations-filter { position: relative; padding: 18px 18px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: #fff; }
+
+.record-filter-annotation-corner {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 100;
+  display: flex;
+  gap: 4px;
+}
+
+.record-filter-annotation-corner.is-left {
+  right: auto;
+  left: 4px;
+}
+
+.record-filter-annotation-corner.is-right { right: 4px; }
 
 .operations-filter-grid {
   display: grid;
@@ -337,7 +353,7 @@
   font-weight: 500;
 }
 
-.operations-modal-header button {
+.operations-modal-header button:not(.record-annotation-marker) {
   border: 0;
   background: transparent;
   color: var(--text-tertiary);

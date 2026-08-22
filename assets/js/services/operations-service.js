@@ -114,6 +114,10 @@
         const keyword = normalize(value);
         return Object.values(item).some((field) => normalize(field).includes(keyword));
       }
+      if (key === 'contact') {
+        const keyword = normalize(value);
+        return [item.manager, item.phone].some((field) => normalize(field).includes(keyword));
+      }
       if (key === 'dateRange' && Array.isArray(value) && value.length === 2) {
         const source = item.createdAt || item.expectedAt || item.occurredAt || item.inboundAt || item.countAt || '';
         return (!value[0] || source >= value[0]) && (!value[1] || source <= `${value[1]} 23:59:59`);

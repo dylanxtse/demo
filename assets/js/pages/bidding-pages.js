@@ -7,6 +7,7 @@
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   const valueOf = (root, selector) => root.querySelector(selector)?.value?.trim() || '';
   const all = (root, selector) => [...root.querySelectorAll(selector)];
+  const downloadIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   const dateNow = () => new Date().toISOString().slice(0, 10);
   const dateAfter = (days) => {
     const date = new Date();
@@ -109,6 +110,136 @@
 
   function statusTag(status) {
     return `<span class="status-tag bidding-status-tag ${statusClass(status)}">${esc(status)}</span>`;
+  }
+
+  function renderAnnotationMarker(annotation, instance = '', isEntry = false) {
+    const baseId = annotation.id || 'supplier-list-header';
+    const id = instance ? `${baseId}-${instance}` : baseId;
+    const placementClass = annotation.placement === 'right' ? ' is-right' : annotation.placement === 'left' ? ' is-left' : '';
+    const entryClass = isEntry ? ' is-entry' : '';
+    return `<span class="record-annotation-placeholder${placementClass}${entryClass}" data-annotation-placeholder="${esc(id)}" data-annotation-base="${esc(baseId)}" aria-hidden="true"></span>`;
+  }
+
+  function mountAnnotationOverlay(root, definitions) {
+    const annotationOverlay = document.createElement('div');
+    annotationOverlay.className = 'record-annotation-overlay';
+    annotationOverlay.setAttribute('aria-label', '页面标注');
+    document.body.appendChild(annotationOverlay);
+    const anchors = new Map();
+
+    const findPlaceholder = (id) => all(root, '[data-annotation-placeholder]')
+      .find((placeholder) => placeholder.dataset.annotationPlaceholder === id);
+    const close = (anchor) => {
+      anchor.classList.remove('is-open');
+      anchor.style.zIndex = '1';
+      anchor.querySelector('[data-annotation-toggle]')?.setAttribute('aria-expanded', 'false');
+      anchor.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', 'true');
+    };
+    const closeAll = (except = null) => anchors.forEach((anchor) => {
+      if (anchor !== except && anchor.classList.contains('is-open')) close(anchor);
+    });
+    const position = (anchor) => {
+      const placeholder = findPlaceholder(anchor.dataset.annotationOverlayId);
+      const marker = anchor.querySelector('[data-annotation-toggle]');
+      const popover = anchor.querySelector('[data-annotation-popover]');
+      if (!placeholder || !marker || !popover || !placeholder.getClientRects().length) {
+        anchor.hidden = true;
+        return;
+      }
+      anchor.hidden = false;
+      const markerSize = 22;
+      const placeholderRect = placeholder.getBoundingClientRect();
+      const entryHost = placeholder.closest('.record-annotation-entry');
+      const cornerHost = placeholder.closest('.record-annotation-corner');
+      const hostRect = (entryHost || cornerHost || placeholder.parentElement)?.getBoundingClientRect() || placeholderRect;
+      const isEntry = anchor.classList.contains('is-entry');
+      const isRight = anchor.dataset.annotationPlacement === 'right';
+      let markerLeft;
+      if (isEntry) {
+        // entry 标注按配置放在业务按钮左侧或右侧，标注本身始终在覆盖层中定位。
+        markerLeft = isRight
+          ? hostRect.right + 4
+          : hostRect.left - markerSize - 4;
+      } else {
+        markerLeft = placeholderRect.left;
+      }
+      if (cornerHost && isRight) markerLeft = placeholderRect.right - markerSize;
+      let markerTop = hostRect.top + ((hostRect.height - markerSize) / 2);
+      if (!hostRect.height) markerTop = placeholderRect.top;
+      markerLeft = Math.max(8, Math.min(markerLeft, window.innerWidth - markerSize - 8));
+      markerTop = Math.max(8, Math.min(markerTop, window.innerHeight - markerSize - 8));
+      anchor.style.left = `${Math.round(markerLeft)}px`;
+      anchor.style.top = `${Math.round(markerTop)}px`;
+      anchor.style.zIndex = anchor.classList.contains('is-open') ? '3' : '1';
+
+      const markerRect = marker.getBoundingClientRect();
+      const popoverWidth = Math.min(popover.offsetWidth || 340, window.innerWidth - 32);
+      const popoverHeight = popover.offsetHeight || 0;
+      const preferredLeft = isRight && !isEntry ? markerRect.right - popoverWidth : markerRect.left;
+      const popoverLeft = Math.max(16, Math.min(preferredLeft, window.innerWidth - popoverWidth - 16));
+      let popoverTop = markerRect.bottom + 8;
+      if (popoverHeight && popoverTop + popoverHeight > window.innerHeight - 16) popoverTop = markerRect.top - 8 - popoverHeight;
+      popoverTop = Math.max(16, Math.min(popoverTop, window.innerHeight - popoverHeight - 16));
+      popover.style.left = `${Math.round(popoverLeft)}px`;
+      popover.style.top = `${Math.round(popoverTop)}px`;
+      popover.style.right = 'auto';
+    };
+    const reposition = () => anchors.forEach(position);
+    const sync = () => {
+      const placeholders = all(root, '[data-annotation-placeholder]');
+      const activeIds = new Set();
+      placeholders.forEach((placeholder) => {
+        const id = placeholder.dataset.annotationPlaceholder;
+        const definition = definitions.get(placeholder.dataset.annotationBase);
+        if (!id || !definition) return;
+        activeIds.add(id);
+        if (anchors.has(id)) return;
+        const number = esc(definition.number || '1');
+        const title = esc(definition.title || `标注${number}`);
+        const content = esc(definition.content || '');
+        const placementClass = definition.placement === 'right' ? ' is-right' : definition.placement === 'left' ? ' is-left' : '';
+        const entryClass = placeholder.classList.contains('is-entry') ? ' is-entry' : '';
+        const anchor = document.createElement('span');
+        anchor.className = `record-annotation-anchor${placementClass}${entryClass}`;
+        anchor.dataset.annotationOverlayId = id;
+        anchor.dataset.annotationPlacement = definition.placement || '';
+        anchor.innerHTML = `<button class="record-annotation-marker" type="button" data-annotation-toggle="${esc(id)}" aria-expanded="false" aria-label="查看标注${number}">${number}</button><span class="record-annotation-popover" data-annotation-popover="${esc(id)}" role="note" aria-hidden="true"><strong>${title}</strong><span>${content}</span></span>`;
+        anchors.set(id, anchor);
+        annotationOverlay.appendChild(anchor);
+      });
+      [...anchors.entries()].forEach(([id, anchor]) => {
+        if (activeIds.has(id)) return;
+        close(anchor);
+        anchor.remove();
+        anchors.delete(id);
+      });
+      reposition();
+    };
+    annotationOverlay.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-annotation-toggle]');
+      if (!toggle) return;
+      const anchor = toggle.closest('.record-annotation-anchor');
+      const expanded = !anchor?.classList.contains('is-open');
+      closeAll(anchor);
+      anchor?.classList.toggle('is-open', expanded);
+      toggle.setAttribute('aria-expanded', String(expanded));
+      anchor?.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', String(!expanded));
+      if (expanded && anchor) position(anchor);
+    });
+    annotationOverlay.addEventListener('pointerover', (event) => {
+      const anchor = event.target.closest('.record-annotation-anchor');
+      if (anchor) position(anchor);
+    });
+    annotationOverlay.addEventListener('focusin', (event) => {
+      const anchor = event.target.closest('.record-annotation-anchor');
+      if (anchor) position(anchor);
+    });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest?.('.record-annotation-anchor')) closeAll();
+    });
+    document.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return { sync };
   }
 
   function categoriesOptions(selected = []) {
@@ -771,12 +902,26 @@
   }
 
   function renderSupplierManagement() {
+    const supplierExportAnnotation = { id: 'supplier-export-button', number: '2', placement: 'left', title: '列表新增', content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的供应商”。' };
+    const supplierHeaderAnnotation = { id: 'supplier-list-header', number: '1', placement: 'right', title: '列表新增', content: '1、勾选框（固定显示）；\n2、用户名字段；\n列表操作项固定显示' };
     const root = mount('供应商档案', `
-      <div class="page-card bidding-page" id="supplierManagementPage">
+      <div class="page-card bidding-page supplier-archive-page" id="supplierManagementPage">
         <section class="bidding-filter-panel"><div class="bidding-filter-grid"><div class="bidding-filter-item"><label>供应商名称</label><input data-filter="name" placeholder="请输入"></div><div class="bidding-filter-item"><label>供应商联系人</label><input data-filter="contact" placeholder="请输入"></div><div class="bidding-filter-item"><label>状态</label><select data-filter="status"><option value="">全部</option><option value="启用">启用</option><option value="待审核">待审核</option><option value="已驳回">已驳回</option><option value="禁用">禁用</option></select></div></div><div class="bidding-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="query">查询</button><button class="btn btn-sm" type="button" data-action="reset">重置</button></div></section>
-        <div class="bidding-toolbar"><div class="bidding-toolbar-left"><button class="btn btn-primary btn-sm" type="button" data-action="add-supplier">添加供应商</button><button class="btn btn-primary btn-sm" type="button" data-action="invite-supplier">邀请供应商</button></div></div>
-        <div class="bidding-table-container"><div class="bidding-table-wrapper"><table class="bidding-table" style="min-width:940px"><thead><tr><th>序号</th><th>供应商名称</th><th>供应商联系人</th><th>联系电话</th><th>合作期限</th><th>状态</th><th>操作</th></tr></thead><tbody id="suppliersBody"></tbody></table></div><div class="pagination bidding-pagination" id="suppliersPagination"></div></div>
+        <div class="bidding-toolbar"><div class="bidding-toolbar-left"><button class="btn btn-primary btn-sm" type="button" data-action="add-supplier">添加供应商</button><button class="btn btn-primary btn-sm" type="button" data-action="invite-supplier">邀请供应商</button></div><div class="bidding-toolbar-right"><button class="btn btn-sm supplier-demo-button supplier-template-button" type="button" data-action="view-supplier-export-template" data-tooltip="此按钮仅为演示按钮，非真实需求" aria-label="查看导出模版">查看导出模版</button><span class="record-annotation-entry"><button class="btn btn-sm supplier-export-button" type="button" data-action="export-suppliers">${downloadIcon}导出</button>${renderAnnotationMarker(supplierExportAnnotation, 'export-entry', true)}</span></div></div>
+        <div class="supplier-table-annotation-surface">
+          <div class="record-annotation-corner record-table-annotation-corner supplier-table-annotation-corner is-right">
+            ${renderAnnotationMarker(supplierHeaderAnnotation)}
+          </div>
+          <div class="bidding-table-container">
+            <div class="bidding-table-wrapper"><table class="bidding-table supplier-archive-table"><thead><tr><th class="supplier-selection-column"><span class="custom-checkbox supplier-custom-checkbox supplier-select-all-checkbox" role="checkbox" aria-checked="false" aria-label="选择当前页供应商" data-action="toggle-select-page" tabindex="0"></span></th><th>序号</th><th>供应商名称</th><th>用户名</th><th>供应商联系人</th><th>联系电话</th><th>合作期限</th><th>状态</th><th>操作</th></tr></thead><tbody id="suppliersBody"></tbody></table></div>
+            <div class="pagination bidding-pagination" id="suppliersPagination"></div>
+          </div>
+        </div>
       </div>`);
+    const annotationOverlay = mountAnnotationOverlay(root, new Map([
+      [supplierExportAnnotation.id, supplierExportAnnotation],
+      [supplierHeaderAnnotation.id, supplierHeaderAnnotation]
+    ]));
     root.insertAdjacentHTML('beforeend', `
       <div class="bidding-modal-mask" id="supplierInviteModal" aria-hidden="true">
         <div class="bidding-dialog supplier-invite-dialog" role="dialog" aria-modal="true" aria-labelledby="supplierInviteTitle">
@@ -790,7 +935,7 @@
       </div>`);
     syncNativeDateInputs(root);
     mountBiddingDatePickers(root);
-    const state = { rows: service.get('suppliers'), filtered: [], pager: null };
+    const state = { rows: service.get('suppliers'), filtered: [], visibleRows: [], selected: new Set(), pager: null };
     const inviteModal = root.querySelector('#supplierInviteModal');
     const inviteLink = root.querySelector('#supplierInviteLink');
 
@@ -830,26 +975,98 @@
       showToast(copied ? '邀请链接已复制' : '请手动复制邀请链接', !copied);
     }
 
+    function formatCooperationPeriod(row) {
+      return row.cooperationStart ? `${row.cooperationStart} ~ ${row.cooperationEnd || '--'}` : '--';
+    }
+
+    function csvCell(value) {
+      return `"${String(value ?? '').replace(/"/g, '""')}"`;
+    }
+
+    function exportSuppliers() {
+      const selectedRows = state.rows.filter((row) => state.selected.has(row.id));
+      if (!selectedRows.length) { showToast('请先勾选要导出的供应商', true); return; }
+      const lines = [
+        // CSV 不支持单元格样式，将标题放在 7 列的中间列，打开表格时保持视觉居中。
+        ['', '', '', `供应商档案-${localDateTimeValue(new Date(), ' ')}`, '', '', ''],
+        ['序号', '供应商名称', '用户名', '供应商联系人', '联系电话', '合作期限', '状态'],
+        ...selectedRows.map((row) => [
+          state.rows.indexOf(row) + 1,
+          row.name || '--',
+          row.username || '--',
+          row.contact || '--',
+          row.phone || '--',
+          formatCooperationPeriod(row),
+          row.status || '--',
+        ]),
+      ];
+      const csv = `\uFEFF${lines.map((line) => line.map(csvCell).join(',')).join('\r\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `供应商档案_${dateNow().replace(/-/g, '')}.csv`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      showToast(`已导出${selectedRows.length}家供应商`);
+    }
+
     function render() {
       const name = valueOf(root, '[data-filter="name"]').toLowerCase(); const contact = valueOf(root, '[data-filter="contact"]').toLowerCase(); const status = valueOf(root, '[data-filter="status"]');
       state.filtered = state.rows.filter((row) => (!name || row.name.toLowerCase().includes(name)) && (!contact || row.contact.toLowerCase().includes(contact)) && (!status || row.status === status));
       const page = state.pager?.getState() || { page: 1, pageSize: 20 }; const start = (page.page - 1) * page.pageSize;
-      const supplierRows = state.filtered.slice(start, start + page.pageSize).map((row, index) => {
+      state.visibleRows = state.filtered.slice(start, start + page.pageSize);
+      const supplierRows = state.visibleRows.map((row, index) => {
         const isPendingAudit = row.auditStatus === '待审核' || row.status === '待审核';
         const canEdit = row.status === '启用' && (!row.auditStatus || row.auditStatus === '已通过');
         const toggleButton = row.status === '启用' && !isPendingAudit ? `<button class="bidding-link" type="button" data-action="toggle-supplier" data-id="${row.id}">禁用</button>` : '';
         const auditButton = isPendingAudit ? `<button class="bidding-link" type="button" data-action="audit-supplier" data-id="${row.id}">审核</button>` : '';
         const editButton = canEdit ? `<button class="bidding-link" type="button" data-action="edit-supplier" data-id="${row.id}">编辑</button>` : '';
-        return `<tr><td>${start + index + 1}</td><td>${esc(row.name)}</td><td>${esc(row.contact)}</td><td>${esc(row.phone)}</td><td>${row.cooperationStart ? `${esc(row.cooperationStart)} ~ ${esc(row.cooperationEnd)}` : '--'}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell">${editButton}${toggleButton}<button class="bidding-link danger" type="button" data-action="delete-supplier" data-id="${row.id}">删除</button>${auditButton}</div></td></tr>`;
+        const checked = state.selected.has(row.id);
+        return `<tr><td><span class="custom-checkbox supplier-custom-checkbox supplier-row-checkbox${checked ? ' checked' : ''}" role="checkbox" aria-checked="${checked}" data-action="toggle-select-supplier" data-id="${esc(row.id)}" aria-label="选择${esc(row.name)}" tabindex="0"></span></td><td>${start + index + 1}</td><td>${esc(row.name)}</td><td>${esc(row.username || '--')}</td><td>${esc(row.contact || '--')}</td><td>${esc(row.phone || '--')}</td><td>${esc(formatCooperationPeriod(row))}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell">${editButton}${toggleButton}<button class="bidding-link danger" type="button" data-action="delete-supplier" data-id="${row.id}">删除</button>${auditButton}</div></td></tr>`;
       }).join('');
-      root.querySelector('#suppliersBody').innerHTML = supplierRows || '<tr><td class="empty-row" colspan="7">暂无符合条件的数据</td></tr>';
+      root.querySelector('#suppliersBody').innerHTML = supplierRows || '<tr><td class="empty-row" colspan="9">暂无符合条件的数据</td></tr>';
+      const selectPage = root.querySelector('[data-action="toggle-select-page"]');
+      const selectedVisibleCount = state.visibleRows.filter((row) => state.selected.has(row.id)).length;
+      if (selectPage) {
+        const allVisibleSelected = state.visibleRows.length > 0 && selectedVisibleCount === state.visibleRows.length;
+        const partiallySelected = selectedVisibleCount > 0 && selectedVisibleCount < state.visibleRows.length;
+        selectPage.classList.toggle('checked', allVisibleSelected);
+        selectPage.classList.toggle('indeterminate', partiallySelected);
+        selectPage.classList.toggle('is-disabled', !state.visibleRows.length);
+        selectPage.setAttribute('aria-checked', partiallySelected ? 'mixed' : String(allVisibleSelected));
+        selectPage.setAttribute('aria-disabled', String(!state.visibleRows.length));
+      }
       state.pager?.update({ total: state.filtered.length });
+      annotationOverlay.sync();
     }
     state.pager = createPager('suppliersPagination', state.rows.length, render); render();
     root.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action; const id = event.target.closest('[data-id]')?.dataset.id;
-      if (action === 'query') { state.pager.update({ page: 1 }); render(); }
-      if (action === 'reset') { all(root, '[data-filter]').forEach((field) => { field.value = ''; }); state.pager.update({ page: 1 }); render(); }
+      if (action === 'query') { state.pager.update({ page: 1 }); render(); return; }
+      if (action === 'reset') { all(root, '[data-filter]').forEach((field) => { field.value = ''; }); state.pager.update({ page: 1 }); render(); return; }
+      if (action === 'toggle-select-page') {
+        if (!state.visibleRows.length) return;
+        const shouldSelect = state.visibleRows.some((row) => !state.selected.has(row.id));
+        state.visibleRows.forEach((row) => shouldSelect ? state.selected.add(row.id) : state.selected.delete(row.id));
+        render();
+        return;
+      }
+      if (action === 'toggle-select-supplier' && id) {
+        if (state.selected.has(id)) state.selected.delete(id); else state.selected.add(id);
+        render();
+        return;
+      }
+      if (action === 'view-supplier-export-template') {
+        const templateUrl = './supplier-export-template.html';
+        const templateWindow = window.open(templateUrl, '_blank', 'noopener');
+        if (!templateWindow) go(templateUrl);
+        return;
+      }
+      if (action === 'export-suppliers') { exportSuppliers(); return; }
       if (action === 'add-supplier') go('./supplier-editor.html?mode=add');
       if (action === 'invite-supplier') openInviteModal();
       if (action === 'view-invite-prototype') go('./supplier-invite.html?mode=invite&invite=demo');
@@ -858,7 +1075,14 @@
       if (action === 'audit-supplier' && id) go(`./supplier-editor.html?mode=audit&id=${encodeURIComponent(id)}`);
       if (action === 'edit-supplier' && id) go(`./supplier-editor.html?mode=edit&id=${encodeURIComponent(id)}`);
       if (action === 'toggle-supplier' && id) { const row = state.rows.find((item) => item.id === id); service.toggle('suppliers', id, row.status !== '启用'); state.rows = service.get('suppliers'); render(); showToast('状态已更新'); }
-      if (action === 'delete-supplier' && id && window.confirm('确定删除这条供应商档案吗？')) { service.remove('suppliers', id); state.rows = service.get('suppliers'); render(); showToast('删除成功'); }
+      if (action === 'delete-supplier' && id && window.confirm('确定删除这条供应商档案吗？')) { service.remove('suppliers', id); state.selected.delete(id); state.rows = service.get('suppliers'); render(); showToast('删除成功'); }
+    });
+    root.addEventListener('keydown', (event) => {
+      const checkbox = event.target.closest('.supplier-custom-checkbox');
+      if (checkbox && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        checkbox.click();
+      }
     });
     inviteModal.addEventListener('change', (event) => {
       if (event.target.id === 'supplierInviteExpire' && inviteModal.classList.contains('open')) {

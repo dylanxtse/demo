@@ -32,6 +32,32 @@
   const previousStorageKey = 'procurement-demo-v2';
   const backupStorageKey = 'procurement-demo-v3-migration-backup';
   const schemaVersion = '20260805-flow-v3.0';
+  const warehouseMonitorPointSeed = [
+    {
+      id: 'WMP-001',
+      name: '中心仓收货区',
+      description: '真实仓储装卸口视频，覆盖卸货月台和收货通道',
+      videoAddress: 'https://commons.wikimedia.org/wiki/Special:FilePath/Amazon_warehouse_BHX4_loading_docks_2.webm',
+      createdAt: '2026-08-12 09:00:00',
+      updatedAt: '2026-08-12 09:00:00'
+    },
+    {
+      id: 'WMP-002',
+      name: '中心仓分拣区',
+      description: '真实包裹分拣线视频，查看分拣作业现场',
+      videoAddress: 'https://commons.wikimedia.org/wiki/Special:FilePath/Robot_package_handling.webm',
+      createdAt: '2026-08-12 09:10:00',
+      updatedAt: '2026-08-12 09:10:00'
+    },
+    {
+      id: 'WMP-003',
+      name: '北区仓出库口',
+      description: '真实出库装车口视频',
+      videoAddress: 'https://commons.wikimedia.org/wiki/Special:FilePath/Plastic_Industry_%287%29_-_Loading_dock.webm',
+      createdAt: '2026-08-12 09:20:00',
+      updatedAt: '2026-08-12 09:20:00'
+    }
+  ];
   const legacyBusinessStoragePrefixes = [
     'procurement-products',
     'procurement-inbound-orders',
@@ -900,6 +926,10 @@
       state.processingTemplates = clone(window.MockProcessingTemplates || []);
       changed = true;
     }
+    if (!Array.isArray(state.warehouseMonitorPoints)) {
+      state.warehouseMonitorPoints = clone(warehouseMonitorPointSeed);
+      changed = true;
+    }
 
     (state.products || []).forEach((product) => {
       if (!product.id) set(product, 'products', 'id', product.code);
@@ -1471,6 +1501,7 @@
       customers,
       customerLocations: sourceLocations(rawOrders, customers),
       warehouses: sourceWarehouses(),
+      warehouseMonitorPoints: clone(warehouseMonitorPointSeed),
       orders,
       orderLines: orders.flatMap((order) => order.items.map((line) => clone(line))),
       sortingTasks,

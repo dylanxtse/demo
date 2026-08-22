@@ -56,6 +56,7 @@
         { name: '加工记录', href: './processing-record.html' }
       ] },
       { name: '仓库档案', href: './warehouse-archive.html' },
+      { name: '仓库监控', href: './warehouse-monitor.html' },
       { name: '期初库存', href: './opening-inventory.html' }
     ] },
     { name: '物流配送', icon: 'route', children: ['数据监测', '线路管理', '物流排线', '司机管理', '车辆管理', '配送地址'] },

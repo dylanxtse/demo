@@ -1,5 +1,10 @@
 (function () {
   const service = window.OperationsService;
+  const downloadIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  const formatExportDateTime = (date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  };
   const defaultStatusMap = {
     PENDING: ['待审核', 'warning'],
     PENDING_CONFIRM: ['待确认', 'warning'],
@@ -30,8 +35,20 @@
       .replace(/'/g, '&#039;');
   }
 
+  function renderAnnotationMarker(annotation, instance = '', isEntry = false) {
+    const baseId = annotation.id || `annotation-${annotation.number || 1}`;
+    const id = escapeHtml(instance ? `${baseId}-${instance}` : baseId);
+    const placementClass = annotation.placement === 'right' ? ' is-right' : annotation.placement === 'left' ? ' is-left' : '';
+    const entryClass = isEntry ? ' is-entry' : '';
+    return `<span class="record-annotation-placeholder${placementClass}${entryClass}" data-annotation-placeholder="${id}" data-annotation-base="${escapeHtml(baseId)}" data-annotation-target="${escapeHtml(annotation.target || '')}" aria-hidden="true"></span>`;
+  }
+
   function mount(config) {
     const statusMap = { ...defaultStatusMap, ...(config.statusMap || {}) };
+    const annotations = (config.annotations || []).filter(Boolean).map((annotation, index) => ({
+      ...annotation,
+      number: String(index + 1)
+    }));
     const state = {
       page: 1,
       pageSize: config.pageSize || 20,
@@ -62,25 +79,43 @@
       </div>`;
     const filters = config.filters || [];
     const filterHtml = filters.map(renderFilter).join('');
-    const primaryFilterHtml = filters.slice(0, 3).map(renderFilter).join('');
-    const advancedFilterHtml = filters.slice(3).map(renderFilter).join('');
+    const tableHeaderAnnotations = annotations.filter((annotation) => annotation.target === 'table-header');
+    const filterAnnotations = annotations.filter((annotation) => annotation.target === 'filter');
+    const addModalAnnotation = annotations.find((annotation) => annotation.target === 'add-modal');
+    const toolbarActionAnnotations = annotations.filter((annotation) => annotation.target === 'toolbar-action');
+    const detailModalAnnotation = annotations.find((annotation) => annotation.target === 'detail-modal');
+    const advancedFilterToggle = config.enableAdvancedFilter === false
+      ? ''
+      : '<button class="operations-filter-toggle" type="button" data-operations-filter-toggle hidden>高级筛选<span class="toggle-arrow">▾</span></button>';
     const toolbarActions = config.toolbar || [];
     const isSideToolbarAction = (action) => action.key === 'export' || action.side === true;
     const isToolbarActionVisible = (action) => !action.visibleStatuses
       || String(state.activeStatus).split(',').some((status) => action.visibleStatuses.includes(status));
+    const withEntryAnnotation = (html, annotation, instance) => annotation
+      ? `<span class="record-annotation-entry">${html}${renderAnnotationMarker(annotation, instance, true)}</span>`
+      : html;
     const renderToolbarButton = (action, compact = false) => {
       const buttonClass = compact ? 'btn btn-sm' : 'btn';
+      const fullButtonClass = [buttonClass, action.primary ? 'btn-primary' : '', action.className || '']
+        .filter(Boolean)
+        .join(' ');
+      const icon = action.icon === 'download' ? downloadIcon : (action.icon || '');
+      const tooltipAttrs = action.tooltip
+        ? ` data-tooltip="${escapeHtml(action.tooltip)}"${action.ariaLabel ? ` aria-label="${escapeHtml(action.ariaLabel)}"` : ''}`
+        : (action.ariaLabel ? ` aria-label="${escapeHtml(action.ariaLabel)}"` : '');
       const options = (action.dropdownOptions || []).filter(isToolbarActionVisible);
       const activeStatus = String(state.activeStatus);
       const effectiveKey = action.defaultActionByStatus?.[activeStatus] || action.key;
       const effectiveLabel = action.labelByStatus?.[activeStatus] || action.label;
       const dropdownVisible = !action.dropdownVisibleStatuses || action.dropdownVisibleStatuses.includes(activeStatus);
-      if (!options.length || !dropdownVisible) return `<button class="${buttonClass} ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${escapeHtml(effectiveKey)}">${escapeHtml(effectiveLabel)}</button>`;
-      return `<div class="toolbar-dropdown">
-        <button class="${buttonClass} toolbar-dropdown-main ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${escapeHtml(effectiveKey)}">${escapeHtml(effectiveLabel)}</button>
+      const entryAnnotation = toolbarActionAnnotations.find((annotation) => annotation.actionKey === action.key)
+        || (action.key === 'add' ? addModalAnnotation : null);
+      if (!options.length || !dropdownVisible) return withEntryAnnotation(`<button class="${fullButtonClass}" type="button" data-toolbar-action="${escapeHtml(effectiveKey)}"${tooltipAttrs}>${icon}${escapeHtml(effectiveLabel)}</button>`, entryAnnotation, `${action.key}-entry`);
+      return withEntryAnnotation(`<div class="toolbar-dropdown">
+        <button class="${fullButtonClass} toolbar-dropdown-main" type="button" data-toolbar-action="${escapeHtml(effectiveKey)}"${tooltipAttrs}>${icon}${escapeHtml(effectiveLabel)}</button>
         <button class="${buttonClass} toolbar-dropdown-toggle ${action.primary ? 'btn-primary' : ''}" type="button" data-toolbar-dropdown-toggle aria-label="更多操作">▾</button>
         <div class="toolbar-dropdown-menu">${options.map((option) => `<button type="button" data-toolbar-option="${escapeHtml(option.key)}">${escapeHtml(option.label)}</button>`).join('')}</div>
-      </div>`;
+      </div>`, entryAnnotation, `${action.key}-entry`);
     };
     const toolbarHtml = toolbarActions.filter((action) => !isSideToolbarAction(action)).map((action) =>
       renderToolbarButton(action, true)
@@ -97,22 +132,25 @@
         <div class="operations-status-row"><div class="operations-status-tabs" id="recordStatusTabs"></div></div>
         <div class="operations-filter filter-section">
           <div class="operations-filter-main">
-            <div class="operations-filter-grid">${primaryFilterHtml}</div>
+            <div class="operations-filter-grid" data-operations-filter-grid>${filterHtml}</div>
             <div class="operations-filter-actions">
-              ${advancedFilterHtml ? '<button class="operations-filter-toggle" type="button" data-operations-filter-toggle>高级筛选<span class="toggle-arrow">▾</span></button>' : ''}
+              ${advancedFilterToggle}
               <button class="btn btn-primary btn-sm" id="recordQuery">查询</button>
               <button class="btn btn-sm" id="recordReset">重置</button>
             </div>
           </div>
-          ${advancedFilterHtml ? `<div class="operations-filter-advanced"><div class="operations-filter-grid">${advancedFilterHtml}</div></div>` : ''}
+          ${filterAnnotations.length ? `<div class="record-annotation-corner record-filter-annotation-corner ${filterAnnotations[0].placement === 'left' ? 'is-left' : 'is-right'}">${filterAnnotations.map(renderAnnotationMarker).join('')}</div>` : ''}
         </div>
         <div class="operations-toolbar">
           <div class="operations-toolbar-main">${toolbarHtml}</div>
           <div class="operations-toolbar-side">${toolbarSideHtml}</div>
         </div>
-        <div class="operations-table-container">
-          <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
-          <div class="operations-pagination" id="recordPagination"></div>
+        <div class="record-table-annotation-surface">
+          ${tableHeaderAnnotations.length ? `<div class="record-annotation-corner record-table-annotation-corner ${tableHeaderAnnotations[0].placement === 'left' ? 'is-left' : 'is-right'}">${tableHeaderAnnotations.map(renderAnnotationMarker).join('')}</div>` : ''}
+          <div class="operations-table-container">
+            <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
+            <div class="operations-pagination" id="recordPagination"></div>
+          </div>
         </div>
       </section>
       <div id="recordOverlay"></div>`;
@@ -133,7 +171,47 @@
     const root = window.AppShell.mount({ title: config.title, content });
     const $ = (selector) => root.querySelector(selector);
     const overlay = $('#recordOverlay');
+    const annotationOverlay = document.createElement('div');
+    annotationOverlay.className = 'record-annotation-overlay';
+    annotationOverlay.setAttribute('aria-label', '页面标注');
+    document.body.appendChild(annotationOverlay);
+    const annotationAnchors = new Map();
+    const annotationById = new Map(annotations.map((annotation) => [
+      annotation.id || `annotation-${annotation.number || 1}`,
+      annotation
+    ]));
     const datePickers = new Map();
+
+    function updateFilterLayout() {
+      const grid = root.querySelector('[data-operations-filter-grid]');
+      const toggle = root.querySelector('[data-operations-filter-toggle]');
+      if (!grid || !toggle) return;
+
+      const wasExpanded = toggle.classList.contains('is-active');
+      const fields = [...grid.children].filter((element) => element.classList.contains('operations-field'));
+      fields.forEach((field) => {
+        field.hidden = false;
+        delete field.dataset.filterOverflow;
+      });
+
+      const rowTops = [...new Set(fields.map((field) => field.offsetTop))].sort((a, b) => a - b);
+      const overflowTop = rowTops[2];
+      const overflowFields = overflowTop == null
+        ? []
+        : fields.filter((field) => field.offsetTop >= overflowTop);
+      const hasAdvanced = overflowFields.length > 0;
+
+      toggle.hidden = !hasAdvanced;
+      toggle.classList.toggle('is-active', hasAdvanced && wasExpanded);
+      grid.classList.toggle('is-expanded', hasAdvanced && wasExpanded);
+      overflowFields.forEach((field) => {
+        field.dataset.filterOverflow = 'true';
+        field.hidden = !(hasAdvanced && wasExpanded);
+      });
+    }
+
+    updateFilterLayout();
+    window.addEventListener('resize', updateFilterLayout);
 
     if (config.categoryTree) {
       const page = root.querySelector('.operations-page');
@@ -168,6 +246,159 @@
         root.querySelector('.operations-page')?.classList.add('has-inline-status-actions');
       }
     }
+    window.requestAnimationFrame?.(updateFilterLayout);
+
+    function findAnnotationPlaceholder(id) {
+      return [...root.querySelectorAll('[data-annotation-placeholder]')]
+        .find((placeholder) => placeholder.dataset.annotationPlaceholder === id);
+    }
+
+    function createAnnotationAnchor(annotation, placeholder) {
+      const id = placeholder.dataset.annotationPlaceholder;
+      const number = escapeHtml(annotation.number || '1');
+      const title = escapeHtml(annotation.title || `标注${number}`);
+      const content = escapeHtml(annotation.content || '');
+      const placementClass = annotation.placement === 'right' ? ' is-right' : annotation.placement === 'left' ? ' is-left' : '';
+      const entryClass = placeholder.classList.contains('is-entry') ? ' is-entry' : '';
+      const anchor = document.createElement('span');
+      anchor.className = `record-annotation-anchor${placementClass}${entryClass}`;
+      anchor.dataset.annotationOverlayId = id;
+      anchor.dataset.annotationPlacement = annotation.placement || '';
+      anchor.innerHTML = `<button class="record-annotation-marker" type="button" data-annotation-toggle="${escapeHtml(id)}" aria-expanded="false" aria-label="查看标注${number}">${number}</button>
+        <span class="record-annotation-popover" data-annotation-popover="${escapeHtml(id)}" role="note" aria-hidden="true"><strong>${title}</strong><span>${content}</span></span>`;
+      return anchor;
+    }
+
+    function positionAnnotation(anchor) {
+      const id = anchor.dataset.annotationOverlayId;
+      const placeholder = findAnnotationPlaceholder(id);
+      const marker = anchor.querySelector('[data-annotation-toggle]');
+      const popover = anchor.querySelector('[data-annotation-popover]');
+      if (!placeholder || !marker || !popover || !placeholder.getClientRects().length) {
+        anchor.hidden = true;
+        return;
+      }
+      anchor.hidden = false;
+      const markerSize = 22;
+      const placeholderRect = placeholder.getBoundingClientRect();
+      const entryHost = placeholder.closest('.record-annotation-entry');
+      const cornerHost = placeholder.closest('.record-annotation-corner');
+      const hostRect = (entryHost || cornerHost || placeholder.parentElement)?.getBoundingClientRect() || placeholderRect;
+      const isEntry = anchor.classList.contains('is-entry');
+      const isRight = anchor.dataset.annotationPlacement === 'right';
+      const queryButton = placeholder.dataset.annotationTarget === 'filter'
+        ? root.querySelector('#recordQuery')
+        : null;
+      const queryRect = queryButton?.getBoundingClientRect();
+      let markerLeft = placeholderRect.left;
+      let markerTop = hostRect.top + ((hostRect.height - markerSize) / 2);
+      if (queryRect && queryRect.width && queryRect.height) {
+        markerLeft = queryRect.left + ((queryRect.width - markerSize) / 2);
+        markerTop = queryRect.bottom + 6;
+      } else if (isEntry) {
+        markerLeft = isRight
+          ? hostRect.right + 4
+          : hostRect.left - markerSize - 4;
+      }
+      else if (cornerHost && isRight) markerLeft = placeholderRect.right - markerSize;
+      if (!queryRect && !hostRect.height) markerTop = placeholderRect.top;
+      const viewportPadding = 8;
+      markerLeft = Math.max(viewportPadding, Math.min(markerLeft, window.innerWidth - markerSize - viewportPadding));
+      markerTop = Math.max(viewportPadding, Math.min(markerTop, window.innerHeight - markerSize - viewportPadding));
+      anchor.style.left = `${Math.round(markerLeft)}px`;
+      anchor.style.top = `${Math.round(markerTop)}px`;
+      anchor.style.zIndex = anchor.classList.contains('is-open') ? '3' : '1';
+
+      const markerRect = marker.getBoundingClientRect();
+      const gap = 8;
+      const popoverWidth = Math.min(popover.offsetWidth || 340, window.innerWidth - 32);
+      const popoverHeight = popover.offsetHeight || 0;
+      const preferredLeft = isRight && !isEntry ? markerRect.right - popoverWidth : markerRect.left;
+      const popoverLeft = Math.max(16, Math.min(preferredLeft, window.innerWidth - popoverWidth - 16));
+      let popoverTop = markerRect.bottom + gap;
+      if (popoverHeight && popoverTop + popoverHeight > window.innerHeight - 16) {
+        popoverTop = markerRect.top - gap - popoverHeight;
+      }
+      popoverTop = Math.max(16, Math.min(popoverTop, window.innerHeight - popoverHeight - 16));
+      popover.style.left = `${Math.round(popoverLeft)}px`;
+      popover.style.top = `${Math.round(popoverTop)}px`;
+      popover.style.right = 'auto';
+    }
+
+    function repositionAnnotations() {
+      annotationAnchors.forEach((anchor) => positionAnnotation(anchor));
+    }
+
+    function closeAnnotation(anchor) {
+      anchor.classList.remove('is-open');
+      anchor.style.zIndex = '1';
+      anchor.querySelector('[data-annotation-toggle]')?.setAttribute('aria-expanded', 'false');
+      anchor.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', 'true');
+    }
+
+    function closeAllAnnotations(except = null) {
+      annotationAnchors.forEach((anchor) => {
+        if (anchor !== except && anchor.classList.contains('is-open')) closeAnnotation(anchor);
+      });
+    }
+
+    function syncAnnotationOverlay() {
+      const placeholders = [...root.querySelectorAll('[data-annotation-placeholder]')];
+      const activeIds = new Set();
+      placeholders.forEach((placeholder) => {
+        const id = placeholder.dataset.annotationPlaceholder;
+        const annotation = annotationById.get(placeholder.dataset.annotationBase);
+        if (!id || !annotation) return;
+        activeIds.add(id);
+        let anchor = annotationAnchors.get(id);
+        if (!anchor) {
+          anchor = createAnnotationAnchor(annotation, placeholder);
+          annotationAnchors.set(id, anchor);
+          annotationOverlay.appendChild(anchor);
+        }
+      });
+      [...annotationAnchors.entries()].forEach(([id, anchor]) => {
+        if (!activeIds.has(id)) {
+          closeAnnotation(anchor);
+          anchor.remove();
+          annotationAnchors.delete(id);
+        }
+      });
+      repositionAnnotations();
+    }
+
+    function toggleAnnotation(annotationToggle) {
+      const anchor = annotationToggle.closest('.record-annotation-anchor');
+      if (!anchor) return;
+      const expanded = !anchor.classList.contains('is-open');
+      closeAllAnnotations(anchor);
+      anchor.classList.toggle('is-open', expanded);
+      annotationToggle.setAttribute('aria-expanded', String(expanded));
+      anchor.querySelector('[data-annotation-popover]')?.setAttribute('aria-hidden', String(!expanded));
+      if (expanded) positionAnnotation(anchor);
+    }
+
+    annotationOverlay.addEventListener('click', (event) => {
+      const annotationToggle = event.target.closest('[data-annotation-toggle]');
+      if (annotationToggle) toggleAnnotation(annotationToggle);
+    });
+    annotationOverlay.addEventListener('pointerover', (event) => {
+      const anchor = event.target.closest('.record-annotation-anchor');
+      if (anchor) positionAnnotation(anchor);
+    });
+    annotationOverlay.addEventListener('focusin', (event) => {
+      const anchor = event.target.closest('.record-annotation-anchor');
+      if (anchor) positionAnnotation(anchor);
+    });
+    annotationOverlay.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeAllAnnotations();
+    });
+    document.addEventListener('click', (event) => {
+      if (event.target.closest?.('.record-annotation-anchor')) return;
+      closeAllAnnotations();
+    });
+    document.addEventListener('scroll', repositionAnnotations, true);
+    window.addEventListener('resize', repositionAnnotations);
 
     function currentResource() {
       const active = config.tabs?.find((tab) => tab.key === state.activeTab);
@@ -252,8 +483,13 @@
     }
 
     function renderHead() {
+      const selectionHeader = config.selectable === false
+        ? ''
+        : config.customSelection
+          ? '<th class="custom-selection-column"><span class="custom-checkbox record-select-all-custom" role="checkbox" id="recordSelectAll" aria-checked="false" aria-label="选择全部" tabindex="0"></span></th>'
+          : '<th><input type="checkbox" id="recordSelectAll" aria-label="选择全部"></th>';
       $('#recordHead').innerHTML = `<tr>
-        ${config.selectable !== false ? '<th><input type="checkbox" id="recordSelectAll" aria-label="选择全部"></th>' : ''}
+        ${selectionHeader}
         <th>序号</th>${currentColumns().map((column) => `<th>${column.label}</th>`).join('')}<th>操作</th>
       </tr>`;
     }
@@ -272,12 +508,20 @@
       const columns = currentColumns();
       if (!state.items.length) {
         $('#recordBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + (config.selectable === false ? 2 : 3)}">暂无数据</td></tr>`;
+        syncAnnotationOverlay();
         return;
       }
       $('#recordBody').innerHTML = state.items.map((item, index) => {
         const actions = currentActions(item);
+        const selectable = isSelectable(item);
+        const checked = state.selected.has(item.id);
+        const selectionCell = config.selectable === false
+          ? ''
+          : config.customSelection
+            ? `<td><span class="custom-checkbox record-row-select${checked ? ' checked' : ''}${selectable ? '' : ' is-disabled'}" role="checkbox" aria-checked="${checked}" aria-label="选择数据" tabindex="${selectable ? '0' : '-1'}"${selectable ? '' : ' aria-disabled="true"'}></span></td>`
+            : `<td><input type="checkbox" class="record-row-select" aria-label="选择数据" ${checked ? 'checked' : ''} ${selectable ? '' : 'disabled'}></td>`;
         return `<tr data-id="${escapeHtml(item.id)}">
-          ${config.selectable !== false ? `<td><input type="checkbox" class="record-row-select" aria-label="选择数据" ${state.selected.has(item.id) ? 'checked' : ''} ${isSelectable(item) ? '' : 'disabled'}></td>` : ''}
+          ${selectionCell}
           <td>${(state.page - 1) * state.pageSize + index + 1}</td>
           ${columns.map((column) => {
             const cell = formatCell(item, column);
@@ -285,7 +529,11 @@
               const href = typeof column.href === 'function' ? column.href(item) : column.href;
               return `<td><button class="cell-link" type="button" data-cell-href="${escapeHtml(href)}" onclick="window.location.href=this.dataset.cellHref">${cell}</button></td>`;
             }
-            return `<td>${column.link ? `<button class="cell-link" data-row-action="view">${cell}</button>` : cell}</td>`;
+            if (!column.link) return `<td>${cell}</td>`;
+            const entryAnnotation = detailModalAnnotation && index === 0
+              ? renderAnnotationMarker(detailModalAnnotation, 'view-entry', true)
+              : '';
+            return `<td><span class="record-annotation-entry"><button class="cell-link" data-row-action="view">${cell}</button>${entryAnnotation}</span></td>`;
           }).join('')}
           <td><div class="cell-actions">${actions.map((action, actionIndex) => {
             const isDisabled = action.disabled && action.disabled(item);
@@ -293,6 +541,7 @@
           }).join('') || '--'}</div></td>
         </tr>`;
       }).join('');
+      syncAnnotationOverlay();
     }
 
     function renderPagination() {
@@ -318,13 +567,23 @@
       side.innerHTML = `${actions.filter(isSideToolbarAction).map((action) =>
         renderToolbarButton(action)
       ).join('')}`;
+      syncAnnotationOverlay();
     }
 
     function updateSelection() {
       const all = $('#recordSelectAll');
       if (all) {
-        all.checked = state.items.length > 0 && state.items.every((item) => state.selected.has(item.id));
-        all.indeterminate = !all.checked && state.items.some((item) => state.selected.has(item.id));
+        const selectableItems = state.items.filter(isSelectable);
+        const isChecked = selectableItems.length > 0 && selectableItems.every((item) => state.selected.has(item.id));
+        const isIndeterminate = !isChecked && selectableItems.some((item) => state.selected.has(item.id));
+        if (config.customSelection) {
+          all.classList.toggle('checked', isChecked);
+          all.classList.toggle('indeterminate', isIndeterminate);
+          all.setAttribute('aria-checked', isIndeterminate ? 'mixed' : String(isChecked));
+        } else {
+          all.checked = isChecked;
+          all.indeterminate = isIndeterminate;
+        }
       }
     }
 
@@ -366,28 +625,31 @@
       renderToolbar();
       renderPagination();
       updateSelection();
+      syncAnnotationOverlay();
     }
 
     function closeModal() {
       overlay.innerHTML = '';
+      syncAnnotationOverlay();
     }
 
-    function modal(title, body, footer, detail = false, variant = '') {
+    function modal(title, body, footer, detail = false, variant = '', annotation = null) {
       overlay.innerHTML = `<div class="operations-modal-backdrop"><section class="operations-modal ${detail ? 'is-detail' : ''} ${variant}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3><button data-record-close aria-label="关闭">×</button></header>
+        <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3>${annotation ? renderAnnotationMarker(annotation) : ''}<button data-record-close aria-label="关闭">×</button></header>
         <div class="operations-modal-body">${body}</div><footer class="operations-modal-footer">${footer}</footer>
       </section></div>`;
+      syncAnnotationOverlay();
     }
 
     function showDetail(item) {
-      modal(`${currentEntityTitle()}详情`, `<dl class="operations-detail-grid">${currentColumns().map((column) => {
-        let value = item[column.key];
-        if (column.format === 'money') value = Number(value || 0).toFixed(2);
-        if (column.format === 'status') {
-          value = statusMap[value]?.[0] || window.BusinessRules?.statusLabel(currentResource(), value) || value;
-        }
-        return `<div class="operations-detail-item"><dt>${column.label}</dt><dd>${escapeHtml(value || '--')}</dd></div>`;
-      }).join('')}</dl>`, '<button class="btn btn-primary" data-record-close>关闭</button>', true);
+      const detailColumns = config.detailColumns || currentColumns();
+      const detailTitle = typeof config.detailTitle === 'function'
+        ? config.detailTitle(item)
+        : (config.detailTitle || `${currentEntityTitle()}详情`);
+      modal(detailTitle, `<dl class="operations-detail-grid">${detailColumns.map((column) => {
+        const value = formatCell(item, column);
+        return `<div class="operations-detail-item"><dt>${column.label}</dt><dd>${value || '--'}</dd></div>`;
+      }).join('')}</dl>`, '<button class="btn btn-primary" data-record-close>关闭</button>', true, config.detailVariant || '', detailModalAnnotation);
     }
 
     async function showRelatedDetail(item, action) {
@@ -440,7 +702,10 @@
       const fields = overrideFields || currentFormFields();
       modal(overrideTitle || (item ? `编辑${currentEntityTitle()}` : `添加${currentEntityTitle()}`),
         `<form id="recordForm"><div class="operations-form-grid">${fields.map((field) => formControl(field, item)).join('')}</div></form>`,
-        '<button class="btn" data-record-close>取消</button><button class="btn btn-primary" id="recordSave">保存</button>'
+        '<button class="btn" data-record-close>取消</button><button class="btn btn-primary" id="recordSave">保存</button>',
+        false,
+        '',
+        item ? null : addModalAnnotation
       );
       $('#recordSave').onclick = async () => {
         const form = $('#recordForm');
@@ -530,14 +795,45 @@
       };
     }
 
-    async function exportRows() {
-      const csv = await service.export(currentResource(), { condition: state.condition }, currentColumns());
+    async function exportRows(action = {}) {
+      let csv;
+      if (action.exportSelected) {
+        let sourceItems = state.items;
+        if (state.total > state.items.length) {
+          const result = await service.list(currentResource(), {
+            page: 1,
+            pageSize: state.total,
+            condition: state.condition
+          });
+          sourceItems = result.items;
+        }
+        const selectedItems = sourceItems.filter((item) => state.selected.has(item.id));
+        if (!selectedItems.length) return toast('请选择要导出的数据', 'error');
+        const columns = currentColumns();
+        const exportColumns = [{ key: '__sequence', label: '序号' }, ...columns];
+        const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+        const titleRow = new Array(exportColumns.length).fill('');
+        titleRow[Math.floor(titleRow.length / 2)] = `${config.exportTitle || config.title}-${formatExportDateTime(new Date())}`;
+        const rows = selectedItems.map((item) => exportColumns.map((column) => {
+          if (column.key === '__sequence') return sourceItems.findIndex((entry) => entry.id === item.id) + 1;
+          if (typeof column.exportValue === 'function') return column.exportValue(item);
+          return item[column.key];
+        }));
+        csv = [titleRow, exportColumns.map((column) => column.label), ...rows]
+          .map((row) => row.map(csvCell).join(','))
+          .join('\r\n');
+      } else {
+        csv = await service.export(currentResource(), { condition: state.condition }, currentColumns());
+      }
       const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${config.title}.csv`;
+      link.download = action.fileName || `${config.title}.csv`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      link.remove();
       URL.revokeObjectURL(url);
       toast('导出成功');
     }
@@ -601,13 +897,20 @@
         }
         return showForm();
       }
+      if (action.key === 'view-export-template') {
+        const templateHref = action.href || config.exportTemplateHref || './warehouse-export-template.html';
+        const templateWindow = window.open(templateHref, '_blank', 'noopener');
+        if (!templateWindow) window.location.href = templateHref;
+        return;
+      }
       if (action.requiresSelection || action.validateSelection) {
         const selectedItems = state.items.filter((item) => state.selected.has(item.id));
-        if (action.requiresSelection && !selectedItems.length) return toast('请选择要操作的数据', 'error');
+        const hasSelectedData = action.exportSelected ? state.selected.size > 0 : selectedItems.length > 0;
+        if (action.requiresSelection && !hasSelectedData) return toast(action.selectionError || '请选择要操作的数据', 'error');
         const message = action.validateSelection?.(selectedItems);
         if (message) return toast(message, 'error');
       }
-      if (action.key === 'export') return exportRows();
+      if (action.key === 'export') return exportRows(action);
       if (action.batchUpdate && action.formFields) return showBatchForm(action);
       if (action.batchTransition) {
         return confirm(action.label, action.message || `确定执行“${action.label}”操作吗？`, async () => {
@@ -630,7 +933,11 @@
       const filterToggle = event.target.closest('[data-operations-filter-toggle]');
       if (filterToggle) {
         const expanded = filterToggle.classList.toggle('is-active');
-        root.querySelector('.operations-filter-advanced')?.classList.toggle('is-visible', expanded);
+        const filterGrid = root.querySelector('[data-operations-filter-grid]');
+        filterGrid?.classList.toggle('is-expanded', expanded);
+        filterGrid?.querySelectorAll('[data-filter-overflow="true"]').forEach((field) => {
+          field.hidden = !expanded;
+        });
         return;
       }
       const categoryButton = event.target.closest('[data-record-category]');
@@ -657,6 +964,27 @@
       const cellLink = event.target.closest('[data-cell-href]');
       if (cellLink) {
         window.location.href = cellLink.dataset.cellHref;
+        return;
+      }
+      const customSelectAll = config.customSelection && event.target.closest('#recordSelectAll.custom-checkbox');
+      if (customSelectAll) {
+        const selectableItems = state.items.filter(isSelectable);
+        const shouldSelect = !selectableItems.length || !selectableItems.every((item) => state.selected.has(item.id));
+        selectableItems.forEach((item) => shouldSelect ? state.selected.add(item.id) : state.selected.delete(item.id));
+        renderBody();
+        updateSelection();
+        return;
+      }
+      const customRowSelect = config.customSelection && event.target.closest('.record-row-select.custom-checkbox');
+      if (customRowSelect) {
+        const id = customRowSelect.closest('tr[data-id]')?.dataset.id;
+        const item = state.items.find((entry) => entry.id === id);
+        if (item && isSelectable(item)) {
+          if (state.selected.has(id)) state.selected.delete(id);
+          else state.selected.add(id);
+          renderBody();
+          updateSelection();
+        }
         return;
       }
       const rowButton = event.target.closest('[data-row-action]');
@@ -726,12 +1054,12 @@
           .catch((error) => toast(error.message || '保存失败', 'error'));
         return;
       }
-      if (event.target.id === 'recordSelectAll') {
+      if (!config.customSelection && event.target.id === 'recordSelectAll') {
         state.items.filter(isSelectable).forEach((item) => event.target.checked ? state.selected.add(item.id) : state.selected.delete(item.id));
         renderBody();
         updateSelection();
       }
-      if (event.target.classList.contains('record-row-select')) {
+      if (!config.customSelection && event.target.classList.contains('record-row-select')) {
         const id = event.target.closest('tr').dataset.id;
         event.target.checked ? state.selected.add(id) : state.selected.delete(id);
         updateSelection();
@@ -744,6 +1072,12 @@
     });
 
     root.addEventListener('keydown', (event) => {
+      const customCheckbox = config.customSelection && event.target.closest('.custom-checkbox');
+      if (customCheckbox && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        customCheckbox.click();
+        return;
+      }
       if (event.key === 'Enter' && event.target.id === 'recordJump') {
         state.page = Math.min(Math.max(1, Math.ceil(state.total / state.pageSize)), Math.max(1, Number(event.target.value) || 1));
         load();

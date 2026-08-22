@@ -84,6 +84,136 @@
 .btn-text:hover { opacity: 0.8; }
 .btn-text.danger { color: var(--danger); }
 .btn-text.disabled { color: var(--text-tertiary); cursor: not-allowed; }
+
+/* ===== 统一页面标注覆盖层 =====
+   页面内只保留零尺寸定位锚点；编号按钮和提示气泡统一挂到 body 的全屏覆盖层，完全不参与业务布局。 */
+.record-annotation-placeholder {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  pointer-events: none;
+  vertical-align: middle;
+}
+
+/* 防止旧缓存或旧模板把实体标注按钮重新渲染回业务页面层。 */
+.record-annotation-anchor {
+  display: none;
+}
+
+.record-annotation-entry {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  vertical-align: middle;
+}
+
+.record-annotation-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.record-annotation-overlay .record-annotation-anchor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  pointer-events: auto;
+}
+
+.record-annotation-overlay .record-annotation-anchor.is-open {
+  z-index: 3;
+}
+
+.record-annotation-marker {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px dashed #e2a13b;
+  border-radius: 50%;
+  background: #fff7e8;
+  color: #b66a12;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.record-annotation-marker:hover,
+.record-annotation-marker:focus-visible,
+.record-annotation-anchor.is-open .record-annotation-marker {
+  border-color: #c77b18;
+  background: #ffefd0;
+  color: #9b5607;
+  outline: none;
+}
+
+.record-annotation-popover {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  z-index: 2;
+  display: flex;
+  width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e8bd72;
+  border-radius: 6px;
+  background: #fffdf6;
+  box-shadow: 0 8px 20px rgba(64, 45, 14, .16);
+  color: #5e4a28;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .15s ease, transform .15s ease, visibility .15s ease;
+  visibility: hidden;
+  white-space: normal;
+  text-align: left;
+}
+
+.record-annotation-anchor:hover .record-annotation-popover,
+.record-annotation-anchor:focus-within .record-annotation-popover,
+.record-annotation-anchor.is-open .record-annotation-popover {
+  z-index: 4;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.record-annotation-popover strong {
+  color: #8a5c16;
+  font-weight: 600;
+}
+
+.record-annotation-popover span {
+  white-space: pre-line;
+}
+
+.record-annotation-anchor.is-open .record-annotation-popover {
+  z-index: 2147483647;
+}
+
 .btn-sm { height: 28px; padding: 0 12px; font-size: 13px; }
 .btn-disabled {
   opacity: 0.5;

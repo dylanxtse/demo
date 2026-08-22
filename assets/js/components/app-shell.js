@@ -7,7 +7,7 @@
  */
 (function () {
   const routes = {
-    enterprise: new Set(['index.html']),
+    enterprise: new Set(['index.html', 'warehouse-monitor.html', 'warehouse-export-template.html']),
     education: new Set([
       'education.html',
       'auction-limit-price.html',
@@ -23,7 +23,7 @@
       'supplier-relationship-management.html',
       'wasted-bid-management.html'
     ]),
-    supplier: new Set(['supplier-bidding-quotation.html', 'supplier-invite.html']),
+    supplier: new Set(['supplier-bidding-quotation.html', 'supplier-invite.html', 'supplier-export-template.html']),
     operations: new Set([
       'operations.html',
       'operations-education-management.html',

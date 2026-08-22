@@ -1,0 +1,72 @@
+.warehouse-export-template-page {
+  min-width: 320px;
+  min-height: 100vh;
+  background: #fff;
+}
+
+.warehouse-export-template-page .supplier-register-header { background: #fff; }
+.warehouse-export-template-section { border-bottom: 0; }
+.warehouse-export-template-inner {
+  width: calc(100% - 64px);
+  max-width: none;
+  margin: 0 0 0 32px;
+  padding: 32px 0 24px;
+}
+.warehouse-export-template-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--register-border);
+  border-radius: 4px;
+}
+.warehouse-export-template-table {
+  width: 100%;
+  min-width: 1280px;
+  border-collapse: collapse;
+  color: var(--register-text);
+  font-size: 14px;
+  table-layout: fixed;
+}
+.warehouse-export-template-table th,
+.warehouse-export-template-table td {
+  height: 48px;
+  padding: 0 16px;
+  border-right: 1px solid var(--register-border);
+  border-bottom: 1px solid var(--register-border);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.warehouse-export-template-table th {
+  background: #f7f8fb;
+  color: #5f6672;
+  font-weight: 600;
+}
+.warehouse-export-template-table .warehouse-export-template-title-row th {
+  height: 54px;
+  background: #f3f6fc;
+  color: #263c68;
+  font-size: 16px;
+  font-weight: 600;
+}
+.warehouse-export-template-table td { background: #fff; }
+.warehouse-export-template-table tbody tr:nth-child(even) td { background: #fbfcfe; }
+.warehouse-export-template-table th:last-child,
+.warehouse-export-template-table td:last-child { border-right: 0; }
+.warehouse-export-template-table tbody tr:last-child td { border-bottom: 0; }
+.warehouse-export-template-actions {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--register-border);
+}
+.warehouse-export-template-actions .register-demo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+@media (max-width: 620px) {
+  .warehouse-export-template-inner { width: calc(100% - 28px); margin-left: 14px; padding-top: 22px; }
+  .warehouse-export-template-actions { min-height: 76px; }
+}

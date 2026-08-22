@@ -319,14 +319,14 @@
   margin-right: auto;
 }
 
-/* 仓库档案列数较少，使用整页宽度展示，避免继承订单宽表的横向滚动。 */
+/* 仓库档案字段较多，保持可读列宽，超出容器时通过横向滚动查看。 */
 .warehouse-archive-page .operations-table-wrap {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .warehouse-archive-page .operations-table {
   width: 100%;
-  min-width: 0;
+  min-width: 1280px;
   table-layout: fixed;
 }
 
@@ -339,27 +339,37 @@
 
 .warehouse-archive-page .operations-table th:nth-child(1),
 .warehouse-archive-page .operations-table td:nth-child(1) {
-  width: 8%;
+  width: 6%;
 }
 
 .warehouse-archive-page .operations-table th:nth-child(2),
 .warehouse-archive-page .operations-table td:nth-child(2) {
-  width: 27%;
+  width: 16%;
 }
 
 .warehouse-archive-page .operations-table th:nth-child(3),
 .warehouse-archive-page .operations-table td:nth-child(3) {
-  width: 28%;
+  width: 17%;
 }
 
 .warehouse-archive-page .operations-table th:nth-child(4),
 .warehouse-archive-page .operations-table td:nth-child(4) {
-  width: 22%;
+  width: 17%;
+}
+
+.warehouse-archive-page .operations-table th:nth-child(5),
+.warehouse-archive-page .operations-table td:nth-child(5) {
+  width: 18%;
+}
+
+.warehouse-archive-page .operations-table th:nth-child(6),
+.warehouse-archive-page .operations-table td:nth-child(6) {
+  width: 16%;
 }
 
 .warehouse-archive-page .operations-table th:last-child,
 .warehouse-archive-page .operations-table td:last-child {
-  width: 15%;
+  width: 10%;
   min-width: 132px;
 }
 

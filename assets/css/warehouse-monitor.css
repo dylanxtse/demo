@@ -1,0 +1,283 @@
+.warehouse-monitor-page {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.warehouse-monitor-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-page);
+}
+
+.warehouse-monitor-points {
+  width: 280px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-light);
+  background: #fff;
+}
+
+.warehouse-monitor-points-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.warehouse-monitor-point-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.warehouse-monitor-point-search-input {
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid #cfd5df;
+  border-radius: 3px;
+  background: #fafbfc;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.warehouse-monitor-point-search-input:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+
+.warehouse-monitor-points-title {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.warehouse-monitor-point-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.warehouse-monitor-point-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 12px 12px 11px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: #fff;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.warehouse-monitor-point-item:hover { background: var(--primary-light); }
+.warehouse-monitor-point-item.is-active { border-color: #b8d0ff; background: #eaf2ff; }
+
+.warehouse-monitor-point-name {
+  display: block;
+  padding-right: 58px;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-monitor-point-description {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-monitor-point-actions {
+  position: absolute;
+  top: 11px;
+  right: 8px;
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.warehouse-monitor-point-item:hover .warehouse-monitor-point-actions,
+.warehouse-monitor-point-item.is-active .warehouse-monitor-point-actions { opacity: 1; }
+
+.warehouse-monitor-point-actions button {
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.warehouse-monitor-point-actions button:hover { color: #035ee0; }
+.warehouse-monitor-point-actions button.danger { color: var(--danger); }
+
+.warehouse-monitor-empty-list {
+  padding: 38px 16px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.warehouse-monitor-view {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  padding: 20px;
+  background: #fff;
+}
+
+.warehouse-monitor-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.warehouse-monitor-view-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.warehouse-monitor-view-description {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.warehouse-monitor-view-actions { display: flex; gap: 8px; }
+
+.warehouse-monitor-video-shell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 300px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #111827;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+.warehouse-monitor-video-snapshot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #111827;
+}
+
+.warehouse-monitor-video-snapshot.is-hidden { display: none; }
+
+.warehouse-monitor-video-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #d4dce8;
+  background: linear-gradient(110deg, #182536 8%, #2c3c4f 18%, #182536 33%);
+  background-size: 200% 100%;
+  font-size: 13px;
+  animation: warehouse-monitor-loading-shimmer 1.45s linear infinite;
+}
+
+.warehouse-monitor-video-loading.is-hidden { display: none; }
+.warehouse-monitor-video-loading-spinner { width: 16px; height: 16px; border: 2px solid rgba(212,220,232,.35); border-top-color: #fff; border-radius: 50%; animation: warehouse-monitor-loading-spin .8s linear infinite; }
+
+@keyframes warehouse-monitor-loading-shimmer { to { background-position: -200% 0; } }
+@keyframes warehouse-monitor-loading-spin { to { transform: rotate(360deg); } }
+
+.warehouse-monitor-video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #d2d9e5;
+  background: radial-gradient(circle at 50% 42%, #334155 0, #1f2937 40%, #111827 100%);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.warehouse-monitor-video-placeholder strong { color: #fff; font-size: 18px; font-weight: 500; }
+.warehouse-monitor-video-placeholder span { color: #9aa7b8; font-size: 12px; }
+.warehouse-monitor-video-placeholder.is-hidden { display: none; }
+.warehouse-monitor-video-retry { margin-top: 6px; }
+.warehouse-monitor-video-placeholder .warehouse-monitor-video-retry { pointer-events: auto; }
+.warehouse-monitor-video-retry.is-hidden { display: none; }
+
+.warehouse-monitor-address {
+  margin: 12px 0 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-monitor-modal .operations-modal-body { padding-bottom: 4px; }
+.warehouse-monitor-confirm-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 24px;
+  text-align: center;
+}
+.warehouse-monitor-form { display: grid; gap: 16px; }
+.warehouse-monitor-form-field { display: grid; gap: 7px; }
+.warehouse-monitor-form-field label { color: var(--text-secondary); font-size: 14px; }
+.warehouse-monitor-form-field label.required::before { content: '*'; margin-right: 4px; color: var(--danger); }
+.warehouse-monitor-form-field input,
+.warehouse-monitor-form-field textarea,
+.warehouse-monitor-form-field select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.warehouse-monitor-form-field input { height: 34px; }
+.warehouse-monitor-form-field select { height: 34px; background: #fff; }
+.warehouse-monitor-form-field textarea { min-height: 78px; resize: vertical; }
+.warehouse-monitor-form-field input:focus,
+.warehouse-monitor-form-field textarea:focus,
+.warehouse-monitor-form-field select:focus { border-color: var(--primary); }
+.warehouse-monitor-form-error { min-height: 18px; color: var(--danger); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .warehouse-monitor-points { width: 240px; min-width: 240px; }
+}
