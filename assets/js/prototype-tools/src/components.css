@@ -99,6 +99,12 @@
   vertical-align: middle;
 }
 
+.record-annotation-placeholder.is-code {
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
 /* 防止旧缓存或旧模板把实体标注按钮重新渲染回业务页面层。 */
 .record-annotation-anchor {
   display: none;
@@ -110,9 +116,24 @@
 }
 
 .record-annotation-overlay {
+  --annotation-accent: var(--prototype-accent, #e67d14);
+  --annotation-accent-strong: var(--prototype-accent-strong, #cf6c0c);
+  --annotation-accent-contrast: var(--prototype-accent-contrast, #fff);
+  --annotation-accent-rgb: var(--prototype-accent-rgb, 230, 125, 20);
+  --annotation-accent-light: var(--prototype-accent-soft, rgba(230, 125, 20, .1));
+  --annotation-accent-faint: var(--prototype-accent-faint, rgba(230, 125, 20, .06));
+  --annotation-accent-border: var(--prototype-accent-border, rgba(230, 125, 20, .32));
+  --annotation-accent-shadow: var(--prototype-accent-shadow, rgba(230, 125, 20, .16));
+  --annotation-text: #172033;
+  --annotation-secondary: #334155;
+  --annotation-muted: #64748b;
+  --annotation-border: rgba(15, 23, 42, .13);
+  --annotation-border-light: rgba(15, 23, 42, .08);
+  --annotation-surface: rgba(255, 255, 255, .72);
   position: fixed;
   inset: 0;
-  z-index: 2147483647;
+  /* 迭代面板使用更高层级；标注覆盖层始终位于其下方。 */
+  z-index: 2147483000;
   isolation: isolate;
   pointer-events: none;
 }
@@ -121,64 +142,365 @@
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1;
+  z-index: 10;
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   pointer-events: auto;
 }
 
 .record-annotation-overlay .record-annotation-anchor.is-open {
-  z-index: 3;
+  z-index: 20;
+}
+
+/* 原型标注编辑器固定在覆盖层内，不参与任何页面组件布局。 */
+.record-annotation-editor {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--annotation-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 12px 30px rgba(15, 23, 42, .1);
+  color: var(--annotation-secondary);
+  font-size: 12px;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(16px) saturate(165%);
+  backdrop-filter: blur(16px) saturate(165%);
+}
+
+.record-annotation-editor[hidden] {
+  display: none !important;
+}
+
+.record-annotation-editor button {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--annotation-accent);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--annotation-accent);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.record-annotation-editor button:hover,
+.record-annotation-editor button:focus-visible {
+  border-color: var(--annotation-accent);
+  color: var(--annotation-accent);
+  background: var(--annotation-accent-light);
+  outline: none;
+}
+
+.record-annotation-editor .record-annotation-mode-toggle {
+  position: relative;
+  border-color: rgba(var(--annotation-accent-rgb), .72);
+  color: var(--annotation-accent);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* 标注模式提示使用工具包统一的浅色主题，不调用浏览器原生黑色 title 提示。 */
+.record-annotation-editor .record-annotation-mode-toggle::after {
+  position: absolute;
+  right: auto;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 50;
+  display: block;
+  max-width: min(280px, 60vw);
+  padding: 7px 10px;
+  border: 1px solid var(--annotation-accent-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 8px 20px var(--annotation-accent-shadow);
+  color: var(--annotation-secondary);
+  content: attr(data-annotation-tooltip);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 4px);
+  transition: opacity .12s ease, transform .12s ease, visibility 0s linear .12s;
+}
+
+.record-annotation-editor .record-annotation-mode-toggle[data-annotation-tooltip]:not([data-annotation-tooltip=""]):hover::after,
+.record-annotation-editor .record-annotation-mode-toggle[data-annotation-tooltip]:not([data-annotation-tooltip=""]):focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition-delay: 0s;
+}
+
+.record-annotation-editor .record-annotation-mode-toggle:hover,
+.record-annotation-editor .record-annotation-mode-toggle:focus-visible {
+  border-color: var(--annotation-accent);
+  color: var(--annotation-accent-strong);
+  background: var(--annotation-accent-faint);
+}
+
+.record-annotation-editor-hint { white-space: nowrap; }
+
+.record-annotation-overlay.is-editing .record-annotation-marker {
+  cursor: grab;
+  box-shadow: 0 0 0 4px var(--annotation-accent-light);
+}
+
+.record-annotation-overlay.is-editing .record-annotation-anchor.is-dragging .record-annotation-marker {
+  cursor: grabbing;
+  opacity: .86;
+}
+
+.record-annotation-overlay.is-editing .record-annotation-popover {
+  cursor: move;
+}
+
+.record-annotation-overlay.is-editing .record-annotation-popover.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.record-annotation-overlay.is-editing .record-annotation-popover input,
+.record-annotation-overlay.is-editing .record-annotation-popover textarea {
+  cursor: text;
+}
+
+.record-annotation-overlay.is-editing .record-annotation-popover button {
+  cursor: pointer;
+}
+
+.record-annotation-draft-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.record-annotation-draft-field input,
+.record-annotation-draft-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, .14);
+  border-radius: 14px;
+  padding: 7px 9px;
+  background: rgba(255, 255, 255, .86);
+  color: var(--annotation-text);
+  font: inherit;
+}
+
+.record-annotation-draft-field input:focus,
+.record-annotation-draft-field textarea:focus {
+  border-color: var(--annotation-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--annotation-accent-faint) !important;
+}
+
+.record-annotation-draft-field input::selection,
+.record-annotation-draft-field textarea::selection {
+  background: var(--annotation-accent);
+  color: var(--annotation-accent-contrast);
+}
+
+.record-annotation-draft-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.record-annotation-edit-header {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding-right: 40px;
+}
+
+.record-annotation-edit-header .record-annotation-popover-title {
+  flex: 0 0 auto;
+}
+
+.record-annotation-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--annotation-accent);
+  cursor: pointer;
+}
+
+.record-annotation-delete svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.record-annotation-popover.is-editable {
+  border-color: var(--annotation-accent-border);
+}
+
+.record-annotation-delete:hover,
+.record-annotation-delete:focus-visible,
+.record-annotation-delete.is-delete-armed {
+  background: var(--annotation-accent-light);
+  color: var(--annotation-accent-strong);
+  outline: none;
+}
+
+.record-annotation-delete-hint {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--annotation-accent);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.record-annotation-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.record-annotation-overlay .record-annotation-draft-actions .btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  font-size: 12px;
+}
+
+.record-annotation-overlay .record-annotation-draft-actions .btn-primary {
+  border-color: rgba(var(--annotation-accent-rgb), .72);
+  color: var(--annotation-accent);
+  background: transparent;
+  box-shadow: none;
+}
+
+.record-annotation-overlay .record-annotation-draft-actions .btn-primary:hover,
+.record-annotation-overlay .record-annotation-draft-actions .btn-primary:focus-visible {
+  border-color: var(--annotation-accent);
+  color: var(--annotation-accent-strong);
+  background: var(--annotation-accent-faint);
+}
+
+.record-annotation-overlay .record-annotation-draft-actions .btn:not(.btn-primary) {
+  border-color: var(--annotation-border);
+  color: var(--annotation-secondary);
+  background: transparent;
+}
+
+.record-annotation-overlay .record-annotation-draft-actions .btn:not(.btn-primary):hover,
+.record-annotation-overlay .record-annotation-draft-actions .btn:not(.btn-primary):focus-visible {
+  border-color: var(--annotation-border);
+  color: var(--annotation-secondary);
+  background: rgba(15, 23, 42, .04);
+}
+
+.record-annotation-draft-error {
+  color: #c0392b;
+  font-size: 12px;
+}
+
+.record-annotation-overlay.is-modal-open .record-annotation-editor {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.record-annotation-overlay.is-markers-hidden .record-annotation-anchor,
+.record-annotation-overlay.is-markers-hidden .record-annotation-popover {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* 弹窗打开时，页面级标注保持页面归属并暂时隐藏，避免被定位到弹窗内容上。 */
+.record-annotation-overlay.is-modal-open .record-annotation-anchor[data-annotation-scope="page"],
+.record-annotation-overlay.is-modal-open .record-annotation-popover[data-annotation-scope="page"] {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .record-annotation-marker {
   display: inline-flex;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px dashed #e2a13b;
+  border: 1px dashed var(--annotation-accent);
   border-radius: 50%;
-  background: #fff7e8;
-  color: #b66a12;
+  background-color: #fff;
+  background-image: linear-gradient(
+    rgba(var(--annotation-accent-rgb), .2),
+    rgba(var(--annotation-accent-rgb), .2)
+  );
+  color: var(--annotation-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 2px 8px var(--annotation-accent-shadow);
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 26px;
   cursor: pointer;
 }
 
 .record-annotation-marker:hover,
 .record-annotation-marker:focus-visible,
 .record-annotation-anchor.is-open .record-annotation-marker {
-  border-color: #c77b18;
-  background: #ffefd0;
-  color: #9b5607;
+  border-color: var(--annotation-accent-strong);
+  background-color: #fff;
+  background-image: linear-gradient(
+    rgba(var(--annotation-accent-rgb), .2),
+    rgba(var(--annotation-accent-rgb), .2)
+  );
+  color: var(--annotation-accent-strong);
   outline: none;
+  box-shadow: 0 0 0 4px var(--annotation-accent-faint), 0 2px 8px var(--annotation-accent-shadow);
 }
 
 .record-annotation-popover {
   position: fixed;
   top: -10000px;
   left: -10000px;
-  z-index: 2147483647;
+  z-index: 100;
   display: flex;
-  width: 340px;
-  max-width: min(340px, calc(100vw - 32px));
+  width: 380px;
+  max-width: min(380px, calc(100vw - 32px));
+  max-height: min(420px, calc(100vh - 32px));
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid #e8bd72;
-  border-radius: 6px;
-  background: #fffdf6;
-  box-shadow: 0 8px 20px rgba(64, 45, 14, .16);
-  color: #5e4a28;
-  font-size: 12px;
+  gap: 8px;
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--annotation-border);
+  border-radius: 20px;
+  background: var(--annotation-surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 10px 24px rgba(15, 23, 42, .1);
+  color: var(--annotation-text);
+  font-size: 13px;
   font-weight: 400;
-  line-height: 20px;
+  line-height: 1.55;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-4px);
@@ -186,6 +508,8 @@
   visibility: hidden;
   white-space: normal;
   text-align: left;
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
 }
 
 .record-annotation-anchor:hover + .record-annotation-popover,
@@ -198,13 +522,21 @@
   visibility: visible;
 }
 
-.record-annotation-popover strong {
-  color: #8a5c16;
+.record-annotation-popover-title {
+  display: block;
+  color: var(--annotation-accent);
+  font-size: 15px;
   font-weight: 600;
 }
 
-.record-annotation-popover span {
-  white-space: pre-line;
+.record-annotation-popover-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--annotation-text);
+}
+
+.record-annotation-popover-list li + li {
+  margin-top: 4px;
 }
 
 .record-annotation-popover-actions {
@@ -216,19 +548,50 @@
 
 .record-annotation-action {
   position: relative;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--annotation-accent);
+  border-radius: 14px;
+  color: var(--annotation-accent);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
   white-space: nowrap;
 }
 
+.record-annotation-action:hover,
+.record-annotation-action:focus-visible {
+  border-color: var(--annotation-accent);
+  color: var(--annotation-accent);
+  background: var(--annotation-accent-light);
+  outline: none;
+}
+
+.record-annotation-overlay .record-annotation-popover-actions .record-annotation-action.btn-primary {
+  border-color: rgba(var(--annotation-accent-rgb), .72);
+  color: var(--annotation-accent);
+  background: transparent;
+  box-shadow: none;
+}
+
+.record-annotation-overlay .record-annotation-popover-actions .record-annotation-action.btn-primary:hover,
+.record-annotation-overlay .record-annotation-popover-actions .record-annotation-action.btn-primary:focus-visible {
+  border-color: var(--annotation-accent);
+  color: var(--annotation-accent-strong);
+  background: var(--annotation-accent-faint);
+}
+
 .record-annotation-demo-action {
-  border: 1px dashed #e2a13b;
-  background: #fff7e8;
-  color: #b66a12;
+  border: 1px dashed var(--annotation-accent-border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--annotation-accent);
 }
 
 .record-annotation-demo-action:hover {
-  border-color: #c77b18;
-  background: #ffefd0;
-  color: #9b5607;
+  border-color: var(--annotation-accent);
+  background: var(--annotation-accent-light);
+  color: var(--annotation-accent-strong);
 }
 
 .btn-sm { height: 28px; padding: 0 12px; font-size: 13px; }

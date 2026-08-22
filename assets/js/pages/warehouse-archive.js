@@ -73,42 +73,68 @@
     exportTitle: '仓库档案',
     exportTemplateHref: './warehouse-export-template.html',
     enableAdvancedFilter: false,
+    addModalKey: 'warehouse-add',
     annotations: [
       {
         id: 'warehouse-list-header',
         target: 'table-header',
-        title: '列表新增',
-        content: '1、勾选框（固定显示）；\n2、负责人\n3、联系电话\n4、运营分公司（一个仓库存在多个分公司运营时省略显示为等*家单位）；\n列表操作项固定显示'
+        title: '仓库列表',
+        items: [
+          '勾选框固定显示。',
+          '新增负责人、联系电话、运营分公司字段。',
+          '一个仓库由多个分公司运营时，运营分公司省略显示为“等*家单位”。',
+          '列表操作项固定显示。'
+        ]
       },
       {
         id: 'warehouse-add-modal',
         target: 'add-modal',
         placement: 'right',
+        scope: 'modal',
+        entryScope: 'page',
+        modalKey: 'warehouse-add',
+        anchorPosition: 'modal-header-right',
         title: '添加仓库弹窗',
-        content: '新增负责人、联系电话、运营分公司；\n负责人、联系电话为非必填；\n运营分公司为非必填，支持多选；\n运营分公司选项默认最多显示5行，超出后弹窗内容支持上下滑动。'
+        items: [
+          '新增负责人、联系电话、运营分公司字段。',
+          '负责人、联系电话为非必填。',
+          '运营分公司为非必填，支持多选。',
+          '运营分公司选项默认最多显示5行，超出后弹窗内容支持上下滑动。'
+        ]
       },
       {
         id: 'warehouse-filter-fields',
         target: 'filter',
-        placement: 'right',
-        title: '查询项新增',
-        content: '新增运营分公司和负责人/联系电话查询项；\n运营分公司为下拉单选框，默认选中“全部”；\n负责人/联系电话为搜索框，支持按仓库负责人姓名或联系电话查询。'
+        placement: 'left',
+        title: '仓库查询项',
+        items: [
+          '新增运营分公司和负责人/联系电话查询项。',
+          '运营分公司为下拉单选框，默认选中“全部”。',
+          '负责人/联系电话为搜索框，支持按仓库负责人姓名或联系电话查询。'
+        ]
       },
       {
         id: 'warehouse-detail-modal',
         target: 'detail-modal',
         placement: 'right',
-        title: '查看仓库弹窗',
+        title: '查看仓库',
         headerColumn: 'warehouseCode',
-        content: '新增显示：\n1、仓库编码\n2、负责人\n3、联系电话\n4、运营分公司\n5、添加时间。'
+        items: [
+          '新增显示仓库编码、负责人、联系电话、运营分公司和添加时间。',
+          '字段在弹窗中按单列方式展示。'
+        ]
       },
       {
         id: 'warehouse-export-button',
         target: 'toolbar-action',
         actionKey: 'export',
         placement: 'left',
-        title: '列表新增',
-        content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的仓库”。',
+        entryMarkerPosition: 'left',
+        title: '导出按钮',
+        items: [
+          '点击导出时校验是否已勾选列表项目。',
+          '未勾选时提示“请先勾选要导出的仓库”。'
+        ],
         popoverActions: [{
           key: 'view-warehouse-export-template',
           label: '查看导出模版',

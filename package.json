@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "scripts": {
+    "start": "node annotation-code-server.js",
     "test": "npm run test:data && npm run test:e2e",
     "test:data": "node --test tests/data-contract.test.cjs",
     "test:e2e": "playwright test",

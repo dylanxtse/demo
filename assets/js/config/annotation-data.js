@@ -1,0 +1,185 @@
+(function () {
+  window.PrototypeAnnotationData = {
+  "pages": {
+    "warehouse-archive.html::仓库档案": [
+      {
+        "id": "warehouse-detail-modal",
+        "target": "detail-modal",
+        "placement": "right",
+        "title": "查看仓库",
+        "headerColumn": "warehouseCode",
+        "items": [
+          "新增显示仓库编码、负责人、联系电话、运营分公司和添加时间。",
+          "字段在弹窗中按单列方式展示。"
+        ],
+        "number": "4",
+        "popoverPosition": {
+          "x": 27,
+          "y": 19
+        },
+        "markerPosition": {
+          "x": 68,
+          "y": -48
+        },
+        "deleted": true
+      },
+      {
+        "id": "warehouse-filter-fields",
+        "target": "filter",
+        "placement": "left",
+        "title": "仓库查询项",
+        "items": [
+          "新增运营分公司和负责人/联系电话查询项。",
+          "运营分公司为下拉单选框，默认选中“全部”。",
+          "负责人/联系电话为搜索框，支持按仓库负责人姓名或联系电话查询。"
+        ],
+        "number": "3",
+        "markerPosition": {
+          "x": -14,
+          "y": 16
+        },
+        "popoverPosition": {
+          "x": -384,
+          "y": 21
+        }
+      },
+      {
+        "id": "warehouse-export-button",
+        "target": "toolbar-action",
+        "actionKey": "export",
+        "placement": "left",
+        "entryMarkerPosition": "left",
+        "title": "导出按钮",
+        "items": [
+          "点击导出时校验是否已勾选列表项目。",
+          "未勾选时提示“请先勾选要导出的仓库”。"
+        ],
+        "popoverActions": [
+          {
+            "key": "view-warehouse-export-template",
+            "label": "查看导出模版",
+            "className": "btn btn-sm record-annotation-demo-action record-annotation-action"
+          }
+        ],
+        "number": "5",
+        "markerPosition": {
+          "x": -13,
+          "y": 21
+        },
+        "popoverPosition": {
+          "x": -377,
+          "y": 20
+        }
+      },
+      {
+        "id": "warehouse-list-header",
+        "target": "table-header",
+        "title": "仓库列表",
+        "items": [
+          "勾选框固定显示。",
+          "新增负责人、联系电话、运营分公司字段。",
+          "一个仓库由多个分公司运营时，运营分公司省略显示为“等*家单位”。",
+          "列表操作项固定显示。"
+        ],
+        "number": "1",
+        "popoverPosition": {
+          "x": -382,
+          "y": 23
+        },
+        "markerPosition": {
+          "x": -200,
+          "y": -13
+        }
+      },
+      {
+        "id": "warehouse-add-modal",
+        "target": "add-modal",
+        "placement": "right",
+        "scope": "modal",
+        "entryScope": "page",
+        "modalKey": "warehouse-add",
+        "anchorPosition": "modal-header-right",
+        "title": "添加仓库弹窗",
+        "items": [
+          "新增负责人、联系电话、运营分公司字段。",
+          "负责人、联系电话为非必填。",
+          "运营分公司为非必填，支持多选。",
+          "运营分公司选项默认最多显示5行，超出后弹窗内容支持上下滑动。"
+        ],
+        "number": "2",
+        "popoverPosition": {
+          "x": 36,
+          "y": 3
+        },
+        "markerPosition": {
+          "x": 100,
+          "y": 16
+        }
+      },
+      {
+        "id": "custom-1787393732657-1",
+        "target": "custom",
+        "targetSelector": "div.app-layout > section.main-section > main.content-area > section.page-card > div.record-table-annotation-surface:nth-of-type(4) > div.operations-table-container:nth-of-type(2) > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(3)",
+        "placement": "right",
+        "title": "仓库编码",
+        "items": [
+          "新增显示仓库编码、负责人、联系电话、运营分公司和添加时间。",
+          "字段在弹窗中按单列方式展示。"
+        ],
+        "number": "5",
+        "markerPosition": {
+          "x": 119,
+          "y": 5
+        }
+      }
+    ],
+    "supplier-archive.html::supplierManagementPage": [
+      {
+        "id": "supplier-list-header",
+        "placement": "right",
+        "title": "供应商列表",
+        "items": [
+          "勾选框固定显示；",
+          "新增用户名字段；",
+          "列表操作项固定显示；"
+        ],
+        "number": "1",
+        "markerPosition": {
+          "x": -255,
+          "y": -11
+        },
+        "popoverPosition": {
+          "x": -386,
+          "y": 18
+        }
+      },
+      {
+        "id": "supplier-export-button",
+        "placement": "left",
+        "actionKey": "export",
+        "entryMarkerPosition": "left",
+        "title": "导出按钮",
+        "items": [
+          "点击导出时校验是否已勾选列表项目，未勾选时提示“请先勾选要导出的供应商”。"
+        ],
+        "popoverActions": [
+          {
+            "key": "view-supplier-export-template",
+            "label": "查看导出模版",
+            "className": "btn btn-sm record-annotation-demo-action record-annotation-action"
+          }
+        ],
+        "number": "2",
+        "markerPosition": {
+          "x": -12,
+          "y": 18
+        },
+        "popoverPosition": {
+          "x": -385,
+          "y": 16
+        }
+      }
+    ]
+  }
+};
+})();

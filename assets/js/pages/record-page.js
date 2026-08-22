@@ -478,9 +478,15 @@
       syncAnnotationOverlay();
     }
 
-    function modal(title, body, footer, detail = false, variant = '') {
+    function modal(title, body, footer, detail = false, variant = '', modalKey = '') {
+      const modalAnnotation = modalKey
+        ? annotations.find((annotation) => annotation.scope === 'modal' && annotation.modalKey === modalKey)
+        : null;
+      const modalMarker = modalAnnotation
+        ? renderAnnotationMarker(modalAnnotation, `modal-${modalKey}`, false)
+        : '';
       overlay.innerHTML = `<div class="operations-modal-backdrop"><section class="operations-modal ${detail ? 'is-detail' : ''} ${variant}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3><button data-record-close aria-label="关闭">×</button></header>
+        <header class="operations-modal-header"><h3>${escapeHtml(title)}</h3>${modalMarker}<button data-record-close aria-label="关闭">×</button></header>
         <div class="operations-modal-body">${body}</div><footer class="operations-modal-footer">${footer}</footer>
       </section></div>`;
       syncAnnotationOverlay();
@@ -545,11 +551,13 @@
 
     function showForm(item, overrideFields, overrideTitle) {
       const fields = overrideFields || currentFormFields();
+      const modalKey = item ? config.editModalKey : config.addModalKey;
       modal(overrideTitle || (item ? `编辑${currentEntityTitle()}` : `添加${currentEntityTitle()}`),
         `<form id="recordForm"><div class="operations-form-grid">${fields.map((field) => formControl(field, item)).join('')}</div></form>`,
         '<button class="btn" data-record-close>取消</button><button class="btn btn-primary" id="recordSave">保存</button>',
         false,
-        ''
+        '',
+        modalKey || ''
       );
       $('#recordSave').onclick = async () => {
         const form = $('#recordForm');

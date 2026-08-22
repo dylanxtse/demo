@@ -135,6 +135,49 @@
 })();
 
 (function () {
+  let annotationEnginePromise = null;
+  const toolkitAssets = Object.freeze({
+    theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260823-4',
+    annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260823-22',
+    iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-46',
+    iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-45',
+    annotationData: './assets/js/config/annotation-data.js?v=20260822-2',
+    iterationData: './assets/js/data/project-iteration-records.js?v=20260822-4'
+  });
+
+  function ensureAnnotationEngine() {
+    if (annotationEnginePromise) return annotationEnginePromise;
+
+    annotationEnginePromise = Promise.resolve()
+      .then(() => loadToolkitScript(toolkitAssets.theme, 'theme'))
+      .then(() => {
+        if (window.PrototypeAnnotationData) return undefined;
+        return loadToolkitScript(toolkitAssets.annotationData, 'annotation-data');
+      })
+      .then(() => {
+        if (window.AnnotationOverlay) return undefined;
+        return loadToolkitScript(toolkitAssets.annotation, 'annotation-overlay');
+      });
+
+    return annotationEnginePromise;
+  }
+
+  function scheduleAnnotationOverlayMount(pageRoot) {
+    if (!pageRoot) return;
+
+    // 让页面自己的业务脚本先完成专用标注挂载；没有专用挂载的页面再由公共壳层兜底。
+    window.setTimeout(() => {
+      ensureAnnotationEngine()
+        .then(() => {
+          if (!pageRoot.isConnected || pageRoot.__annotationOverlayController) return;
+          window.AnnotationOverlay?.mount(pageRoot, []);
+        })
+        .catch(() => {
+          // 标注工具加载失败不应阻塞业务页面。
+        });
+    }, 0);
+  }
+
   window.AppShell = {
     mount({ title, content, emptyText = '当前没有打开的页面', variant = 'enterprise' }) {
       const root = document.getElementById('app');
@@ -165,7 +208,67 @@
       window.AppSidebar.bind(root, shellOptions);
       window.AppPageTabs.bind(root, { variant });
       window.AppHeader.bind?.(root, shellOptions);
+      scheduleAnnotationOverlayMount(root.querySelector('#pageContent'));
       return root;
     }
   };
+
+  function appendProjectIterationStyles() {
+    if (document.querySelector('link[data-project-iteration-panel-style], link[href*="project-iteration-panel.css"]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = toolkitAssets.iterationStyles;
+    link.dataset.projectIterationPanelStyle = 'true';
+    document.head.appendChild(link);
+  }
+
+  function loadToolkitScript(src, marker) {
+    return new Promise((resolve, reject) => {
+      if (marker === 'theme' && window.PrototypeToolsTheme) {
+        resolve();
+        return;
+      }
+      const existing = document.querySelector(`script[data-project-iteration-script="${marker}"]`);
+      if (existing) {
+        if (existing.dataset.loaded === 'true') resolve();
+        else {
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', reject, { once: true });
+        }
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.dataset.projectIterationScript = marker;
+      script.addEventListener('load', () => {
+        script.dataset.loaded = 'true';
+        resolve();
+      }, { once: true });
+      script.addEventListener('error', reject, { once: true });
+      document.body.appendChild(script);
+    });
+  }
+
+  function mountProjectIterationPanel() {
+    appendProjectIterationStyles();
+    if (window.ProjectIterationPanel) {
+      window.ProjectIterationPanel.mount({
+        records: window.ProjectIterationData?.records || [],
+        persistToProjectCode: true
+      });
+      return;
+    }
+    loadToolkitScript(toolkitAssets.theme, 'theme')
+      .then(() => loadToolkitScript(toolkitAssets.iterationData, 'data'))
+      .then(() => loadToolkitScript(toolkitAssets.iteration, 'component'))
+      .then(() => window.ProjectIterationPanel?.mount({
+        records: window.ProjectIterationData?.records || [],
+        persistToProjectCode: true
+      }))
+      .catch(() => {
+        // 面板资源加载失败时不影响当前业务页面继续使用。
+      });
+  }
+
+  mountProjectIterationPanel();
 })();

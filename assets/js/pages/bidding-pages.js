@@ -785,8 +785,11 @@
       placement: 'left',
       actionKey: 'export',
       entryMarkerPosition: 'left',
-      title: '按钮新增',
-      content: '导出按钮；\n点击导出时校验是否勾选列表项目；\n未勾选时提示“请先勾选要导出的供应商”。',
+      title: '导出按钮',
+      items: [
+        '点击导出时校验是否已勾选列表项目。',
+        '未勾选时提示“请先勾选要导出的供应商”。'
+      ],
       popoverActions: [{
         key: 'view-supplier-export-template',
         label: '查看导出模版',
@@ -796,7 +799,16 @@
         if (key === 'view-supplier-export-template') openSupplierExportTemplate();
       }
     };
-    const supplierHeaderAnnotation = { id: 'supplier-list-header', placement: 'right', title: '列表新增', content: '1、勾选框（固定显示）；\n2、用户名字段；\n列表操作项固定显示' };
+    const supplierHeaderAnnotation = {
+      id: 'supplier-list-header',
+      placement: 'right',
+      title: '供应商列表',
+      items: [
+        '勾选框固定显示。',
+        '供应商名称后新增用户名字段。',
+        '列表操作项固定显示。'
+      ]
+    };
     const root = mount('供应商档案', `
       <div class="page-card bidding-page supplier-archive-page" id="supplierManagementPage">
         <section class="bidding-filter-panel"><div class="bidding-filter-grid"><div class="bidding-filter-item"><label>供应商名称</label><input data-filter="name" placeholder="请输入"></div><div class="bidding-filter-item"><label>供应商联系人</label><input data-filter="contact" placeholder="请输入"></div><div class="bidding-filter-item"><label>状态</label><select data-filter="status"><option value="">全部</option><option value="启用">启用</option><option value="待审核">待审核</option><option value="已驳回">已驳回</option><option value="禁用">禁用</option></select></div></div><div class="bidding-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="query">查询</button><button class="btn btn-sm" type="button" data-action="reset">重置</button></div></section>
