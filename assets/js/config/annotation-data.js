@@ -103,16 +103,16 @@
           "新增负责人、联系电话、运营分公司字段。",
           "负责人、联系电话为非必填。",
           "运营分公司为非必填，支持多选。",
-          "运营分公司选项默认最多显示5行，超出后弹窗内容支持上下滑动。"
+          "运营分公司选项默认最多显示5行，超出支持滑动查看。"
         ],
         "number": "2",
         "popoverPosition": {
-          "x": 36,
-          "y": 3
+          "x": 32,
+          "y": -153
         },
         "markerPosition": {
-          "x": 100,
-          "y": 16
+          "x": 97,
+          "y": 19
         }
       },
       {
@@ -130,6 +130,19 @@
           "x": 119,
           "y": 5
         }
+      },
+      {
+        "id": "custom-1787480651906-2",
+        "target": "custom",
+        "targetSelector": "div > div.operations-modal-backdrop > section.operations-modal > header.operations-modal-header > h3",
+        "placement": "right",
+        "scope": "modal",
+        "title": "添加仓库档案",
+        "items": [
+          "非34放"
+        ],
+        "number": "6",
+        "deleted": true
       }
     ],
     "supplier-archive.html::supplierManagementPage": [
@@ -176,6 +189,27 @@
         "popoverPosition": {
           "x": -385,
           "y": 16
+        }
+      }
+    ],
+    "warehouse-monitor.html::仓库监控": [
+      {
+        "id": "custom-1787479690617-1",
+        "target": "custom",
+        "targetSelector": "#addMonitorPointButton",
+        "placement": "right",
+        "title": "新增点位",
+        "items": [
+          "名称必填，不可重复；"
+        ],
+        "number": "1",
+        "markerPosition": {
+          "x": 67,
+          "y": 14
+        },
+        "popoverPosition": {
+          "x": 35,
+          "y": 2
         }
       }
     ]

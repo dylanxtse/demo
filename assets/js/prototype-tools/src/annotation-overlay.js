@@ -145,6 +145,16 @@
     let repositionFrame = null;
     let queuedRepositionOptions = null;
     let syncFrame = null;
+    const modalTargetSelector = [
+      '[role="dialog"]',
+      '.operations-modal',
+      '.bidding-dialog',
+      '.lower-units-dialog',
+      '.price-detail-dialog',
+      '.processing-submit-dialog',
+      '.review-modal-dialog',
+      '.unit-modal-dialog'
+    ].join(', ');
 
     const scheduleFrame = (callback) => typeof window.requestAnimationFrame === 'function'
       ? window.requestAnimationFrame(callback)
@@ -166,6 +176,8 @@
     const hasVisibleModal = () => [...root.querySelectorAll(
       '[role="dialog"], .operations-modal-backdrop, .bidding-modal-mask.open, .lower-units-modal.is-visible, .qr-modal.is-visible'
     )].some(isVisibleElement);
+
+    const isModalTarget = (element) => Boolean(element?.closest?.(modalTargetSelector));
 
     const close = (anchor) => {
       anchor.classList.remove('is-open');
@@ -453,7 +465,9 @@
         'data-filter',
         'data-row-action',
         'data-record-close',
-        'data-operations-filter-toggle'
+        'data-operations-filter-toggle',
+        'aria-label',
+        'aria-labelledby'
       ];
       for (const attribute of stableAttributes) {
         const value = element.getAttribute(attribute);
@@ -519,7 +533,35 @@
     const findAnnotationTarget = (eventTarget) => {
       const target = eventTarget?.nodeType === 1 ? eventTarget : eventTarget?.parentElement;
       if (!target || !root.contains(target)) return null;
-      const candidate = target.closest('button, input, select, textarea, a, th, td, label, [role="button"], .operations-toolbar, .operations-filter, .bidding-toolbar, .bidding-filter-panel, .page-card');
+      const candidate = target.closest([
+        'button',
+        'input',
+        'select',
+        'textarea',
+        'a',
+        'th',
+        'td',
+        'label',
+        '[role="button"]',
+        '.operations-toolbar',
+        '.operations-filter',
+        '.bidding-toolbar',
+        '.bidding-filter-panel',
+        '.page-card',
+        '[role="dialog"] h1',
+        '[role="dialog"] h2',
+        '[role="dialog"] h3',
+        '[role="dialog"] h4',
+        '[role="dialog"] p',
+        '[role="dialog"] li',
+        '[role="dialog"] dt',
+        '[role="dialog"] dd',
+        '[role="dialog"] > *',
+        '.operations-modal > *',
+        '.bidding-dialog > *',
+        '.lower-units-dialog > *',
+        '[role="dialog"]'
+      ].join(', '));
       return candidate && root.contains(candidate) && candidate !== root ? candidate : null;
     };
 
@@ -957,6 +999,7 @@
         target: 'custom',
         targetSelector,
         placement: 'right',
+        scope: isModalTarget(draft.target) ? 'modal' : 'page',
         title,
         items
       };
@@ -990,7 +1033,7 @@
     };
 
     const createDraft = (target) => {
-      if (readOnly || !annotationMode || !markersVisible || !target || modalOpen) return;
+      if (readOnly || !annotationMode || !markersVisible || !target) return;
       closeAll();
       const id = `draft-${++draftSequence}`;
       const number = definitionById.size + drafts.size + 1;
@@ -1232,7 +1275,7 @@
     };
 
     const handleDoubleClick = (event) => {
-      if (readOnly || !annotationMode || modalOpen || event.target.closest?.('.record-annotation-overlay')) return;
+      if (readOnly || !annotationMode || event.target.closest?.('.record-annotation-overlay')) return;
       const target = findAnnotationTarget(event.target);
       if (!target) return;
       event.preventDefault();
