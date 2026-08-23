@@ -88,7 +88,8 @@
 .project-iteration-panel-root.is-peeking .project-iteration-drawer {
   transform: translateX(calc(100% - var(--iteration-peek-width)));
   background: var(--iteration-drawer-bg);
-  box-shadow: -8px 0 20px rgba(var(--iteration-accent-rgb), .12);
+  /* 预呼出区域需要与页面背景拉开层次，边缘用工具包主题色定位。 */
+  box-shadow: -14px 0 28px rgba(15, 23, 42, .28);
 }
 
 .project-iteration-panel-root.is-open .project-iteration-backdrop {

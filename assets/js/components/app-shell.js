@@ -140,7 +140,7 @@
     theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260823-6',
     annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260823-25',
     iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-51',
-    iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-56',
+    iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-58',
     annotationData: './assets/js/config/annotation-data.js?v=20260822-2',
     iterationData: './assets/js/data/project-iteration-records.js?v=20260822-4'
   });
