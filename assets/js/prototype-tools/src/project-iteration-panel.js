@@ -492,6 +492,7 @@
         <div class="project-iteration-record-content" data-project-iteration-record-content>
           <div class="project-iteration-record-heading" data-project-iteration-record-heading>
             <strong>${escapeHtml(record.name)}</strong>
+            <button type="button" class="project-iteration-record-toggle project-iteration-record-heading-toggle" data-project-iteration-toggle aria-expanded="false" aria-label="展开" title="展开">${chevronDownIcon}</button>
             <div class="project-iteration-record-heading-actions">
               <time>${escapeHtml(formatDisplayDate(record.date))}</time>
               <button
@@ -504,7 +505,7 @@
           </div>
           ${renderRecordChanges(record)}
           <div class="project-iteration-record-footer">
-            <button type="button" class="project-iteration-record-toggle" data-project-iteration-toggle aria-expanded="false" aria-label="展开" title="展开">${chevronDownIcon}</button>
+            <button type="button" class="project-iteration-record-toggle project-iteration-record-footer-toggle" data-project-iteration-toggle aria-expanded="false" aria-label="展开" title="展开">展开</button>
             <button type="button" class="project-iteration-record-edit" data-project-iteration-edit="${escapeHtml(record.id)}">修改</button>
           </div>
         </div>
@@ -1738,6 +1739,29 @@
       }
     };
 
+    const toggleRecordDetails = (record) => {
+      const details = record?.querySelector('[data-project-iteration-record-details]');
+      const toggleButtons = [...(record?.querySelectorAll('[data-project-iteration-toggle]') || [])];
+      const toggleButton = toggleButtons[0];
+      if (!details || !toggleButton) return false;
+      const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+      const nextExpanded = !isExpanded;
+      details.hidden = isExpanded;
+      toggleButtons.forEach((button) => {
+        button.setAttribute('aria-expanded', String(nextExpanded));
+        button.setAttribute('aria-label', isExpanded ? '展开' : '收起');
+        button.title = isExpanded ? '展开' : '收起';
+        button.innerHTML = button.classList.contains('project-iteration-record-footer-toggle')
+          ? (isExpanded ? '展开' : '收起')
+          : (isExpanded ? chevronDownIcon : chevronUpIcon);
+      });
+      record.classList.toggle('is-record-expanded', nextExpanded);
+      syncNestedRecordStickyOffsets();
+      buildNestedRecordLayoutCache();
+      syncNestedRecordOcclusion();
+      return true;
+    };
+
     const handleClick = (event) => {
       if (readOnly && event.target.closest([
         '[data-project-iteration-new]',
@@ -1855,20 +1879,18 @@
       }
       const toggleButton = event.target.closest('[data-project-iteration-toggle]');
       if (toggleButton) {
-        const record = toggleButton.closest('.project-iteration-record');
-        const details = record?.querySelector('[data-project-iteration-record-details]');
-        if (!details) return;
-        const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-        const nextExpanded = !isExpanded;
-        details.hidden = isExpanded;
-        toggleButton.setAttribute('aria-expanded', String(nextExpanded));
-        toggleButton.setAttribute('aria-label', isExpanded ? '展开' : '收起');
-        toggleButton.title = isExpanded ? '展开' : '收起';
-        toggleButton.innerHTML = isExpanded ? chevronDownIcon : chevronUpIcon;
-        record.classList.toggle('is-record-expanded', nextExpanded);
-        syncNestedRecordStickyOffsets();
-        buildNestedRecordLayoutCache();
-        syncNestedRecordOcclusion();
+        toggleRecordDetails(toggleButton.closest('.project-iteration-record'));
+        return;
+      }
+      const recordCard = event.target.closest('.project-iteration-record');
+      const recordContent = recordCard?.querySelector('[data-project-iteration-record-content]');
+      const isBlankCardArea = event.target === recordCard
+        || event.target === recordContent
+        || event.target.matches?.(
+          '[data-project-iteration-record-heading], .project-iteration-record-heading-actions, .project-iteration-record-footer, .project-iteration-record-change, .project-iteration-record-detail-content'
+        );
+      if (recordCard && isBlankCardArea) {
+        toggleRecordDetails(recordCard);
         return;
       }
       if (event.target.closest('[data-project-iteration-new]')) {

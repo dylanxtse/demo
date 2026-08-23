@@ -1287,6 +1287,14 @@
   stroke-width: 1.8;
 }
 
+.project-iteration-record-heading-toggle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+}
+
 .project-iteration-record-heading time {
   color: var(--iteration-muted);
   font-size: 13px;
@@ -1368,7 +1376,12 @@
   margin-top: 16px;
 }
 
-.project-iteration-record-footer .project-iteration-record-toggle { grid-column: 2; }
+.project-iteration-record-footer .project-iteration-record-toggle {
+  grid-column: 2;
+  width: auto;
+  min-width: 52px;
+  padding: 0 10px;
+}
 
 .project-iteration-record-field,
 .project-iteration-record-description {
