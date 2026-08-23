@@ -46,13 +46,26 @@
     const source = Array.isArray(definition.items)
       ? definition.items
       : String(definition.content || '').split(/\n+/);
-    return source.map((item) => String(item || '')
+    return source.map((item) => String(typeof item === 'object'
+      ? (item?.text ?? item?.content ?? '')
+      : item || '')
       .replace(/^\s*(?:\d+[、.．)]|[-•])\s*/, '')
       .trim()).filter(Boolean);
   }
 
+  function getAnnotationItems(definition) {
+    const source = Array.isArray(definition.items)
+      ? definition.items
+      : String(definition.content || '').split(/\n+/);
+    return source.map((item) => String(typeof item === 'object'
+        ? (item?.text ?? item?.content ?? '')
+        : item || '')
+        .replace(/^\s*(?:\d+[、.．)]|[-•])\s*/, '')
+        .trim()).filter(Boolean);
+  }
+
   function renderPopoverItems(definition) {
-    const items = normaliseItems(definition);
+    const items = getAnnotationItems(definition);
     if (!items.length) return '';
     return `<ol class="record-annotation-popover-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`;
   }
@@ -584,9 +597,9 @@
       const actions = Array.isArray(definition.popoverActions)
         ? definition.popoverActions.filter((action) => action && action.key && action.label)
         : [];
-      const actionsHtml = actions.length
-        ? `<div class="record-annotation-popover-actions">${actions.map((action) => `<button class="${escapeHtml(action.className || 'btn btn-sm record-annotation-action')}" type="button" data-annotation-popover-action="${escapeHtml(action.key)}">${escapeHtml(action.label)}</button>`).join('')}</div>`
-        : '';
+    const actionsHtml = actions.length
+      ? `<div class="record-annotation-popover-actions">${actions.map((action) => `<button class="${escapeHtml(action.className || 'btn btn-sm record-annotation-action')}" type="button" data-annotation-popover-action="${escapeHtml(action.key)}">${escapeHtml(action.label)}</button>`).join('')}</div>`
+      : '';
       return `<strong class="record-annotation-popover-title">${title}</strong>${renderPopoverItems(definition)}${actionsHtml}`;
     };
 
@@ -690,7 +703,8 @@
         bodyInput?.focus();
         return false;
       }
-      const next = { ...definition, title, items };
+      const next = { ...definition, items };
+      next.title = title;
       popover._recordAnnotationSaving = true;
       if (saveButton) {
         saveButton.disabled = true;
@@ -1351,6 +1365,7 @@
       attachModeControl,
       getDefinitions: () => [...definitionById.values()].map((definition) => ({ ...definition })),
       destroy() {
+        textStyleRegistration?.();
         overlay.removeEventListener('click', handleClick);
         overlay.removeEventListener('pointerdown', handlePointerDown);
         overlay.removeEventListener('pointermove', handlePointerMove);

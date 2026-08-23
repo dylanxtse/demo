@@ -644,7 +644,7 @@
           data-platform-index="${index}"
           role="tabpanel"
           aria-label="${escapeHtml(option)}"${isSelected ? '' : ' hidden'}>
-          <button type="button" class="project-iteration-add-change-button" data-project-iteration-add-change>＋新增功能-描述</button>
+          <button type="button" class="project-iteration-add-change-button" data-project-iteration-add-change>＋新增描述</button>
           <div class="project-iteration-change-pairs" data-project-iteration-change-items>
             ${displayItems.map((item, itemIndex) => renderChangePair(
               option,
@@ -700,7 +700,7 @@
         </div>
         <div class="project-iteration-form-actions">
           <button type="button" class="project-iteration-secondary-button" data-project-iteration-cancel>取消</button>
-          <button type="submit" class="project-iteration-primary-button">${isEditing ? '保存修改' : '保存记录'}</button>
+          <button type="submit" class="project-iteration-primary-button">保存</button>
         </div>
       </form>`;
   }
@@ -1344,8 +1344,14 @@
         }))
         .filter((item) => item.feature || hasDescriptionContent(item.description))
         .sort((left, right) => left.order - right.order)
-        .map(({ feature, description }) => ({ feature, description }));
-      return { platform, items };
+        .map(({ feature, description }) => ({
+          feature,
+          description
+        }));
+      return {
+        platform,
+        items
+      };
     }).filter((change) => change.items.length);
 
     const refreshForm = (form, draftChanges = collectFormChanges(form), selectedPlatform = '') => {
@@ -1900,7 +1906,7 @@
       } catch (saveError) {
         if (submitButton) {
           submitButton.disabled = false;
-          submitButton.textContent = isEditing ? '保存修改' : '保存记录';
+          submitButton.textContent = '保存';
         }
         showToast('无法写入项目代码，请先启动项目代码保存服务。', 'error');
         return;
@@ -1936,6 +1942,7 @@
       setAnnotationMarkerVisibility: (visible) => applyAnnotationMarkerVisibility(visible),
       getAnnotationMarkerVisibility: () => annotationMarkersVisible,
       destroy() {
+        textStyleRegistration?.();
         window.clearTimeout(toastTimer);
         resetPendingDeleteConfirmation();
         document.removeEventListener('mousemove', handleDocumentMouseMove);
