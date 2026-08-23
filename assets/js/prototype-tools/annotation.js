@@ -26,6 +26,7 @@
         pageKey: options.pageKey,
         data: options.data,
         theme: options.theme,
+        readOnly: options.readOnly,
         saveDefinition,
         onChange: options.onChange
       }

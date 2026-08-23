@@ -12,6 +12,20 @@
     { name: '运维管理平台', variants: ['operations'], tokens: ['运维管理平台'] }
   ];
 
+  function resolveReadOnly(options = {}) {
+    if (typeof options.readOnly === 'boolean') return options.readOnly;
+    if (typeof window.PrototypeToolsConfig?.readOnly === 'boolean') {
+      return window.PrototypeToolsConfig.readOnly;
+    }
+    const protocol = window.location?.protocol || '';
+    const hostname = window.location?.hostname || '';
+    const isLocal = protocol === 'file:'
+      || hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '::1';
+    return /^(http:|https:)$/.test(protocol) && !isLocal;
+  }
+
   const escapeHtml = (value) => String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -720,8 +734,11 @@
 
     let currentRecords = loadRecords(records, options);
     let currentPlatforms = loadPlatforms(currentRecords, options);
+    const readOnly = resolveReadOnly(options);
     const root = document.createElement('div');
     root.className = 'project-iteration-panel-root';
+    root.classList.toggle('is-readonly', readOnly);
+    root.dataset.projectIterationReadOnly = String(readOnly);
     root.dataset.projectIterationPanel = 'true';
     root.innerHTML = `
       <div class="project-iteration-backdrop" data-project-iteration-close></div>
@@ -1236,6 +1253,7 @@
     };
 
     const openForm = (recordId = null) => {
+      if (readOnly) return;
       editingId = recordId;
       resetPendingDeleteConfirmation();
       trashOpen = false;
@@ -1721,6 +1739,24 @@
     };
 
     const handleClick = (event) => {
+      if (readOnly && event.target.closest([
+        '[data-project-iteration-new]',
+        '[data-project-iteration-edit]',
+        '[data-project-iteration-delete]',
+        '[data-project-iteration-trash-toggle]',
+        '[data-project-iteration-permanent-delete]',
+        '[data-project-iteration-restore]',
+        '[data-project-iteration-platform-settings]',
+        '[data-project-iteration-platform-add]',
+        '[data-project-iteration-platform-create]',
+        '[data-project-iteration-platform-delete]',
+        '[data-project-iteration-add-change]',
+        '[data-project-iteration-remove-change]'
+      ].join(', '))) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (!root.classList.contains('is-open')
         && root.classList.contains('is-peeking')
         && event.target.closest('.project-iteration-drawer')) {
@@ -1853,6 +1889,7 @@
     };
 
     const handleDoubleClick = (event) => {
+      if (readOnly) return;
       const platformDelete = event.target.closest('[data-project-iteration-platform-delete]');
       if (platformDelete) {
         event.preventDefault();
@@ -1871,6 +1908,7 @@
       const form = event.target.closest('[data-project-iteration-form]');
       if (!form) return;
       event.preventDefault();
+      if (readOnly) return;
       const changes = collectFormChanges(form);
       if (!changes.length || changes.some((change) => change.items.some((item) => !item.feature || !hasDescriptionContent(item.description)))) {
         showToast('请至少填写一个端的功能-描述；每条涉及功能都需填写对应描述。', 'error');
@@ -1928,6 +1966,7 @@
 
     const controller = {
       root,
+      readOnly,
       open: () => setOpen(true),
       close: () => setOpen(false),
       toggle: () => setOpen(!root.classList.contains('is-open')),

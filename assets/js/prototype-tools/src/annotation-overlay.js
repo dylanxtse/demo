@@ -1,6 +1,20 @@
 (function () {
   let activeController = null;
 
+  function resolveReadOnly(options = {}) {
+    if (typeof options.readOnly === 'boolean') return options.readOnly;
+    if (typeof window.PrototypeToolsConfig?.readOnly === 'boolean') {
+      return window.PrototypeToolsConfig.readOnly;
+    }
+    const protocol = window.location?.protocol || '';
+    const hostname = window.location?.hostname || '';
+    const isLocal = protocol === 'file:'
+      || hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '::1';
+    return /^(http:|https:)$/.test(protocol) && !isLocal;
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -100,6 +114,8 @@
 
     const overlay = document.createElement('div');
     overlay.className = 'record-annotation-overlay';
+    const readOnly = resolveReadOnly(options);
+    overlay.classList.toggle('is-readonly', readOnly);
     overlay.setAttribute('aria-label', '页面标注');
     document.body.appendChild(overlay);
     if (options.theme !== false) {
@@ -639,6 +655,7 @@
     };
 
     const openAnnotationEditor = (anchor) => {
+      if (readOnly) return;
       const definition = getDefinitionForAnchor(anchor);
       const popover = anchor._recordAnnotationPopover;
       if (!definition || !popover) return;
@@ -659,6 +676,7 @@
     };
 
     const showAnnotationEditor = (anchor) => {
+      if (readOnly) return;
       const popover = anchor._recordAnnotationPopover;
       if (!popover?._recordAnnotationEditing) return;
       const savedPopoverPosition = readPopoverPosition(popover);
@@ -688,6 +706,7 @@
     };
 
     const saveAnnotationText = async (anchor) => {
+      if (readOnly) return false;
       const definition = getDefinitionForAnchor(anchor);
       const popover = anchor._recordAnnotationPopover;
       if (!definition || !popover) return false;
@@ -746,6 +765,7 @@
     };
 
     const deleteAnnotation = async (anchor) => {
+      if (readOnly) return false;
       const definition = getDefinitionForAnchor(anchor);
       const popover = anchor._recordAnnotationPopover;
       if (!definition || !popover) return false;
@@ -796,6 +816,7 @@
     };
 
     const saveAnnotationPosition = (anchor, positionPatch) => {
+      if (readOnly) return;
       const definition = getDefinitionForAnchor(anchor);
       if (!definition) return;
       const next = { ...definition, ...positionPatch };
@@ -969,7 +990,7 @@
     };
 
     const createDraft = (target) => {
-      if (!annotationMode || !markersVisible || !target || modalOpen) return;
+      if (readOnly || !annotationMode || !markersVisible || !target || modalOpen) return;
       closeAll();
       const id = `draft-${++draftSequence}`;
       const number = definitionById.size + drafts.size + 1;
@@ -1023,8 +1044,8 @@
     const setMarkerVisibility = (visible) => {
       markersVisible = Boolean(visible);
       overlay.classList.toggle('is-markers-hidden', !markersVisible);
-      editor.hidden = !markersVisible;
-      modeToggle.hidden = !markersVisible;
+      editor.hidden = readOnly || !markersVisible;
+      modeToggle.hidden = readOnly || !markersVisible;
       if (!markersVisible) {
         closeAll();
         if (annotationMode && !modeTransitioning) exitAnnotationMode();
@@ -1094,7 +1115,7 @@
     };
 
     const setAnnotationMode = (enabled) => {
-      if (modeTransitioning) return;
+      if (readOnly || modeTransitioning) return;
       const nextMode = Boolean(enabled);
       if (nextMode && !markersVisible) return;
       if (nextMode === annotationMode) return;
@@ -1211,7 +1232,7 @@
     };
 
     const handleDoubleClick = (event) => {
-      if (!annotationMode || modalOpen || event.target.closest?.('.record-annotation-overlay')) return;
+      if (readOnly || !annotationMode || modalOpen || event.target.closest?.('.record-annotation-overlay')) return;
       const target = findAnnotationTarget(event.target);
       if (!target) return;
       event.preventDefault();
@@ -1220,7 +1241,7 @@
     };
 
     const handlePointerDown = (event) => {
-      if (!annotationMode || event.button !== 0) return;
+      if (readOnly || !annotationMode || event.button !== 0) return;
       const popover = event.target.closest?.('.record-annotation-popover');
       if (popover && !event.target.closest?.('input, textarea, select, button, [data-annotation-popover-action]')) {
         const anchor = anchors.get(popover.dataset.annotationPopover);
@@ -1347,6 +1368,7 @@
     modalObserver.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-hidden', 'style'] });
 
     const attachModeControl = (target) => {
+      if (readOnly) return false;
       const host = target?.querySelector?.('[data-project-iteration-annotation-mode-host]');
       if (!host) return false;
       host.appendChild(editor);
@@ -1358,6 +1380,7 @@
 
     const controller = {
       pageKey,
+      readOnly,
       sync,
       setAnnotationMode,
       setMarkerVisibility,

@@ -179,6 +179,10 @@
   display: none !important;
 }
 
+.record-annotation-overlay.is-readonly .record-annotation-editor {
+  display: none !important;
+}
+
 .record-annotation-editor button {
   height: 36px;
   padding: 0 12px;

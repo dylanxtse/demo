@@ -98,6 +98,23 @@
 
 .project-iteration-panel-root.is-open .project-iteration-drawer { transform: translateX(0); }
 
+/* 线上页面只展示迭代内容，所有会改变项目代码的入口不参与布局。 */
+.project-iteration-panel-root.is-readonly .project-iteration-record-toolbar,
+.project-iteration-panel-root.is-readonly [data-project-iteration-form-host],
+.project-iteration-panel-root.is-readonly [data-project-iteration-edit],
+.project-iteration-panel-root.is-readonly [data-project-iteration-delete],
+.project-iteration-panel-root.is-readonly [data-project-iteration-trash-toggle],
+.project-iteration-panel-root.is-readonly [data-project-iteration-permanent-delete],
+.project-iteration-panel-root.is-readonly [data-project-iteration-restore],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-settings],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-add],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-create],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-delete],
+.project-iteration-panel-root.is-readonly [data-project-iteration-add-change],
+.project-iteration-panel-root.is-readonly [data-project-iteration-remove-change] {
+  display: none !important;
+}
+
 .project-iteration-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
