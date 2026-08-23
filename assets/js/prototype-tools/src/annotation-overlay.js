@@ -52,7 +52,27 @@
       ]);
     return new Map(entries.map(([key, definition], index) => {
       const id = definition.id || key || `annotation-${index + 1}`;
-      return [id, { ...definition, number: String(index + 1) }];
+      const legacyPosition = {};
+      if (definition.markerPosition) legacyPosition.markerPosition = definition.markerPosition;
+      if (definition.popoverPosition) legacyPosition.popoverPosition = definition.popoverPosition;
+      let positionByScope = definition.positionByScope && typeof definition.positionByScope === 'object'
+        ? { ...definition.positionByScope }
+        : null;
+      const legacyScope = definition.scope || 'page';
+      if (Object.keys(legacyPosition).length) {
+        positionByScope = {
+          ...(positionByScope || {}),
+          [legacyScope]: {
+            ...legacyPosition,
+            ...(positionByScope?.[legacyScope] || {})
+          }
+        };
+      }
+      return [id, {
+        ...definition,
+        number: String(index + 1),
+        ...(positionByScope ? { positionByScope } : {})
+      }];
     }));
   }
 
@@ -217,6 +237,30 @@
       return definitionById.get(placeholder?.dataset.annotationBase) || null;
     };
 
+    const getAnnotationScope = (anchor) => {
+      const placeholder = findPlaceholder(anchor?.dataset.annotationOverlayId);
+      return placeholder?.dataset.annotationScope
+        || anchor?.dataset.annotationScope
+        || getDefinitionForAnchor(anchor)?.scope
+        || 'page';
+    };
+
+    const getStoredPosition = (definition, scope = 'page') => {
+      const positionByScope = definition?.positionByScope;
+      if (positionByScope && Object.prototype.hasOwnProperty.call(positionByScope, scope)) {
+        const scopedPosition = positionByScope[scope] || {};
+        return {
+          markerPosition: scopedPosition.markerPosition || definition.markerPosition,
+          popoverPosition: scopedPosition.popoverPosition || definition.popoverPosition
+        };
+      }
+      if (positionByScope) return {};
+      return {
+        markerPosition: definition?.markerPosition,
+        popoverPosition: definition?.popoverPosition
+      };
+    };
+
     const getHorizontalScrollHost = (element) => {
       let node = element?.parentElement;
       while (node && node !== document.body) {
@@ -257,6 +301,7 @@
       const queryRect = queryButton?.getBoundingClientRect();
       const modalHeaderRect = modalHeader?.getClientRects().length ? modalHeader.getBoundingClientRect() : null;
       const targetRect = targetElement?.getBoundingClientRect() || null;
+      const scope = getAnnotationScope(anchor);
       return {
         placeholder,
         marker,
@@ -272,7 +317,8 @@
         isEntry,
         isRight,
         isExportEntry,
-        entryMarkerPosition
+        entryMarkerPosition,
+        scope
       };
     };
 
@@ -352,7 +398,7 @@
       const markerRect = marker.getBoundingClientRect();
       const popoverWidth = Math.min(popover.offsetWidth || 340, window.innerWidth - 32);
       const popoverHeight = popover.offsetHeight || 0;
-      const storedPosition = definition?.popoverPosition;
+      const storedPosition = getStoredPosition(definition, getAnnotationScope(anchor)).popoverPosition;
       if (storedPosition && Number.isFinite(Number(storedPosition.x)) && Number.isFinite(Number(storedPosition.y))) {
         const storedLeft = markerRect.left + Number(storedPosition.x);
         const storedTop = markerRect.top + Number(storedPosition.y);
@@ -381,7 +427,7 @@
       anchor.hidden = false;
       const definition = getDefinitionForAnchor(anchor);
       const autoPosition = getAutoPosition(context);
-      const storedPosition = definition?.markerPosition;
+      const storedPosition = getStoredPosition(definition, context.scope).markerPosition;
       const markerPosition = storedPosition
         && Number.isFinite(Number(storedPosition.x))
         && Number.isFinite(Number(storedPosition.y))
@@ -861,7 +907,18 @@
       if (readOnly) return;
       const definition = getDefinitionForAnchor(anchor);
       if (!definition) return;
-      const next = { ...definition, ...positionPatch };
+      const scope = getAnnotationScope(anchor);
+      const currentPosition = getStoredPosition(definition, scope);
+      const next = {
+        ...definition,
+        positionByScope: {
+          ...(definition.positionByScope || {}),
+          [scope]: {
+            ...currentPosition,
+            ...positionPatch
+          }
+        }
+      };
       definitionById.set(next.id, next);
       anchor._recordAnnotationPopover._recordAnnotationDefinition = next;
       const positionPromise = persistDefinition(next);

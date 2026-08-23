@@ -111,8 +111,26 @@
           "y": -153
         },
         "markerPosition": {
-          "x": 97,
-          "y": 19
+          "x": 95,
+          "y": 16
+        },
+        "positionByScope": {
+          "modal": {
+            "markerPosition": {
+              "x": 125,
+              "y": 15
+            },
+            "popoverPosition": {
+              "x": 32,
+              "y": -153
+            }
+          },
+          "page": {
+            "markerPosition": {
+              "x": 96,
+              "y": 14
+            }
+          }
         }
       },
       {
