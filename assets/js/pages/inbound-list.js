@@ -252,11 +252,11 @@
             <td><span class="status-tag ${getStatusClass(order.status)}">${escapeHtml(statusLabel)}</span></td>
             <td>${escapeHtml(order.purchaserLeaderName)}</td>
             <td>${escapeHtml(order.creator)}</td>
-            <td class="action-cell">
+            <td class="action-cell"><div class="operation-actions">
               <button class="btn-text ${!canAudit ? 'disabled' : ''}" type="button" data-row-action="audit" data-id="${escapeHtml(order.id)}" ${!canAudit ? 'disabled' : ''}>审核</button>
               <button class="btn-text ${!canEdit ? 'disabled' : ''}" type="button" data-row-action="edit" data-id="${escapeHtml(order.id)}" ${!canEdit ? 'disabled' : ''}>编辑</button>
               <button class="btn-text ${!canClose ? 'disabled' : ''}" type="button" data-row-action="close" data-id="${escapeHtml(order.id)}" ${!canClose ? 'disabled' : ''}>关闭</button>
-            </td>
+            </div></td>
           </tr>
         `;
       }).join('');

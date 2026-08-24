@@ -258,10 +258,10 @@
           <td>${escapeHtml(item.origin || '--')}</td>
           <td>${escapeHtml(item.shelfLife || '--')}</td>
           <td>${escapeHtml(item.addTime || '--')}</td>
-          <td class="action-cell">
+          <td class="action-cell"><div class="operation-actions">
             <button class="btn-text ${pending ? 'disabled' : ''}" type="button" data-row-action="shelf" data-id="${escapeHtml(item.reviewId)}" ${pending ? 'disabled' : ''}>上架</button>
             <button class="btn-text ${pending ? '' : 'disabled'}" type="button" data-row-action="audit" data-id="${escapeHtml(item.reviewId)}" ${pending ? '' : 'disabled'}>审核</button>
-          </td>
+          </div></td>
         </tr>
       `;
     }).join('');

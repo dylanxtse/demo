@@ -228,11 +228,11 @@
             <td>${relNoCell}</td>
             <td><span class="status-tag ${statusClass}">${escapeHtml(statusLabel)}</span></td>
             <td>${escapeHtml(order.creator)}</td>
-            <td class="action-cell">
+            <td class="action-cell"><div class="operation-actions">
               <button class="btn-text ${!actionable ? 'disabled' : ''}" type="button" data-row-action="audit" data-id="${escapeHtml(order.id)}" ${!actionable ? 'disabled' : ''}>审核</button>
               <button class="btn-text ${!actionable ? 'disabled' : ''}" type="button" data-row-action="edit" data-id="${escapeHtml(order.id)}" ${!actionable ? 'disabled' : ''}>编辑</button>
               <button class="btn-text ${!actionable ? 'disabled' : ''}" type="button" data-row-action="close" data-id="${escapeHtml(order.id)}" ${!actionable ? 'disabled' : ''}>关闭</button>
-            </td>
+            </div></td>
           </tr>
         `;
       }).join('');

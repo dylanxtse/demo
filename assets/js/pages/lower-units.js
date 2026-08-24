@@ -75,7 +75,7 @@
       <td>${escapeHtml(company.createdAt || '--')}</td>
       <td>${escapeHtml(company.updatedAt || '--')}</td>
       <td>${escapeHtml(company.operator || '--')}</td>
-      <td><div class="lower-units-actions">
+      <td><div class="lower-units-actions operation-actions">
         <button class="btn-text" type="button" data-action="edit-company" data-id="${escapeHtml(company.id)}">编辑</button>
         <button class="btn-text" type="button" data-action="reset-password" data-id="${escapeHtml(company.id)}">重置密码</button>
         <button class="btn-text ${company.status === 'ENABLE' ? 'danger' : ''}" type="button" data-action="toggle-company" data-id="${escapeHtml(company.id)}">${company.status === 'ENABLE' ? '停用' : '启用'}</button>

@@ -31,6 +31,9 @@
     ] },
     { name: '学校管理', icon: 'home' },
     { name: '统计报表', icon: 'chart' },
+    { name: '公告管理', icon: 'notice', expanded: true, children: [
+      { name: '公告管理', href: './notice-management.html' }
+    ] },
     { name: '系统管理', icon: 'settings', children: [
       { name: '用户管理' },
       { name: '角色管理' },

@@ -1,4 +1,4 @@
-.operations-page { min-width: 0; padding: 16px; color: var(--text-primary); }
+.operations-page { min-width: 0; min-height: 0; padding: 16px; color: var(--text-primary); }
 
 .operations-tabs {
   display: flex;
@@ -179,6 +179,23 @@
   background: #fff;
 }
 
+/* 企业端普通列表统一参与页面 flex 高度计算，避免多行数据把分页撑出 content-area。 */
+.operations-page > .operations-table-container {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.operations-page > .operations-table-container > .operations-table-wrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
 /* record-page 会在列表容器外包一层标注宿主；宿主必须参与同一条 flex 链，
    否则表格会把页面撑高，内部滚动条和底部分页会被 content-area 截断。 */
 .operations-page .record-table-annotation-surface {
@@ -235,10 +252,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.operations-table .cell-actions .divider {
-  color: var(--border-color);
 }
 
 .operations-table .quantity-input {

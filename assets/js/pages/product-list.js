@@ -235,11 +235,11 @@
           ${isSupplierProductPage ? '' : `<td>${purchaseType}</td>`}
           <td>${safe.source}</td>
           <td>${safe.addTime}</td>
-          <td class="action-cell">
+          <td class="action-cell"><div class="operation-actions">
             ${isSupplierProductPage ? '' : `<button class="btn-text" type="button" data-row-action="status" data-code="${safe.code}">${nextAction}</button>`}
             <button class="btn-text ${editDisabled ? 'disabled' : ''}" type="button" data-row-action="edit" data-code="${safe.code}" ${editDisabled ? 'disabled' : ''}>编辑</button>
             <button class="btn-text danger" type="button" data-row-action="delete" data-code="${safe.code}">删除</button>
-          </td>
+          </div></td>
         </tr>
       `;
     }).join('');

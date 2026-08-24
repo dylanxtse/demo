@@ -179,8 +179,8 @@
           if (key === 'orderNo') return `<td><button class="cell-link order-goods-link" data-action="view"><span>${escapeHtml(value)}</span><small>${escapeHtml(item.createdAt || '--')}</small></button></td>`;
           return `<td title="${escapeHtml(value)}">${escapeHtml(value || '--')}</td>`;
         }).join('')}
-        <td><div class="cell-actions">${visibleActions(item).map((action, actionIndex) =>
-          `${actionIndex ? '<span class="divider">|</span>' : ''}<button class="btn-text ${action.danger ? 'danger' : ''}" data-action="${action.key}">${action.label}</button>`
+        <td><div class="cell-actions operation-actions">${visibleActions(item).map((action) =>
+          `<button class="btn-text ${action.danger ? 'danger' : ''}" data-action="${action.key}">${action.label}</button>`
         ).join('')}</div></td>
       </tr>
     `).join('');

@@ -21,7 +21,8 @@
       'supplier-archive.html',
       'supplier-editor.html',
       'supplier-relationship-management.html',
-      'wasted-bid-management.html'
+      'wasted-bid-management.html',
+      'notice-management.html'
     ]),
     supplier: new Set(['supplier-product-management.html', 'supplier-bidding-quotation.html', 'supplier-invite.html', 'supplier-export-template.html']),
     operations: new Set([
@@ -384,7 +385,7 @@
 (function () {
   let annotationEnginePromise = null;
   const toolkitAssets = Object.freeze({
-    theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260823-6',
+    theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260824-9',
     annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260824-31',
     iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-56',
     iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60',

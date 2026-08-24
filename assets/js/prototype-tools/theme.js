@@ -45,10 +45,17 @@
     return `#${[r, g, b].map((channel) => Math.round((channel + match) * 255).toString(16).padStart(2, '0')).join('')}`;
   }
 
+  function rgbToHex({ r, g, b }) {
+    return `#${[r, g, b].map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('')}`;
+  }
+
   function fallbackTheme(options = {}) {
+    const configuredProjectColor = parseHex(global.PrototypeToolsConfig?.projectColor);
+    const hostProjectColor = parseHex(getComputedStyle(document.documentElement).getPropertyValue('--primary'));
     const projectColor = parseHex(options.projectColor)
-      || parseHex(getComputedStyle(document.documentElement).getPropertyValue('--primary'))
-      || { r: 88, g: 97, b: 116 };
+      || configuredProjectColor
+      || hostProjectColor
+      || { r: 2, g: 73, b: 196 };
     const source = rgbToHsl(projectColor);
     const accent = options.accent || hslToHex({
       h: (source.h + 180) % 360,
@@ -58,7 +65,9 @@
     const rgb = parseHex(accent) || { r: 214, g: 112, b: 20 };
     const accentRgb = `${rgb.r}, ${rgb.g}, ${rgb.b}`;
     return {
-      projectColor: options.projectColor || '#586174',
+      projectColor: options.projectColor
+        || global.PrototypeToolsConfig?.projectColor
+        || rgbToHex(projectColor),
       accent,
       strong: options.strong || accent,
       contrastText: options.contrastText || '#172033',

@@ -54,6 +54,7 @@
       {
         id: 'SUP-002', name: '七鲜', username: 'qixian_supplier', contact: '刘小东', phone: '13499998888',
         cooperationStart: '2026-08-01', cooperationEnd: '2030-09-30', status: '启用', licenseCode: '91130927MA0A000002', address: '南皮县迎宾大道',
+        segmentIds: ['SEG-001', 'SEG-004'], segmentNames: ['演示标段', '姜标段1'],
         jointVenture: false, hideCustomerPrice: false, qualifications: []
       },
       {
@@ -75,7 +76,7 @@
         businessPlace: '北京市延庆区教育局演示园区', address: '北京市延庆区教育局演示园区',
         representativeName: '张三', representativeIdNo: '110101199001011234',
         licenseFileName: '营业执照示例.png', idCardFrontFileName: '法人身份证人像.png', idCardBackFileName: '法人身份证国徽.png',
-        qualifications: ['食品经营许可证示例.png'], jointVenture: false, hideCustomerPrice: false
+        qualifications: ['食品经营许可证示例.png'], segmentIds: ['SEG-002', 'SEG-005'], segmentNames: ['姜0004', '标段一'], jointVenture: false, hideCustomerPrice: false
       }
     ];
     const segments = [
@@ -219,6 +220,13 @@
         if (!state.suppliers.some((item) => item.id === 'SUP-005')) {
           state.suppliers.push(seedState().suppliers.find((item) => item.id === 'SUP-005'));
         }
+        const seedSuppliers = seedState().suppliers;
+        const segmentMap = new Map((state.segments || seedState().segments).map((item) => [item.id, item.name]));
+        state.suppliers.forEach((supplier) => {
+          const seedSupplier = seedSuppliers.find((item) => item.id === supplier.id);
+          if (!Array.isArray(supplier.segmentIds)) supplier.segmentIds = [...(seedSupplier?.segmentIds || [])];
+          if (!Array.isArray(supplier.segmentNames)) supplier.segmentNames = supplier.segmentIds.map((segmentId) => segmentMap.get(segmentId)).filter(Boolean);
+        });
         const pendingDemo = state.suppliers.find((item) => item.id === 'SUP-005');
         if (pendingDemo?.auditStatus === '待审核') pendingDemo.username = '';
         writeState(state);

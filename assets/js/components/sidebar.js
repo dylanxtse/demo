@@ -24,7 +24,8 @@
       'segment-management': 'segment-management.html',
       'relationship-management': 'supplier-relationship-management.html',
       'supplier-management': 'supplier-archive.html',
-      'supplier-form': 'supplier-editor.html'
+      'supplier-form': 'supplier-editor.html',
+      'notice-management': 'notice-management.html'
     };
     const targetPath = pageAliases[pageKey] || pageKey || currentPath;
     const cleanPath = (routeAliases[targetPath] || targetPath).replace(/\.html$/, '');

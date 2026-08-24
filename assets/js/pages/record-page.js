@@ -418,9 +418,9 @@
               : '';
             return `<td><span class="record-annotation-entry"><button class="cell-link" data-row-action="view">${cell}</button>${entryAnnotation}</span></td>`;
           }).join('')}
-          <td><div class="cell-actions">${actions.map((action, actionIndex) => {
+          <td><div class="cell-actions operation-actions">${actions.map((action) => {
             const isDisabled = action.disabled && action.disabled(item);
-            return `${actionIndex ? '<span class="divider">|</span>' : ''}<button class="btn-text ${action.danger ? 'danger' : ''}" data-row-action="${action.key}"${isDisabled ? ' disabled' : ''}>${action.label}</button>`;
+            return `<button class="btn-text ${action.danger ? 'danger' : ''}" data-row-action="${action.key}"${isDisabled ? ' disabled' : ''}>${action.label}</button>`;
           }).join('') || '--'}</div></td>
         </tr>`;
       }).join('');

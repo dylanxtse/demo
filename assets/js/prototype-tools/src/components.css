@@ -85,6 +85,29 @@
 .btn-text.danger { color: var(--danger); }
 .btn-text.disabled { color: var(--text-tertiary); cursor: not-allowed; }
 
+/* 统一列表操作项之间的分隔线 */
+.operation-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0 !important;
+  white-space: nowrap;
+}
+.operation-actions > * + * {
+  position: relative;
+  margin-left: 22px;
+}
+.operation-actions > * + *::before {
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  width: 1px;
+  height: 14px;
+  background: var(--border-color);
+  content: "";
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 /* ===== 统一页面标注覆盖层 =====
    页面内只保留零尺寸定位锚点；编号按钮和提示气泡统一挂到 body 的全屏覆盖层，完全不参与业务布局。 */
 .record-annotation-placeholder {

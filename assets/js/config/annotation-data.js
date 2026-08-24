@@ -78,7 +78,8 @@
           "新增固定显示勾选框；",
           "新增显示负责人、联系电话、运营分公司；",
           "一个仓库由多个分公司运营时，运营分公司省略显示为“等*家单位”；",
-          "列表操作项固定显示；"
+          "列表操作项固定显示；",
+          "已经关联过仓库的运营分公司不可再次被其他仓库关联；"
         ],
         "number": "1",
         "popoverPosition": {
@@ -212,15 +213,16 @@
         "positionByScope": {
           "page": {
             "markerPosition": {
-              "x": 65,
-              "y": -12
+              "x": 139,
+              "y": -34
             },
             "popoverPosition": {
               "x": -370,
               "y": 28
             }
           }
-        }
+        },
+        "deleted": true
       }
     ],
     "supplier-archive.html::supplierManagementPage": [
@@ -342,6 +344,32 @@
             "markerPosition": {
               "x": 88,
               "y": -18
+            }
+          }
+        }
+      }
+    ],
+    "warehouse-export-template.html::warehouseExportTemplateApp": [
+      {
+        "id": "custom-1787562131288-4",
+        "target": "custom",
+        "targetSelector": "main.supplier-register-page > section.supplier-register-section > div.supplier-register-section-inner > div.warehouse-export-template-table-wrap > table.warehouse-export-template-table > thead > tr:nth-of-type(2) > th:nth-of-type(7)",
+        "placement": "right",
+        "scope": "page",
+        "title": "运营分公司",
+        "items": [
+          "仓库关联多个仓库，导出时需要显示该仓库的全部运营分公司名称，不可省略显示"
+        ],
+        "number": "1",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 22,
+              "y": 10
+            },
+            "popoverPosition": {
+              "x": -398,
+              "y": 0
             }
           }
         }

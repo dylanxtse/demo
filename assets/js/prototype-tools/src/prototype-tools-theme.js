@@ -8,7 +8,8 @@
   if (window.PrototypeToolsTheme) return;
 
   const registeredTargets = new Set();
-  const fallbackProjectColor = { r: 88, g: 97, b: 116 };
+  // 本项目只有一个主色；独立页面未加载 variables.css 时也必须沿用它。
+  const fallbackProjectColor = { r: 2, g: 73, b: 196 };
   let observer = null;
   let refreshQueued = false;
 
@@ -159,8 +160,9 @@
   }
 
   function resolveProjectColor() {
+    const configured = window.PrototypeToolsConfig?.projectColor;
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--primary');
-    return parseColor(raw) || fallbackProjectColor;
+    return parseColor(configured) || parseColor(raw) || fallbackProjectColor;
   }
 
   function resolve() {

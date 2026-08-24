@@ -38,7 +38,7 @@
           <td>${escapeHtml(row.username)}</td>
           <td>${escapeHtml(row.contactName)}<button type="button" class="operations-admin-phone" data-action="phone" data-phone="${escapeHtml(row.phone)}">(${escapeHtml(row.phone)})</button></td>
           <td>${statusTag(row.status)}</td>
-          <td><div class="operations-admin-actions">
+          <td><div class="operations-admin-actions operation-actions">
             <button type="button" class="operations-admin-action" data-action="reset-password" data-id="${escapeHtml(row.id)}">重置密码</button>
             <button type="button" class="operations-admin-action" data-action="edit" data-id="${escapeHtml(row.id)}">编辑</button>
             <button type="button" class="operations-admin-action" data-action="toggle" data-id="${escapeHtml(row.id)}">${row.status === '启用' ? '禁用' : '启用'}</button>

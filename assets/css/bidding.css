@@ -694,6 +694,42 @@
   padding-top: 16px;
 }
 
+.supplier-form-grid > .supplier-segment-field {
+  width: min(1500px, 100%) !important;
+  align-items: flex-start;
+}
+.supplier-segment-field > label { padding-top: 6px !important; }
+.supplier-segment-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 13px 20px;
+  flex: 1 1 auto;
+  width: calc(100% - 158px);
+  max-width: none;
+  min-width: 0;
+  min-height: 34px;
+  padding-top: 2px;
+}
+.supplier-segment-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  color: var(--text-primary);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.supplier-segment-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+.supplier-segment-select-all { font-weight: 500; }
+.supplier-segment-empty { color: var(--text-tertiary); font-size: 13px; }
+
 @media (max-width: 760px) {
   .bidding-form-page > .bidding-form-grid,
   .supplier-form-grid { padding-right: 16px; padding-left: 16px; }

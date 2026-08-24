@@ -29,15 +29,6 @@
   width: 280px;
 }
 
-.unit-measurement-page .action-divider {
-  display: inline-block;
-  width: 1px;
-  height: 14px;
-  margin: 0 4px;
-  background: var(--border-color);
-  vertical-align: middle;
-}
-
 .unit-modal {
   position: fixed;
   inset: 0;

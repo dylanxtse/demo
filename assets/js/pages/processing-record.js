@@ -242,7 +242,7 @@
       <td rowspan="${rowSpan}">${escapeHtml(order.processingDate)}</td>
       <td rowspan="${rowSpan}"><span class="status-tag ${getStatusClass(getDisplayStatus(order))}">${escapeHtml(getDisplayStatus(order))}</span></td>
       <td rowspan="${rowSpan}">${escapeHtml(order.operator)}</td>
-      <td class="action-cell" rowspan="${rowSpan}">${renderRowActions(order)}</td>
+      <td class="action-cell" rowspan="${rowSpan}"><div class="operation-actions">${renderRowActions(order)}</div></td>
     ` : '';
 
     const rowClass = visibleOutputs.length > 1 ? 'is-multi-output' : 'is-single-output';

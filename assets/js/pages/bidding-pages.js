@@ -252,7 +252,7 @@
     function actionButtons(row) {
       const isDraft = row.status === '暂存';
       const canStop = ['待开标', '需求提报中'].includes(row.status);
-      return `<div class="bidding-actions-cell">
+      return `<div class="bidding-actions-cell operation-actions">
         <button class="bidding-link" type="button" data-action="draw-rule" data-id="${row.id}" ${isDraft ? '' : 'disabled'}>规则抽签</button>
         <button class="bidding-link" type="button" data-action="open-bid" data-id="${row.id}" ${row.status === '待开标' ? '' : 'disabled'}>开标</button>
         <button class="bidding-link" type="button" data-action="stop-bid" data-id="${row.id}" ${canStop ? '' : 'disabled'}>停止竞价</button>
@@ -455,7 +455,7 @@
       const page = state.pager?.getState() || { page: 1, pageSize: 20 };
       const start = (page.page - 1) * page.pageSize;
       const visible = state.filtered.slice(start, start + page.pageSize);
-      root.querySelector('#rulesBody').innerHTML = visible.length ? visible.map((row, index) => `<tr><td>${start + index + 1}</td><td class="align-left">${esc(row.name)}</td><td>${esc(row.way)}</td><td>${esc(row.rows.map((item) => item.winRule).join('、'))}</td><td><div class="bidding-actions-cell"><button class="bidding-link" type="button" data-action="edit-rule" data-id="${row.id}">编辑</button><button class="bidding-link danger" type="button" data-action="delete-rule" data-id="${row.id}">删除</button></div></td></tr>`).join('') : '<tr><td class="empty-row" colspan="5">暂无符合条件的数据</td></tr>';
+      root.querySelector('#rulesBody').innerHTML = visible.length ? visible.map((row, index) => `<tr><td>${start + index + 1}</td><td class="align-left">${esc(row.name)}</td><td>${esc(row.way)}</td><td>${esc(row.rows.map((item) => item.winRule).join('、'))}</td><td><div class="bidding-actions-cell operation-actions"><button class="bidding-link" type="button" data-action="edit-rule" data-id="${row.id}">编辑</button><button class="bidding-link danger" type="button" data-action="delete-rule" data-id="${row.id}">删除</button></div></td></tr>`).join('') : '<tr><td class="empty-row" colspan="5">暂无符合条件的数据</td></tr>';
       state.pager?.update({ total: state.filtered.length });
     }
     state.pager = createPager('rulesPagination', state.rows.length, render);
@@ -543,7 +543,7 @@
       const page = state.pager?.getState() || { page: 1, pageSize: 20 };
       const start = (page.page - 1) * page.pageSize;
       const visible = state.filtered.slice(start, start + page.pageSize);
-      root.querySelector('#limitsBody').innerHTML = visible.length ? visible.map((row, index) => `<tr><td>${start + index + 1}</td><td><span class="product-image-placeholder">图片</span></td><td>${esc(row.productCode)}</td><td class="align-left">${esc(row.productName)}</td><td class="align-left">${esc(row.category)}</td><td>${formatLimitPrice(row.minPrice)}</td><td>${formatLimitPrice(row.maxPrice)}</td><td>${esc(row.unit)}</td><td>${esc(row.brand)}</td><td>${esc(row.spec)}</td><td class="align-left">${esc(row.indicator || '--')}</td><td>${esc(row.executionStart)} ~ ${esc(row.executionEnd)}</td><td>${esc(row.updatedAt)}</td><td><div class="bidding-actions-cell"><button class="bidding-link" type="button" data-action="clear-limit" data-id="${row.id}">清除</button><button class="bidding-link" type="button" data-action="view-limit" data-id="${row.id}">查看</button></div></td></tr>`).join('') : '<tr><td class="empty-row" colspan="14">暂无符合条件的数据</td></tr>';
+      root.querySelector('#limitsBody').innerHTML = visible.length ? visible.map((row, index) => `<tr><td>${start + index + 1}</td><td><span class="product-image-placeholder">图片</span></td><td>${esc(row.productCode)}</td><td class="align-left">${esc(row.productName)}</td><td class="align-left">${esc(row.category)}</td><td>${formatLimitPrice(row.minPrice)}</td><td>${formatLimitPrice(row.maxPrice)}</td><td>${esc(row.unit)}</td><td>${esc(row.brand)}</td><td>${esc(row.spec)}</td><td class="align-left">${esc(row.indicator || '--')}</td><td>${esc(row.executionStart)} ~ ${esc(row.executionEnd)}</td><td>${esc(row.updatedAt)}</td><td><div class="bidding-actions-cell operation-actions"><button class="bidding-link" type="button" data-action="clear-limit" data-id="${row.id}">清除</button><button class="bidding-link" type="button" data-action="view-limit" data-id="${row.id}">查看</button></div></td></tr>`).join('') : '<tr><td class="empty-row" colspan="14">暂无符合条件的数据</td></tr>';
       state.pager?.update({ total: state.filtered.length });
     }
     state.pager = createPager('limitsPagination', state.rows.length, render);
@@ -676,7 +676,7 @@
       state.filtered = state.rows.filter((row) => !keyword || row.name.toLowerCase().includes(keyword));
       const page = state.pager?.getState() || { page: 1, pageSize: 20 };
       const start = (page.page - 1) * page.pageSize;
-      root.querySelector('#segmentsBody').innerHTML = state.filtered.slice(start, start + page.pageSize).map((row, index) => `<tr><td>${start + index + 1}</td><td>${esc(row.name)}</td><td class="align-left">${esc(row.categories.join('，'))}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell"><button class="bidding-link" type="button" data-action="toggle-segment" data-id="${row.id}">${row.status === '启用' ? '禁用' : '启用'}</button><button class="bidding-link" type="button" data-action="edit-segment" data-id="${row.id}">编辑</button><button class="bidding-link danger" type="button" data-action="delete-segment" data-id="${row.id}">删除</button></div></td></tr>`).join('') || '<tr><td class="empty-row" colspan="5">暂无符合条件的数据</td></tr>';
+      root.querySelector('#segmentsBody').innerHTML = state.filtered.slice(start, start + page.pageSize).map((row, index) => `<tr><td>${start + index + 1}</td><td>${esc(row.name)}</td><td class="align-left">${esc(row.categories.join('，'))}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell operation-actions"><button class="bidding-link" type="button" data-action="toggle-segment" data-id="${row.id}">${row.status === '启用' ? '禁用' : '启用'}</button><button class="bidding-link" type="button" data-action="edit-segment" data-id="${row.id}">编辑</button><button class="bidding-link danger" type="button" data-action="delete-segment" data-id="${row.id}">删除</button></div></td></tr>`).join('') || '<tr><td class="empty-row" colspan="5">暂无符合条件的数据</td></tr>';
       state.pager?.update({ total: state.filtered.length });
     }
     function openModal(row) {
@@ -933,7 +933,7 @@
         const auditButton = isPendingAudit ? `<button class="bidding-link" type="button" data-action="audit-supplier" data-id="${row.id}">审核</button>` : '';
         const editButton = canEdit ? `<button class="bidding-link" type="button" data-action="edit-supplier" data-id="${row.id}">编辑</button>` : '';
         const checked = state.selected.has(row.id);
-        return `<tr><td><span class="custom-checkbox supplier-custom-checkbox supplier-row-checkbox${checked ? ' checked' : ''}" role="checkbox" aria-checked="${checked}" data-action="toggle-select-supplier" data-id="${esc(row.id)}" aria-label="选择${esc(row.name)}" tabindex="0"></span></td><td>${start + index + 1}</td><td>${esc(row.name)}</td><td>${esc(row.username || '--')}</td><td>${esc(row.contact || '--')}</td><td>${esc(row.phone || '--')}</td><td>${esc(formatCooperationPeriod(row))}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell">${editButton}${toggleButton}<button class="bidding-link danger" type="button" data-action="delete-supplier" data-id="${row.id}">删除</button>${auditButton}</div></td></tr>`;
+        return `<tr><td><span class="custom-checkbox supplier-custom-checkbox supplier-row-checkbox${checked ? ' checked' : ''}" role="checkbox" aria-checked="${checked}" data-action="toggle-select-supplier" data-id="${esc(row.id)}" aria-label="选择${esc(row.name)}" tabindex="0"></span></td><td>${start + index + 1}</td><td>${esc(row.name)}</td><td>${esc(row.username || '--')}</td><td>${esc(row.contact || '--')}</td><td>${esc(row.phone || '--')}</td><td>${esc(formatCooperationPeriod(row))}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell operation-actions">${editButton}${toggleButton}<button class="bidding-link danger" type="button" data-action="delete-supplier" data-id="${row.id}">删除</button>${auditButton}</div></td></tr>`;
       }).join('');
       root.querySelector('#suppliersBody').innerHTML = supplierRows || '<tr><td class="empty-row" colspan="9">暂无符合条件的数据</td></tr>';
       const selectPage = root.querySelector('[data-action="toggle-select-page"]');
@@ -1010,6 +1010,9 @@
     const inviteExpires = params.get('expires') || '';
     const inviteToken = params.get('invite') || 'demo';
     const existing = isInvite ? null : service.get('suppliers').find((row) => row.id === id);
+    const segments = service.get('segments');
+    const existingSegmentIds = (existing?.segmentIds || []).filter((segmentId) => segments.some((segment) => segment.id === segmentId));
+    const segmentSelection = new Set(existingSegmentIds);
     const title = isAudit ? '审核供应商' : isInvite ? '供应商信息填写' : mode === 'edit' ? '编辑供应商' : '添加供应商';
 
     if (isInvite && inviteExpires && isExpiredDateTime(inviteExpires)) {
@@ -1039,7 +1042,7 @@
           <div class="bidding-form-field supplier-license-meta"><label>统一社会信用代码</label><input data-field="licenseCode" placeholder="请输入统一社会信用代码" value="${inputValue(existing?.licenseCode)}" ${readOnly}></div>
           <div class="bidding-form-field supplier-license-meta"><label>住所</label><input data-field="address" placeholder="请输入住所" value="${inputValue(existing?.address)}" ${readOnly}></div>
           <div class="bidding-form-field supplier-qualification-field"><label>其他资质</label><div class="bidding-control-stack"><div class="bidding-file-row"><button class="btn btn-sm supplier-add-qualification" type="button" data-action="choose-qualification" ${uploadDisabled}>+</button><input id="qualificationFile" type="file" accept=".png,.jpg,.jpeg" hidden ${uploadDisabled}></div><div class="bidding-asset-list" id="qualificationNames">${(existing?.qualifications || []).map((item) => `<span class="bidding-asset-chip">${esc(item)}</span>`).join('')}</div><div class="field-hint">支持上传食品经营许可证、质量检测报告等资质图片，单张图片不超过5M</div></div></div>
-          ${showManagedSettings ? `<div class="bidding-form-field supplier-date-field"><label>合作期限</label><div class="bidding-range"><input type="date" data-field="cooperationStart" value="${inputValue(existing?.cooperationStart)}" placeholder="请选择日期"><span>至</span><input type="date" data-field="cooperationEnd" value="${inputValue(existing?.cooperationEnd)}" placeholder="请选择日期"></div></div><div class="bidding-form-field"><label>联营供应商</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.jointVenture ? 'on' : ''}" type="button" data-switch="jointVenture" aria-pressed="${Boolean(existing?.jointVenture)}"></button><span class="bidding-switch-label">保存后无法编辑</span></div></div><div class="bidding-form-field"><label>隐藏客户价格</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.hideCustomerPrice ? 'on' : ''}" type="button" data-switch="hideCustomerPrice" aria-pressed="${Boolean(existing?.hideCustomerPrice)}"></button><span class="bidding-switch-label">开启后，该供应商端将不显示客户的单价和金额</span></div></div>` : ''}
+          ${showManagedSettings ? `<div class="bidding-form-field supplier-date-field"><label>合作期限</label><div class="bidding-range"><input type="date" data-field="cooperationStart" value="${inputValue(existing?.cooperationStart)}" placeholder="请选择日期"><span>至</span><input type="date" data-field="cooperationEnd" value="${inputValue(existing?.cooperationEnd)}" placeholder="请选择日期"></div></div><div class="bidding-form-field required supplier-segment-field"><label>标段</label><div class="supplier-segment-control"><label class="supplier-segment-option supplier-segment-select-all"><input type="checkbox" data-segment-all>全选</label>${segments.length ? segments.map((segment) => `<label class="supplier-segment-option"><input type="checkbox" value="${esc(segment.id)}" data-segment-option ${segmentSelection.has(segment.id) ? 'checked' : ''}><span>${esc(segment.name)}</span></label>`).join('') : '<span class="supplier-segment-empty">暂无可选标段</span>'}</div></div><div class="bidding-form-field"><label>联营供应商</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.jointVenture ? 'on' : ''}" type="button" data-switch="jointVenture" aria-pressed="${Boolean(existing?.jointVenture)}"></button><span class="bidding-switch-label">保存后无法编辑</span></div></div><div class="bidding-form-field"><label>隐藏客户价格</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.hideCustomerPrice ? 'on' : ''}" type="button" data-switch="hideCustomerPrice" aria-pressed="${Boolean(existing?.hideCustomerPrice)}"></button><span class="bidding-switch-label">开启后，该供应商端将不显示客户的单价和金额</span></div></div>` : ''}
         </div>
         <div class="bidding-form-actions">${isAudit ? '<button class="btn btn-sm" type="button" data-action="cancel">返回</button><button class="btn btn-danger btn-sm" type="button" data-action="reject-supplier">审核驳回</button><button class="btn btn-primary btn-sm" type="button" data-action="approve-supplier">审核通过</button>' : isInvite ? '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="submit-invite">提交信息</button>' : '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-supplier">保存</button>'}</div>
       </div>`);
@@ -1066,7 +1069,25 @@
     };
     const switches = { jointVenture: Boolean(existing?.jointVenture), hideCustomerPrice: Boolean(existing?.hideCustomerPrice) };
     const qualificationNames = [...(existing?.qualifications || [])];
+    const syncSegmentSelectAll = () => {
+      const options = all(root, '[data-segment-option]');
+      const selectAll = root.querySelector('[data-segment-all]');
+      if (!selectAll) return;
+      const selectedCount = options.filter((option) => option.checked).length;
+      selectAll.checked = options.length > 0 && selectedCount === options.length;
+      selectAll.indeterminate = selectedCount > 0 && selectedCount < options.length;
+      selectAll.disabled = options.length === 0;
+    };
+    syncSegmentSelectAll();
     root.addEventListener('change', (event) => {
+      if (event.target.matches('[data-segment-option]')) {
+        if (event.target.checked) segmentSelection.add(event.target.value); else segmentSelection.delete(event.target.value);
+        syncSegmentSelectAll();
+      }
+      if (event.target.matches('[data-segment-all]')) {
+        all(root, '[data-segment-option]').forEach((option) => { option.checked = event.target.checked; if (event.target.checked) segmentSelection.add(option.value); else segmentSelection.delete(option.value); });
+        syncSegmentSelectAll();
+      }
       if (event.target.id === 'licenseFile') {
         const file = event.target.files?.[0];
         if (file && (file.size > 5 * 1024 * 1024 || !/\.(png|jpe?g)$/i.test(file.name))) { showToast('营业执照需为不超过5M的png、jpg或jpeg图片', true); event.target.value = ''; return; }
@@ -1097,7 +1118,9 @@
         if (!/^[A-Za-z0-9]{6,20}$/.test(username)) { showToast('用户名需为6~20位字母或数字', true); root.querySelector('[data-field="username"]')?.focus(); return; }
         if (!cooperationStart || !cooperationEnd) { showToast('请设置合作期限', true); return; }
         if (cooperationStart > cooperationEnd) { showToast('合作期限开始日期不能晚于结束日期', true); return; }
-        service.update('suppliers', existing.id, { username, cooperationStart, cooperationEnd, jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice, status: '启用', auditStatus: '已通过', auditRemark: '', auditedAt: dateTimeNow() });
+        if (!segmentSelection.size) { showToast('请至少选择一个合作标段', true); return; }
+        const segmentNames = segments.filter((segment) => segmentSelection.has(segment.id)).map((segment) => segment.name);
+        service.update('suppliers', existing.id, { username, cooperationStart, cooperationEnd, segmentIds: [...segmentSelection], segmentNames, jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice, status: '启用', auditStatus: '已通过', auditRemark: '', auditedAt: dateTimeNow() });
         showToast('审核已通过'); window.setTimeout(() => go('./supplier-archive.html?audit=approved'), 450); return;
       }
       if (action === 'back' || action === 'cancel') { go('./supplier-archive.html'); return; }
@@ -1105,12 +1128,15 @@
       if (action === 'choose-qualification') { root.querySelector('#qualificationFile').click(); return; }
       if (action !== 'save-supplier' && action !== 'submit-invite') return;
       const get = (key) => valueOf(root, `[data-field="${key}"]`);
+      const selectedSegmentIds = [...segmentSelection];
+      const segmentNames = segments.filter((segment) => selectedSegmentIds.includes(segment.id)).map((segment) => segment.name);
       const payload = { name: get('name'), contact: get('contact'), phone: get('phone'), licenseCode: get('licenseCode'), address: get('address'), qualifications: qualificationNames, licenseFileName: root.querySelector('#licenseFileName').textContent };
       if (isSelfManaged) {
-        Object.assign(payload, { username: get('username'), cooperationStart: get('cooperationStart'), cooperationEnd: get('cooperationEnd'), jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice });
+        Object.assign(payload, { username: get('username'), cooperationStart: get('cooperationStart'), cooperationEnd: get('cooperationEnd'), segmentIds: selectedSegmentIds, segmentNames, jointVenture: switches.jointVenture, hideCustomerPrice: switches.hideCustomerPrice });
       }
       if (!payload.name || !payload.contact || !payload.phone || (isSelfManaged && !payload.username)) { showToast(isSelfManaged ? '请完善供应商名称、用户名、联系人和联系电话' : '请完善供应商名称、联系人和联系电话', true); return; }
       if (isSelfManaged && !/^[A-Za-z0-9]{6,20}$/.test(payload.username)) { showToast('用户名需为6~20位字母或数字', true); return; }
+      if (isSelfManaged && !selectedSegmentIds.length) { showToast('请至少选择一个合作标段', true); return; }
       if (isSelfManaged && payload.cooperationStart && payload.cooperationEnd && payload.cooperationStart > payload.cooperationEnd) { showToast('合作期限开始日期不能晚于结束日期', true); return; }
       if (isInvite && action === 'submit-invite') {
         service.add('suppliers', { ...payload, username: '', cooperationStart: '', cooperationEnd: '', jointVenture: false, hideCustomerPrice: false, status: '待审核', auditStatus: '待审核', source: '供应商邀请', inviteToken, inviteExpiresAt: inviteExpires, submittedAt: dateTimeNow() }, 'SUP');

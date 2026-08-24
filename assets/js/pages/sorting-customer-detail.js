@@ -76,7 +76,7 @@
       const sorted = isSorted(item);
       const actionHtml = sorted
         ? '<button class="btn-text" data-row-action="resetSort">重置</button>'
-        : `<button class="btn-text" data-row-action="sort">分拣</button><span class="divider">|</span><button class="btn-text" data-row-action="markShortage">${shortage ? '取消缺货' : '标记缺货'}</button>`;
+        : `<button class="btn-text" data-row-action="sort">分拣</button><button class="btn-text" data-row-action="markShortage">${shortage ? '取消缺货' : '标记缺货'}</button>`;
       const progress = `${item.actualQty ?? 0}/${item.orderQty ?? 0}`;
       return `<tr data-id="${escapeHtml(item.id)}">
         <td><input class="detail-row-select" type="checkbox" ${selected.has(item.id) ? 'checked' : ''} aria-label="选择数据"></td>
@@ -84,7 +84,7 @@
         <td>${escapeHtml(item.orderQty)}</td><td><input class="quantity-input detail-actual-qty" type="number" min="0" value="${item.actualQty ? escapeHtml(item.actualQty) : ''}" placeholder="请输入" aria-label="实际数量"></td>
         <td>${escapeHtml(item.shipped || '否')}</td><td>${escapeHtml(item.unit)}</td><td>${escapeHtml(progress)}</td><td>${escapeHtml(item.remark || '--')}</td><td>${escapeHtml(item.stock)}</td>
         <td><span class="operation-status ${statusClass(item)}">${statusText(item)}</span></td><td>${escapeHtml(item.sorter || '--')}</td><td>${escapeHtml(item.sortingAt || '--')}</td><td>${escapeHtml(item.route || '--')}</td>
-        <td><div class="cell-actions">${actionHtml}</div></td>
+        <td><div class="cell-actions operation-actions">${actionHtml}</div></td>
       </tr>`;
     }).join('') : '<tr><td class="empty-cell" colspan="17">暂无数据</td></tr>';
     root.querySelector('#detailTotal').textContent = `共 ${filteredItems.length} 条数据`;

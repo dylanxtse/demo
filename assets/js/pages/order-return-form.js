@@ -88,7 +88,7 @@
       <div class="operations-modal-body">
         <div class="operations-filter-grid compact-picker-filter"><div class="operations-field"><label>商品名称</label><input class="filter-input" placeholder="请输入"></div><div class="operations-field"><label>期望发货日期</label><input class="filter-input" type="date"></div><button class="btn btn-primary btn-sm">查询</button><button class="btn btn-sm">重置</button></div>
         <div class="order-goods-table-wrap"><table class="order-goods-table"><thead><tr><th>订单号</th><th>期望送达时间</th><th>下单金额</th><th>操作</th></tr></thead><tbody>
-        ${result.items.filter((item) => !['DRAFT', 'CLOSED'].includes(item.status)).map((item) => `<tr><td>${escapeHtml(item.orderNo)}</td><td>${escapeHtml(item.expectedAt)}</td><td>${money(item.orderAmount)}</td><td><button class="btn-text" data-select-order="${escapeHtml(item.id)}" data-full="1">整单退</button><span class="divider">|</span><button class="btn-text" data-select-order="${escapeHtml(item.id)}" data-full="0">部分退</button></td></tr>`).join('')}
+        ${result.items.filter((item) => !['DRAFT', 'CLOSED'].includes(item.status)).map((item) => `<tr><td>${escapeHtml(item.orderNo)}</td><td>${escapeHtml(item.expectedAt)}</td><td>${money(item.orderAmount)}</td><td><div class="operation-actions"><button class="btn-text" data-select-order="${escapeHtml(item.id)}" data-full="1">整单退</button><button class="btn-text" data-select-order="${escapeHtml(item.id)}" data-full="0">部分退</button></div></td></tr>`).join('')}
         </tbody></table></div>
       </div><footer class="operations-modal-footer"><button class="btn" data-close>取消</button></footer>
     </section></div>`;

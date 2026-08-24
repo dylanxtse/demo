@@ -172,13 +172,11 @@
           <td>${escapeHtml(item.unitName)}</td>
           <td>${escapeHtml(displayRate(item.conversionRate))}</td>
           <td><span class="status-tag ${enabled ? 'online' : 'offline'}">${enabled ? '启用' : '禁用'}</span></td>
-          <td class="action-cell">
+          <td class="action-cell"><div class="operation-actions">
             <button class="btn-text" type="button" data-row-action="${enabled ? 'disable' : 'enable'}" data-id="${escapeHtml(item.id)}">${enabled ? '禁用' : '启用'}</button>
-            <span class="action-divider"></span>
             <button class="btn-text" type="button" data-row-action="edit" data-id="${escapeHtml(item.id)}">编辑</button>
-            <span class="action-divider"></span>
             <button class="btn-text danger" type="button" data-row-action="delete" data-id="${escapeHtml(item.id)}">删除</button>
-          </td>
+          </div></td>
         </tr>
       `;
     }).join('');
