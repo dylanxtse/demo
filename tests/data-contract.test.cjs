@@ -13,9 +13,9 @@ const documentFields = {
   receiptChanges: 'changeNo'
 };
 
-test('60 个页面的本地资源存在且共享规则脚本顺序正确', () => {
+test('61 个页面的本地资源存在且共享规则脚本顺序正确', () => {
   const pages = fs.readdirSync(root).filter((file) => file.endsWith('.html')).sort();
-  assert.equal(pages.length, 60);
+  assert.equal(pages.length, 61);
   pages.forEach((page) => {
     const source = fs.readFileSync(path.join(root, page), 'utf8');
     const refs = [...source.matchAll(/(?:src|href)=["']([^"'?#]+)["']/g)]

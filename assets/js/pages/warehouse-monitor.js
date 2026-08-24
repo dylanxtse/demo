@@ -202,15 +202,6 @@
     state.confirmingId = '';
   }
 
-  function renderVideoOptions(currentValue = '') {
-    const options = [...(window.WarehouseMonitorService.videoOptions || [])];
-    if (currentValue && !options.some((option) => option.value === currentValue)) {
-      options.unshift({ label: '当前地址（历史配置）', value: currentValue });
-    }
-    return `<option value="">请选择视频地址</option>${options.map((option) => `
-      <option value="${escapeHtml(option.value)}" ${option.value === currentValue ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}`;
-  }
-
   function renderWarehouseOptions(currentValue = '', context = accessContext()) {
     const options = context.warehouses || [];
     return `<option value="">请选择所属仓库</option>${options.map((warehouse) => `
@@ -231,10 +222,10 @@
           <header class="operations-modal-header"><h3>${isEdit ? '编辑视频点位' : '新增视频点位'}</h3><button type="button" data-monitor-close aria-label="关闭">×</button></header>
           <div class="operations-modal-body">
             <form id="monitorPointForm" class="warehouse-monitor-form">
-              <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointName">点位名称</label><input id="monitorPointName" name="name" value="${escapeHtml(point?.name || '')}" placeholder="请输入点位名称" maxlength="50"><div id="monitorPointNameError" class="warehouse-monitor-form-error"></div></div>
               <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointWarehouse">所属仓库</label><select id="monitorPointWarehouse" name="warehouseId"${warehouseOptions.length ? '' : ' disabled'}>${renderWarehouseOptions(currentWarehouseId, context)}</select><div id="monitorPointWarehouseError" class="warehouse-monitor-form-error"></div></div>
+              <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointName">点位名称</label><input id="monitorPointName" name="name" value="${escapeHtml(point?.name || '')}" placeholder="请输入点位名称" maxlength="50"><div id="monitorPointNameError" class="warehouse-monitor-form-error"></div></div>
               <div class="warehouse-monitor-form-field"><label for="monitorPointDescription">点位描述</label><textarea id="monitorPointDescription" name="description" placeholder="请输入点位描述（选填）" maxlength="200">${escapeHtml(point?.description || '')}</textarea></div>
-              <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointVideoAddress">视频地址</label><select id="monitorPointVideoAddress" name="videoAddress">${renderVideoOptions(point?.videoAddress || '')}</select><div id="monitorPointVideoError" class="warehouse-monitor-form-error"></div></div>
+              <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointVideoAddress">视频地址</label><input id="monitorPointVideoAddress" name="videoAddress" type="url" inputmode="url" value="${escapeHtml(point?.videoAddress || '')}" placeholder="请输入视频地址" maxlength="500"><div id="monitorPointVideoError" class="warehouse-monitor-form-error"></div></div>
               <div id="monitorPointFormError" class="warehouse-monitor-form-error"></div>
             </form>
           </div>

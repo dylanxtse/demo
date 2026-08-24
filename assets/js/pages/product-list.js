@@ -1,4 +1,5 @@
 (function () {
+  const isSupplierProductPage = document.body.dataset.userEnd === 'supplier';
   const downloadIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   const addIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   const categoryIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
@@ -7,9 +8,7 @@
     <div class="page-card product-list-page">
       <div class="workspace-grid">
         <section class="category-panel">
-          <button class="btn btn-sm btn-blue category-edit-btn" type="button" data-action="edit-category">
-            ${categoryIcon}编辑商品分类
-          </button>
+          ${isSupplierProductPage ? '' : `<button class="btn btn-sm btn-blue category-edit-btn" type="button" data-action="edit-category">${categoryIcon}编辑商品分类</button>`}
           <div class="category-tree">
             <div class="category-filter">
               <label class="filter-label" for="categorySearch">商品分类</label>
@@ -43,10 +42,11 @@
                   <label class="filter-label" for="sourceFilter">商品来源</label>
                   <select class="filter-select" id="sourceFilter"><option>全部</option><option>平台添加</option><option>供应商添加</option></select>
                 </div>
+                ${isSupplierProductPage ? '' : `
                 <div class="filter-group">
                   <label class="filter-label" for="netVegetableFilter">是否净菜</label>
                   <select class="filter-select" id="netVegetableFilter"><option>全部</option><option>净菜</option><option>非净菜</option></select>
-                </div>
+                </div>`}
               </div>
               <div class="action-controls">
                 <button class="btn btn-primary btn-sm btn-fixed" type="button" data-action="query">查询</button>
@@ -58,16 +58,14 @@
           <div class="action-bar">
             <div class="action-main">
               <button class="btn btn-primary btn-sm btn-action" type="button" data-action="add-product">${addIcon}添加商品</button>
-              <button class="btn btn-sm btn-action btn-blue" type="button">导入商品信息</button>
-              <button class="btn btn-sm btn-action btn-blue" type="button">导入商品图片</button>
-              <button class="btn btn-sm btn-action btn-blue" type="button">导入市场价</button>
-              <button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchShelfBtn" type="button" disabled>批量上架</button>
-              <button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchUnshelfBtn" type="button" disabled>批量下架</button>
+              <button id="supplierImportInfoBtn" class="btn btn-sm btn-action btn-blue ${isSupplierProductPage ? 'btn-disabled' : ''}" type="button" ${isSupplierProductPage ? 'disabled' : ''}>导入商品信息</button>
+              <button id="supplierImportImageBtn" class="btn btn-sm btn-action btn-blue ${isSupplierProductPage ? 'btn-disabled' : ''}" type="button" ${isSupplierProductPage ? 'disabled' : ''}>导入商品图片</button>
+              ${isSupplierProductPage ? '' : '<button class="btn btn-sm btn-action btn-blue" type="button">导入市场价</button>'}
+              ${isSupplierProductPage ? '' : '<button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchShelfBtn" type="button" disabled>批量上架</button>'}
+              ${isSupplierProductPage ? '' : '<button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchUnshelfBtn" type="button" disabled>批量下架</button>'}
               <button class="btn btn-danger btn-sm btn-action btn-disabled" id="batchDeleteBtn" type="button" disabled>批量删除</button>
             </div>
-            <div class="action-controls">
-              <button class="btn btn-sm btn-fixed" type="button">${downloadIcon}导出</button>
-            </div>
+            ${isSupplierProductPage ? '' : `<div class="action-controls"><button class="btn btn-sm btn-fixed" type="button">${downloadIcon}导出</button></div>`}
           </div>
 
           <div class="table-container">
@@ -87,7 +85,7 @@
                     <th>别名</th>
                     <th>产地</th>
                     <th>保质期</th>
-                    <th>采购类型</th>
+                    ${isSupplierProductPage ? '' : '<th>采购类型</th>'}
                     <th>商品来源</th>
                     <th>添加时间</th>
                     <th>操作</th>
@@ -216,7 +214,7 @@
         ? '--'
         : window.DomUtils.escapeHtml(product.shelfLife);
       const nextAction = isEnabled ? '下架' : '上架';
-      const netVegetableTag = product.isNetVegetable
+      const netVegetableTag = !isSupplierProductPage && product.isNetVegetable
         ? '<span class="net-vegetable-tag">净菜</span>'
         : '';
       const editDisabled = isEnabled;
@@ -234,11 +232,11 @@
           <td>${safe.alias || '--'}</td>
           <td>${safe.origin || '--'}</td>
           <td>${shelfLife}</td>
-          <td>${purchaseType}</td>
+          ${isSupplierProductPage ? '' : `<td>${purchaseType}</td>`}
           <td>${safe.source}</td>
           <td>${safe.addTime}</td>
           <td class="action-cell">
-            <button class="btn-text" type="button" data-row-action="status" data-code="${safe.code}">${nextAction}</button>
+            ${isSupplierProductPage ? '' : `<button class="btn-text" type="button" data-row-action="status" data-code="${safe.code}">${nextAction}</button>`}
             <button class="btn-text ${editDisabled ? 'disabled' : ''}" type="button" data-row-action="edit" data-code="${safe.code}" ${editDisabled ? 'disabled' : ''}>编辑</button>
             <button class="btn-text danger" type="button" data-row-action="delete" data-code="${safe.code}">删除</button>
           </td>
@@ -250,8 +248,12 @@
 
   function updateBatchButtons() {
     const enabled = document.querySelectorAll('#tableBody .custom-checkbox.checked').length > 0;
-    ['batchShelfBtn', 'batchUnshelfBtn', 'batchDeleteBtn'].forEach((id) => {
+    const buttonIds = isSupplierProductPage
+      ? ['supplierImportInfoBtn', 'supplierImportImageBtn', 'batchDeleteBtn']
+      : ['batchShelfBtn', 'batchUnshelfBtn', 'batchDeleteBtn'];
+    buttonIds.forEach((id) => {
       const button = document.getElementById(id);
+      if (!button) return;
       button.disabled = !enabled;
       button.classList.toggle('btn-disabled', !enabled);
     });
@@ -273,14 +275,14 @@
     const status = value('statusFilter');
     const purchaseType = value('purchaseTypeFilter');
     const source = value('sourceFilter');
-    const netVegetable = value('netVegetableFilter');
+    const netVegetable = isSupplierProductPage ? '全部' : value('netVegetableFilter');
     const result = state.products.filter((product) => (
       (!nameOrCode || `${product.name} ${product.code}`.toLowerCase().includes(nameOrCode)) &&
       (!brand || product.brand.toLowerCase().includes(brand)) &&
       (status === '全部' || window.BusinessRules.statusLabel('products', product.status) === status) &&
       (purchaseType === '全部' || product.purchaseType === purchaseType) &&
       (source === '全部' || product.source === source) &&
-      (netVegetable === '全部' || (netVegetable === '净菜' && product.isNetVegetable) || (netVegetable === '非净菜' && !product.isNetVegetable))
+      (isSupplierProductPage || netVegetable === '全部' || (netVegetable === '净菜' && product.isNetVegetable) || (netVegetable === '非净菜' && !product.isNetVegetable))
     ));
     state.filteredProducts = result;
     state.total = result.length;
@@ -290,7 +292,8 @@
 
   function resetFilters() {
     ['productNameFilter', 'brandFilter'].forEach((id) => { document.getElementById(id).value = ''; });
-    ['statusFilter', 'purchaseTypeFilter', 'sourceFilter', 'netVegetableFilter'].forEach((id) => { document.getElementById(id).value = '全部'; });
+    ['statusFilter', 'purchaseTypeFilter', 'sourceFilter'].forEach((id) => { document.getElementById(id).value = '全部'; });
+    if (!isSupplierProductPage) document.getElementById('netVegetableFilter').value = '全部';
     filterProducts(true);
   }
 
@@ -349,6 +352,16 @@
 
   function bindEvents() {
     const root = document.querySelector('.product-list-page');
+    const navigateToProductForm = (mode = '', code = '') => {
+      const params = new URLSearchParams();
+      if (isSupplierProductPage) params.set('from', 'supplier');
+      if (mode) params.set('mode', mode);
+      if (code) params.set('id', code);
+      const query = params.toString();
+      const target = `./goodsAdd.html${query ? `?${query}` : ''}`;
+      if (window.AppNavigationGuard?.navigate) window.AppNavigationGuard.navigate(target);
+      else window.location.href = target;
+    };
     root.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
       const selectedCodes = () => [...document.querySelectorAll('#tableBody .custom-checkbox.checked')]
@@ -385,7 +398,7 @@
       }
       if (action === 'query') filterProducts(true);
       if (action === 'reset') resetFilters();
-      if (action === 'add-product') window.location.href = './goodsAdd.html';
+      if (action === 'add-product') navigateToProductForm();
       if (action === 'edit-category') window.alert('编辑商品分类');
       if (action === 'add-category') {
         event.stopPropagation();
@@ -425,8 +438,8 @@
       if (rowAction) {
         const product = state.products.find((item) => item.code === rowAction.dataset.code);
         if (!product) return;
-        if (rowAction.dataset.rowAction === 'edit') window.location.href = `./goodsAdd.html?mode=edit&id=${encodeURIComponent(product.code)}`;
-        if (rowAction.dataset.rowAction === 'detail') window.location.href = `./goodsAdd.html?mode=view&id=${encodeURIComponent(product.code)}`;
+        if (rowAction.dataset.rowAction === 'edit') navigateToProductForm('edit', product.code);
+        if (rowAction.dataset.rowAction === 'detail') navigateToProductForm('view', product.code);
         if (rowAction.dataset.rowAction === 'status') {
           if (product.status === 'ENABLE') openUnshelfModal(product);
           else updateProductStatus(product, 'ENABLE');
@@ -462,7 +475,7 @@
     });
   }
 
-  window.AppShell.mount({ title: '商品管理', content: pageContent });
+  window.AppShell.mount({ title: '商品管理', content: pageContent, variant: isSupplierProductPage ? 'supplier' : 'enterprise' });
   state.filteredProducts = [...state.products];
   state.total = state.filteredProducts.length;
   state.pagination = window.Pagination.create({

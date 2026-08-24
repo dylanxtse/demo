@@ -26,7 +26,7 @@
       'supplier-management': 'supplier-archive.html',
       'supplier-form': 'supplier-editor.html'
     };
-    const targetPath = pageAliases[pageKey] || currentPath;
+    const targetPath = pageAliases[pageKey] || pageKey || currentPath;
     const cleanPath = (routeAliases[targetPath] || targetPath).replace(/\.html$/, '');
     function hrefMatches(href) {
       if (!href) return false;
@@ -277,7 +277,7 @@
             ? window.SchoolMenuConfig
           : window.AppMenuConfig;
       const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-      const pageKey = root.querySelector('#app')?.dataset.page || '';
+      const pageKey = root.dataset?.page || root.querySelector('#app')?.dataset.page || '';
       autoSelectByHref(menu, currentPath, pageKey);
       if (sidebar) {
         const isOperations = options.variant === 'operations';

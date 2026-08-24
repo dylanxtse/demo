@@ -2,7 +2,7 @@
   const icons = window.AppMenuConfig?.icons || {};
   const menu = [
     { name: '商品档案', icon: 'box', children: [
-      { name: '商品管理' }
+      { name: '商品管理', href: './supplier-product-management.html' }
     ] },
     { name: '采购单', icon: 'cart' },
     { name: '价格管理', icon: 'tag', children: [

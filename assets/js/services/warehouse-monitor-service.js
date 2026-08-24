@@ -122,7 +122,13 @@
 
   function assertVideoAddress(value, allowLegacy = false) {
     if (videoOptions.some((option) => option.value === value) || allowLegacy) return;
-    const error = new Error('请选择视频地址');
+    try {
+      const url = new URL(value);
+      if (url.protocol === 'http:' || url.protocol === 'https:') return;
+    } catch (error) {
+      // Fall through to the domain-specific validation error below.
+    }
+    const error = new Error('请输入有效视频地址');
     error.code = 'INVALID_MONITOR_VIDEO_ADDRESS';
     throw error;
   }

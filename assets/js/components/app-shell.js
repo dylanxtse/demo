@@ -23,7 +23,7 @@
       'supplier-relationship-management.html',
       'wasted-bid-management.html'
     ]),
-    supplier: new Set(['supplier-bidding-quotation.html', 'supplier-invite.html', 'supplier-export-template.html']),
+    supplier: new Set(['supplier-product-management.html', 'supplier-bidding-quotation.html', 'supplier-invite.html', 'supplier-export-template.html']),
     operations: new Set([
       'operations.html',
       'operations-education-management.html',
@@ -54,6 +54,12 @@
     return fileName.endsWith('.html') ? 'enterprise' : '';
   }
 
+  function variantFromUrl(url) {
+    const explicitVariant = url?.searchParams?.get('from') || url?.searchParams?.get('userEnd');
+    if (explicitVariant && routes[explicitVariant]) return explicitVariant;
+    return variantFromFile(fileNameFromPath(url?.pathname));
+  }
+
   function currentVariant() {
     return mountedVariant
       || document.querySelector('.app-layout[data-user-end]')?.dataset.userEnd
@@ -74,7 +80,7 @@
   function isCrossEnd(url) {
     const target = resolveTarget(url);
     if (!target) return false;
-    const targetVariant = variantFromFile(fileNameFromPath(target.pathname));
+    const targetVariant = variantFromUrl(target);
     const sourceVariant = currentVariant();
     return Boolean(targetVariant && sourceVariant && targetVariant !== sourceVariant);
   }
