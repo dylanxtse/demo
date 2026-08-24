@@ -1072,6 +1072,9 @@
     const syncSegmentSelectAll = () => {
       const options = all(root, '[data-segment-option]');
       const selectAll = root.querySelector('[data-segment-all]');
+      all(root, '.supplier-segment-option').forEach((option) => {
+        option.classList.toggle('is-selected', Boolean(option.querySelector('input')?.checked));
+      });
       if (!selectAll) return;
       const selectedCount = options.filter((option) => option.checked).length;
       selectAll.checked = options.length > 0 && selectedCount === options.length;

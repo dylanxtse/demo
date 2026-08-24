@@ -716,11 +716,12 @@
   align-items: center;
   gap: 7px;
   min-height: 24px;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
 }
+.supplier-segment-option.is-selected { color: var(--text-primary); }
 .supplier-segment-option input {
   width: 16px;
   height: 16px;
