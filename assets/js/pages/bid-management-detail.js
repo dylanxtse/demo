@@ -232,7 +232,6 @@
       <header class="bidding-detail-header">
         <div class="bidding-detail-heading">
           <button class="bidding-back-button" type="button" data-action="back"><span class="bidding-back-icon" aria-hidden="true"></span><span>返回</span></button>
-          <span class="bidding-detail-heading-divider" aria-hidden="true"></span>
           <h2>查看竞价</h2>
         </div>
         <div class="bidding-detail-status">${statusText}</div>

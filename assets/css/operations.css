@@ -239,6 +239,55 @@
   font-weight: 500;
 }
 
+/* 表格勾选框统一使用项目通用的 16px 自定义样式，避免原生控件在不同页面出现尺寸差异。 */
+.operations-table input[type='checkbox'] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: #fff;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: border-color .2s, background-color .2s;
+}
+
+.operations-table input[type='checkbox']:hover {
+  border-color: var(--primary);
+}
+
+.operations-table input[type='checkbox']:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.2 4 7.5 8.5 2.5' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.operations-table input[type='checkbox']:indeterminate {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  background-image: linear-gradient(#fff, #fff);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 8px 2px;
+}
+
+.operations-table input[type='checkbox']:focus-visible {
+  outline: 2px solid rgba(2, 73, 196, .2);
+  outline-offset: 2px;
+}
+
+.operations-table input[type='checkbox']:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .operations-table tbody tr:hover { background: #f7fbff; }
 
 .operations-table .cell-link {
@@ -856,7 +905,10 @@
 
 .inventory-document-title h2 {
   margin: 0;
-  font-size: 16px;
+  padding-left: 12px;
+  border-left: 1px solid #dfe3eb;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
 }
 

@@ -281,8 +281,8 @@
 .notice-jump-label input { width: 48px; padding: 0 8px; text-align: center; }
 
 .notice-form-page { overflow: auto; padding: 20px 28px 16px; }
-.notice-form-heading { display: flex; align-items: center; gap: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border-light); }
-.notice-form-heading h2 { color: var(--text-primary); font-size: 18px; font-weight: 500; }
+.notice-form-heading { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--border-light); }
+.notice-form-heading h2 { color: var(--text-primary); font-size: 14px; font-weight: 500; }
 .notice-back-button { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: var(--text-secondary); font: inherit; cursor: pointer; }
 .notice-back-button:hover { color: var(--text-primary); }
 .notice-back-button .icon-svg { width: 16px; height: 16px; }
@@ -351,11 +351,11 @@
   display: flex;
   flex: 0 0 52px;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 0 24px;
   border-bottom: 1px solid var(--border-light);
 }
-.notice-preview-heading h2 { color: var(--text-primary); font-size: 16px; font-weight: 500; }
+.notice-preview-heading h2 { color: var(--text-primary); font-size: 14px; font-weight: 500; }
 .notice-preview-page-body { min-width: 0; min-height: 0; flex: 1; overflow: auto; padding: 30px 40px 44px; }
 .notice-preview-article { width: min(920px, 100%); margin: 0 auto; }
 .notice-preview-article > h1 { margin: 0 0 18px; color: var(--text-primary); font-size: 24px; font-weight: 500; line-height: 1.45; text-align: center; }
@@ -381,12 +381,12 @@
   display: flex;
   flex: 0 0 52px;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 0 24px;
   border-bottom: 1px solid var(--border-light);
 }
-.notice-recipient-detail-heading h2 { color: var(--text-primary); font-size: 16px; font-weight: 500; }
-.notice-detail-heading-divider { width: 1px; height: 18px; background: var(--border-color); }
+.notice-recipient-detail-heading h2 { color: var(--text-primary); font-size: 14px; font-weight: 500; }
+.notice-detail-heading-divider { display: none; }
 .notice-recipient-detail-content { display: flex; min-width: 0; min-height: 0; flex: 1; flex-direction: column; padding: 24px 32px 20px; }
 .notice-recipient-tabs { display: flex; flex: 0 0 42px; align-items: stretch; gap: 28px; border-bottom: 1px solid var(--border-light); }
 .notice-recipient-tab {

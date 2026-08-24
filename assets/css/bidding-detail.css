@@ -16,7 +16,7 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .bidding-back-button {
@@ -37,9 +37,9 @@
 .bidding-detail-page .bidding-back-button {
   min-width: 0 !important;
   height: 32px !important;
-  padding: 0 16px 0 0 !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-right: 1px solid var(--border-light) !important;
+  border-right: 0 !important;
   background: transparent !important;
   color: #5f6c7c !important;
   font-size: 13px !important;
@@ -83,14 +83,16 @@
 }
 
 .bidding-detail-heading-divider {
-  width: 1px;
-  height: 18px;
-  background: #dfe4ec;
+  display: none;
 }
 
 .bidding-detail-heading h2 {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 1px solid #dfe3eb;
   color: #202733;
-  font-size: 18px;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 600;
 }
 

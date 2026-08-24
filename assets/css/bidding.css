@@ -305,7 +305,7 @@
   padding: 0 48px;
   border-bottom: 1px solid var(--border-light);
 }
-.bidding-form-title-row h2 { font-size: 16px; font-weight: 500; }
+.bidding-form-title-row h2 { font-size: 14px; font-weight: 500; }
 .bidding-back-button {
   display: inline-flex;
   align-items: center;
@@ -539,13 +539,13 @@
   box-shadow: 0 1px 0 var(--border-light);
 }
 .bidding-form-page .bidding-form-title-row h2 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
 }
 .bidding-form-page .bidding-back-button {
   margin-right: 0;
-  padding-right: 16px !important;
-  border-right: 1px solid var(--border-light) !important;
+  padding-right: 0 !important;
+  border-right: 0 !important;
 }
 .bidding-form-page > .bidding-form-grid {
   display: flex;
@@ -858,9 +858,9 @@ body > .calendar-panel { z-index: 1200; }
   height: 32px !important;
   align-items: center;
   gap: 6px;
-  padding: 0 16px 0 0 !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-right: 1px solid var(--border-light) !important;
+  border-right: 0 !important;
   background: transparent !important;
   color: #5f6c7c !important;
   font-size: 13px !important;

@@ -222,7 +222,7 @@
       : '<th>供应商名称</th><th>统一社会信用代码</th><th>联系人</th><th>已读状态</th>';
     const tableCols = kind === '学校' ? '<col class="recipient-col-name"><col class="recipient-col-contact"><col class="recipient-col-status">' : '<col class="recipient-col-name"><col class="recipient-col-code"><col class="recipient-col-contact"><col class="recipient-col-status">';
     root.innerHTML = `<section class="page-card notice-page notice-recipient-detail-page" id="noticeRecipientDetailPage">
-      <div class="notice-recipient-detail-heading"><button class="notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><span class="notice-detail-heading-divider" aria-hidden="true"></span><h2>接收对象详情</h2></div>
+      <div class="notice-recipient-detail-heading"><button class="notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><h2>接收对象详情</h2></div>
       <div class="notice-recipient-detail-content">
         <div class="notice-recipient-tabs" role="tablist" aria-label="接收对象类型"><button class="notice-recipient-tab ${kind === '学校' ? 'is-active' : ''}" type="button" role="tab" aria-selected="${kind === '学校'}" data-action="recipient-tab" data-recipient="学校">学校</button><button class="notice-recipient-tab ${kind === '供应商' ? 'is-active' : ''}" type="button" role="tab" aria-selected="${kind === '供应商'}" data-action="recipient-tab" data-recipient="供应商">供应商</button></div>
         <div class="notice-recipient-filter"><div class="notice-recipient-filter-item"><label for="noticeRecipientName">${nameLabel}</label><select id="noticeRecipientName" data-recipient-filter="name"><option value="">${namePlaceholder}</option>${nameOptions}</select></div><div class="notice-recipient-filter-item"><label for="noticeRecipientStatus">已读状态</label><select id="noticeRecipientStatus" data-recipient-filter="status"><option value="">全部</option><option value="已读">已读</option><option value="未读">未读</option></select></div><div class="notice-recipient-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="recipient-query">查询</button><button class="btn btn-sm" type="button" data-action="recipient-reset">重置</button></div></div>
@@ -262,7 +262,7 @@
       ? `<div class="notice-preview-attachments"><strong>公告附件</strong><div>${attachments.map((file) => `<span>${esc(file.name)}</span>`).join('')}</div></div>`
       : '';
     root.innerHTML = `<section class="page-card notice-page notice-preview-page" id="noticePreviewPage">
-      <div class="notice-preview-heading"><button class="notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><span class="notice-detail-heading-divider" aria-hidden="true"></span><h2>公告预览</h2></div>
+      <div class="notice-preview-heading"><button class="notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><h2>公告预览</h2></div>
       <div class="notice-preview-page-body"><article class="notice-preview-article">
         <h1>${esc(row.title)}</h1>
         <div class="notice-preview-meta"><span>发布时间：${esc(row.time || '--')}</span></div>
