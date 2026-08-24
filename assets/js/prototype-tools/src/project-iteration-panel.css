@@ -18,8 +18,13 @@
   --iteration-muted: #64748b;
   --iteration-border: rgba(15, 23, 42, .13);
   --iteration-border-light: rgba(15, 23, 42, .08);
-  --iteration-glass-bg: rgba(255, 255, 255, .1);
-  --iteration-glass-surface: rgba(255, 255, 255, .68);
+  /* 外层按“透明 90%”处理，内部组件使用 50% 白色表面提升文字可读性。 */
+  --iteration-drawer-bg: rgba(240, 243, 248, .1);
+  --iteration-component-bg: rgba(255, 255, 255, .5);
+  --iteration-component-soft-bg: rgba(255, 255, 255, .5);
+  --iteration-control-bg: rgba(255, 255, 255, .5);
+  --iteration-glass-bg: var(--iteration-drawer-bg);
+  --iteration-glass-surface: var(--iteration-component-bg);
   --iteration-glass-border: rgba(15, 23, 42, .1);
   --iteration-peek-width: 16px;
   position: fixed;
@@ -82,8 +87,9 @@
 
 .project-iteration-panel-root.is-peeking .project-iteration-drawer {
   transform: translateX(calc(100% - var(--iteration-peek-width)));
-  background: var(--iteration-accent-light);
-  box-shadow: -8px 0 20px rgba(var(--iteration-accent-rgb), .12);
+  background: var(--iteration-drawer-bg);
+  /* 预呼出区域需要与页面背景拉开层次，边缘用工具包主题色定位。 */
+  box-shadow: -14px 0 28px rgba(15, 23, 42, .28);
 }
 
 .project-iteration-panel-root.is-open .project-iteration-backdrop {
@@ -93,50 +99,69 @@
 
 .project-iteration-panel-root.is-open .project-iteration-drawer { transform: translateX(0); }
 
+/* 线上页面只展示迭代内容，所有会改变项目代码的入口不参与布局。 */
+.project-iteration-panel-root.is-readonly .project-iteration-record-toolbar,
+.project-iteration-panel-root.is-readonly [data-project-iteration-form-host],
+.project-iteration-panel-root.is-readonly [data-project-iteration-edit],
+.project-iteration-panel-root.is-readonly [data-project-iteration-delete],
+.project-iteration-panel-root.is-readonly [data-project-iteration-trash-toggle],
+.project-iteration-panel-root.is-readonly [data-project-iteration-permanent-delete],
+.project-iteration-panel-root.is-readonly [data-project-iteration-restore],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-settings],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-add],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-create],
+.project-iteration-panel-root.is-readonly [data-project-iteration-platform-delete],
+.project-iteration-panel-root.is-readonly [data-project-iteration-add-change],
+.project-iteration-panel-root.is-readonly [data-project-iteration-remove-change] {
+  display: none !important;
+}
+
 .project-iteration-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   min-height: 72px;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 0 24px;
   background: transparent;
 }
 
 .project-iteration-heading {
-  display: inline-flex;
-  min-width: 0;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 8px;
+  display: contents;
 }
 
 .project-iteration-heading-tools {
   display: inline-flex;
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
-  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
+  justify-self: start;
 }
 
 .project-iteration-header h2 {
-  flex: 0 0 auto;
+  grid-column: 2;
+  grid-row: 1;
   margin: 0;
   color: var(--iteration-text);
   font-size: 21px;
-  font-weight: 650;
+  font-weight: 400;
+  justify-self: center;
   letter-spacing: .2px;
   white-space: nowrap;
 }
 
 .project-iteration-header-actions {
   display: inline-flex;
-  flex: 0 0 auto;
+  grid-column: 3;
+  grid-row: 1;
   min-width: 0;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
   flex-wrap: nowrap;
+  justify-self: end;
 }
 
 .project-iteration-annotation-visibility-toggle,
@@ -154,7 +179,7 @@
   color: var(--iteration-accent);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -182,7 +207,7 @@
 .project-iteration-annotation-visibility-state {
   min-width: 22px;
   color: currentColor;
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .project-iteration-annotation-mode-host {
@@ -288,7 +313,7 @@
   padding: 0 12px;
   border-radius: 18px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   transition: border-color .18s ease, background .18s ease, color .18s ease;
 }
@@ -401,17 +426,17 @@
   top: -3px;
   right: -5px;
   display: inline-flex;
-  min-width: 15px;
-  height: 15px;
+  min-width: 0;
+  height: auto;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 0 4px;
-  border-radius: 8px;
+  padding: 0;
+  border-radius: 0;
   color: #475569;
-  background: #e2e8f0;
-  font-size: 9px;
-  font-weight: 600;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -434,7 +459,7 @@
   padding: 8px 10px;
   border: 1px solid var(--iteration-border-light);
   border-radius: 10px;
-  background: rgba(255, 255, 255, .62);
+  background: var(--iteration-component-soft-bg);
 }
 
 .project-iteration-trash-item-main {
@@ -447,7 +472,7 @@
 .project-iteration-trash-item-main strong {
   overflow: hidden;
   color: var(--iteration-text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -456,7 +481,7 @@
 .project-iteration-trash-item-main span,
 .project-iteration-trash-empty {
   color: var(--iteration-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .project-iteration-trash-actions {
@@ -475,7 +500,7 @@
   color: var(--iteration-accent);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -498,7 +523,7 @@
   color: #94a3b8;
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -535,8 +560,8 @@
   padding: 16px;
   border: 0;
   border-radius: 22px;
-  background: rgba(255, 255, 255, .7);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82), 0 12px 30px rgba(15, 23, 42, .08);
+  background: var(--iteration-component-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 12px 30px rgba(15, 23, 42, .08);
   -webkit-backdrop-filter: blur(16px) saturate(165%);
   backdrop-filter: blur(16px) saturate(165%);
 }
@@ -553,7 +578,7 @@
   display: block;
   margin-bottom: 6px;
   color: var(--iteration-secondary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .project-iteration-form-field-heading {
@@ -619,7 +644,7 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .project-iteration-platform-manager-add,
@@ -629,7 +654,7 @@
   border: 1px solid transparent;
   border-radius: 14px;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -714,9 +739,9 @@
   border: 1px solid rgba(15, 23, 42, .14);
   border-radius: 12px;
   color: var(--iteration-text);
-  background: rgba(255, 255, 255, .86);
+  background: var(--iteration-control-bg);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .project-iteration-platform-manager-row input:focus {
@@ -755,7 +780,7 @@
 .project-iteration-platform-empty {
   margin: 8px 0 0;
   color: var(--iteration-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -768,9 +793,9 @@
   border-radius: 14px;
   padding: 7px 9px;
   color: var(--iteration-text);
-  background: rgba(255, 255, 255, .86);
+  background: var(--iteration-control-bg);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .project-iteration-form-item input::placeholder,
@@ -819,7 +844,7 @@
   display: block;
   margin-top: 5px;
   color: var(--iteration-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -833,13 +858,13 @@
   padding: 10px 12px 12px;
   border: 1px solid var(--iteration-border-light);
   border-radius: 15px;
-  background: rgba(255, 255, 255, .42);
+  background: var(--iteration-component-soft-bg);
 }
 
 .project-iteration-change-pair.is-readonly {
   padding: 8px 10px;
   border-color: rgba(15, 23, 42, .07);
-  background: rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .5);
   cursor: pointer;
 }
 
@@ -854,7 +879,7 @@
   justify-content: flex-end;
   gap: 10px;
   color: var(--iteration-secondary);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -866,7 +891,7 @@
   gap: 5px;
   margin-top: 7px;
   color: var(--iteration-secondary);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -906,7 +931,7 @@
   color: var(--danger, #d54941);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -929,7 +954,7 @@
   color: var(--iteration-accent);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -960,10 +985,10 @@
   padding: 0;
   border: 1px solid transparent;
   border-radius: 12px;
-  color: var(--iteration-muted);
+  color: var(--iteration-text);
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
 }
@@ -981,7 +1006,7 @@
   color: inherit;
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
   cursor: pointer;
 }
@@ -1002,9 +1027,9 @@
   border: 1px solid var(--iteration-accent);
   border-radius: 8px;
   color: var(--iteration-text);
-  background: rgba(255, 255, 255, .86);
+  background: var(--iteration-control-bg);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
   outline: none;
   box-shadow: none;
@@ -1016,13 +1041,13 @@
 
 .project-iteration-platform-tab:hover,
 .project-iteration-platform-tab.is-filled:not(.is-selected) {
-  color: var(--iteration-accent);
+  color: var(--iteration-text);
   background: var(--iteration-accent-light);
 }
 
 .project-iteration-platform-tab.is-selected {
   border-color: var(--iteration-accent);
-  color: var(--iteration-accent);
+  color: var(--iteration-text);
   background: var(--iteration-accent-faint);
   box-shadow: none;
   outline: none;
@@ -1044,8 +1069,8 @@
   padding: 12px;
   border: 0;
   border-radius: 18px;
-  background: rgba(255, 255, 255, .72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+  background: var(--iteration-component-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22);
 }
 
 .project-iteration-platform-detail[hidden] { display: none; }
@@ -1053,7 +1078,7 @@
 .project-iteration-platform-detail h4 {
   margin: 0;
   color: var(--iteration-text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -1154,12 +1179,12 @@
   color: var(--iteration-secondary);
   background: rgba(248, 250, 252, .94);
   box-shadow: 0 2px 6px rgba(15, 23, 42, .08);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .project-iteration-record-content {
-  --iteration-record-surface: rgba(255, 255, 255, .72);
+  --iteration-record-surface: var(--iteration-component-bg);
   --iteration-record-heading-height: 28px;
   --iteration-record-platform-height: 28px;
   --iteration-record-feature-height: 28px;
@@ -1241,7 +1266,7 @@
   color: var(--iteration-muted);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -1262,9 +1287,17 @@
   stroke-width: 1.8;
 }
 
+.project-iteration-record-heading-toggle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+}
+
 .project-iteration-record-heading time {
   color: var(--iteration-muted);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -1280,7 +1313,7 @@
   color: var(--iteration-accent);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -1303,7 +1336,7 @@
   color: #94a3b8;
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -1343,7 +1376,12 @@
   margin-top: 16px;
 }
 
-.project-iteration-record-footer .project-iteration-record-toggle { grid-column: 2; }
+.project-iteration-record-footer .project-iteration-record-toggle {
+  grid-column: 2;
+  width: auto;
+  min-width: 52px;
+  padding: 0 10px;
+}
 
 .project-iteration-record-field,
 .project-iteration-record-description {
@@ -1354,7 +1392,7 @@
   gap: 8px;
   margin-top: 10px;
   color: var(--iteration-text);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.55;
 }
 
@@ -1381,7 +1419,7 @@
   border-radius: 12px;
   color: var(--iteration-accent);
   background: var(--iteration-accent-light);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .project-iteration-record-function-summary { align-items: flex-start; }
@@ -1412,7 +1450,7 @@
 .project-iteration-record-function-row > strong {
   flex: 0 0 64px;
   color: var(--iteration-secondary);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -1433,7 +1471,7 @@
   border-radius: 11px;
   color: var(--iteration-secondary);
   background: rgba(15, 23, 42, .06);
-  font-size: 11px;
+  font-size: 13px;
   overflow-wrap: anywhere;
   word-break: break-all;
 }
@@ -1501,7 +1539,7 @@
   overflow: hidden;
   color: var(--iteration-text);
   background: transparent;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 20px;
   text-overflow: ellipsis;
@@ -1537,7 +1575,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--iteration-text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -1589,4 +1627,28 @@
   .project-iteration-platform-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .project-iteration-header { padding: 0 18px; }
   .project-iteration-body { padding: 8px 18px 24px; }
+}
+
+@media (max-width: 440px) {
+  .project-iteration-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    min-height: 88px;
+    row-gap: 8px;
+  }
+
+  .project-iteration-heading-tools {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .project-iteration-header-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .project-iteration-header h2 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }

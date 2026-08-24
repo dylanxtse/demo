@@ -16,6 +16,15 @@
   overflow-y: auto;
 }
 
+.warehouse-archive-page + #recordOverlay .operations-multi-option.is-locked {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.warehouse-archive-page + #recordOverlay .operations-multi-option.is-locked input {
+  cursor: not-allowed;
+}
+
 .warehouse-archive-page + #recordOverlay .operations-modal:not(.is-detail) .operations-form-grid {
   grid-template-columns: 1fr;
 }

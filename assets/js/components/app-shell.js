@@ -134,13 +134,254 @@
   };
 })();
 
+/*
+ * 项目级查询区布局约束：
+ * 1. 查询条件默认最多展示两行；
+ * 2. 超过两行时，将溢出条件折叠，并在“查询”按钮左侧显示“高级查询”；
+ * 3. 状态卡片、快捷页签等切换控件不计入查询条件；
+ * 4. 这里只处理业务页面 DOM，不依赖标注或迭代记录工具包。
+ */
+(function () {
+  const scopeSelector = [
+    '.operations-filter',
+    '.filter-section',
+    '.bidding-filter-panel',
+    '.price-query-panel',
+    '.lower-units-filter',
+    '.supplier-quotation-filters',
+    '.operations-admin-filters',
+    '.school-product-filters',
+    '.order-processing-query'
+  ].join(',');
+  const fieldHostSelector = [
+    '[data-operations-filter-grid]',
+    '.operations-filter-grid',
+    '.filter-fields',
+    '.filter-advanced-grid',
+    '.bidding-filter-grid',
+    '.price-filter-fields',
+    '.lower-units-filter-main',
+    '.supplier-filter-fields',
+    '.sorting-customer-filter-grid',
+    '.order-processing-context'
+  ].join(',');
+  const fieldSelector = [
+    '.operations-field',
+    '.filter-group',
+    '.bidding-filter-item',
+    '.price-filter-group',
+    '.lower-units-filter-item',
+    '.supplier-filter-item',
+    '.operations-admin-region-filter',
+    '.operations-admin-keyword',
+    '.school-product-filters > label',
+    '.basic-info-field'
+  ].join(',');
+  const actionSelector = [
+    '.operations-filter-actions',
+    '.action-controls',
+    '.bidding-filter-actions',
+    '.price-filter-actions',
+    '.lower-units-filter-actions',
+    '.supplier-filter-actions',
+    '.operations-admin-filter-actions',
+    '.school-product-filter-actions'
+  ].join(',');
+  const advancedPanelSelector = '.operations-filter-advanced, .filter-advanced';
+  const oldToggleSelector = [
+    '[data-operations-filter-toggle]',
+    '#goodsAdvancedToggle',
+    '[data-action="toggle-advanced"]',
+    '.filter-advanced-toggle'
+  ].join(',');
+  const excludedSelector = [
+    '[role="dialog"]',
+    '[aria-modal="true"]',
+    '.operations-modal',
+    '.bidding-dialog',
+    '.lower-units-dialog',
+    '.price-import-dialog',
+    '.price-detail-dialog',
+    '#recordOverlay'
+  ].join(',');
+  const mountedScopes = new Set();
+  const toggleScopes = new WeakMap();
+  let resizeBound = false;
+
+  function normalizedText(element) {
+    return String(element?.textContent || element?.value || '').replace(/\s+/g, '');
+  }
+
+  function isQueryButton(element) {
+    return element instanceof HTMLElement && normalizedText(element) === '查询';
+  }
+
+  function findScope(button) {
+    if (!button || button.closest(excludedSelector)) return null;
+    const directScope = button.closest(scopeSelector);
+    if (directScope) return directScope;
+
+    // 个别记录页会把查询按钮移动到快捷状态栏；查询条件仍属于页面内的筛选区。
+    const page = button.closest('.operations-page');
+    return button.closest('.operations-status-row')
+      ? page?.querySelector('.operations-filter') || null
+      : null;
+  }
+
+  function findPrimaryHost(scope) {
+    const host = [...scope.querySelectorAll(fieldHostSelector)]
+      .find((candidate) => !candidate.closest(advancedPanelSelector));
+    if (host) return host;
+    return [...scope.children].some((field) => field.matches(fieldSelector)) ? scope : null;
+  }
+
+  function moveLegacyAdvancedFields(scope, host) {
+    scope.querySelectorAll(advancedPanelSelector).forEach((panel) => {
+      panel.querySelectorAll(fieldHostSelector).forEach((advancedHost) => {
+        [...advancedHost.children]
+          .filter((field) => field.matches(fieldSelector))
+          .forEach((field) => host.appendChild(field));
+      });
+      panel.classList.remove('is-visible');
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  function getColumnCount(host) {
+    const template = window.getComputedStyle(host).gridTemplateColumns;
+    if (!template || template === 'none') return 1;
+    return Math.max(1, template.trim().split(/\s+/).filter(Boolean).length);
+  }
+
+  function ensureToggle(scope, queryButton, hasAdvanced, expanded) {
+    const buttonRow = queryButton.parentElement;
+    if (!buttonRow) return;
+    buttonRow.classList.add('query-filter-actions');
+
+    let toggle = buttonRow.querySelector(':scope > [data-query-filter-toggle]');
+    if (!toggle) {
+      toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'query-filter-toggle';
+      toggle.dataset.queryFilterToggle = 'true';
+      toggle.innerHTML = '<span>高级查询</span><span class="query-filter-toggle-arrow" aria-hidden="true">▾</span>';
+      buttonRow.insertBefore(toggle, queryButton);
+    }
+
+    toggleScopes.set(toggle, scope);
+    toggle.hidden = !hasAdvanced;
+    toggle.classList.toggle('is-active', expanded);
+    toggle.setAttribute('aria-expanded', String(expanded));
+  }
+
+  function layoutScope(scope, queryButton) {
+    if (!scope?.isConnected || !queryButton?.isConnected) return;
+    const host = findPrimaryHost(scope);
+    if (!host) return;
+
+    // 页面旧实现的“高级筛选”按钮和独立面板统一收口到主查询网格。
+    scope.querySelectorAll(oldToggleSelector).forEach((toggle) => toggle.remove());
+    moveLegacyAdvancedFields(scope, host);
+
+    const actions = queryButton.closest(actionSelector);
+    const hostRow = host.parentElement;
+    if (actions && hostRow && actions.parentElement !== hostRow && queryButton.closest('.operations-status-row')) {
+      hostRow.appendChild(actions);
+    }
+
+    const fields = [...host.children].filter((field) => field.matches(fieldSelector));
+    if (!fields.length) return;
+    fields.forEach((field) => {
+      field.dataset.queryFilterField = 'true';
+      field.hidden = false;
+      delete field.dataset.queryFilterOverflow;
+    });
+
+    const visibleFieldCount = getColumnCount(host) * 2;
+    const overflowFields = fields.slice(visibleFieldCount);
+    const hasAdvanced = overflowFields.length > 0;
+    const expanded = hasAdvanced && scope.dataset.queryFilterExpanded === 'true';
+
+    scope.dataset.queryFilterExpanded = String(expanded);
+    overflowFields.forEach((field) => {
+      field.dataset.queryFilterOverflow = 'true';
+      field.hidden = !expanded;
+    });
+    ensureToggle(scope, queryButton, hasAdvanced, expanded);
+    mountedScopes.add(scope);
+  }
+
+  function refresh(root) {
+    const buttons = [...root.querySelectorAll('button, input[type="submit"], input[type="button"]')]
+      .filter(isQueryButton);
+    const handledScopes = new Set();
+    buttons.forEach((button) => {
+      const scope = findScope(button);
+      if (!scope || handledScopes.has(scope)) return;
+      handledScopes.add(scope);
+      layoutScope(scope, button);
+    });
+  }
+
+  function relayoutMountedScopes() {
+    mountedScopes.forEach((scope) => {
+      if (!scope.isConnected) {
+        mountedScopes.delete(scope);
+        return;
+      }
+      const queryButton = [...scope.querySelectorAll('button, input[type="submit"], input[type="button"]')]
+        .find(isQueryButton);
+      if (queryButton) layoutScope(scope, queryButton);
+    });
+  }
+
+  function mount(root) {
+    if (!root || root.__queryFilterLayoutObserver) return;
+    let scheduled = false;
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(() => {
+        scheduled = false;
+        if (root.isConnected) refresh(root);
+      });
+    };
+    const observer = new MutationObserver(schedule);
+    observer.observe(root, { childList: true, subtree: true });
+    root.__queryFilterLayoutObserver = observer;
+    refresh(root);
+    schedule();
+
+    if (!resizeBound) {
+      resizeBound = true;
+      window.addEventListener('resize', relayoutMountedScopes);
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const toggle = event.target?.closest?.('[data-query-filter-toggle]');
+    if (!toggle) return;
+    const scope = toggleScopes.get(toggle) || toggle.closest(scopeSelector);
+    if (!scope) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    scope.dataset.queryFilterExpanded = String(scope.dataset.queryFilterExpanded !== 'true');
+    const queryButton = [...scope.querySelectorAll('button, input[type="submit"], input[type="button"]')]
+      .find(isQueryButton);
+    if (queryButton) layoutScope(scope, queryButton);
+  }, true);
+
+  window.QueryFilterLayout = { mount, refresh };
+})();
+
 (function () {
   let annotationEnginePromise = null;
   const toolkitAssets = Object.freeze({
-    theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260823-4',
-    annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260823-22',
-    iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-46',
-    iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-45',
+    theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260823-6',
+    annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260824-31',
+    iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-56',
+    iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60',
     annotationData: './assets/js/config/annotation-data.js?v=20260822-2',
     iterationData: './assets/js/data/project-iteration-records.js?v=20260822-4'
   });
@@ -208,7 +449,9 @@
       window.AppSidebar.bind(root, shellOptions);
       window.AppPageTabs.bind(root, { variant });
       window.AppHeader.bind?.(root, shellOptions);
-      scheduleAnnotationOverlayMount(root.querySelector('#pageContent'));
+      const pageContent = root.querySelector('#pageContent');
+      window.QueryFilterLayout?.mount(pageContent);
+      scheduleAnnotationOverlayMount(pageContent);
       return root;
     }
   };

@@ -25,7 +25,7 @@
     </div>
     <div class="operations-toolbar"><span></span><button class="btn btn-sm" id="goodsExport">导出</button></div>
     <div class="operations-table-container"><div class="operations-table-wrap"><table class="operations-table order-goods-table"><thead><tr><th>序号</th><th>订单号</th><th>商品名称（计量单位/品牌/规格）</th><th>客户名称</th><th>食堂</th><th>客户类型</th><th>订单标签</th><th>计量单位</th><th>下单单价</th><th>下单数量</th><th>下单小计</th><th>发货数量</th><th>发货小计</th><th>期望送达时间</th><th class="status-column">单据状态</th><th>收货状态</th><th>仓库</th><th>备注</th><th>线路</th><th>添加人</th></tr></thead><tbody id="orderGoodsBody"></tbody></table></div>
-    <div class="operations-pagination" id="orderGoodsPagination"></div></div>
+    <div class="pagination" id="orderGoodsPagination"><span class="page-total"></span></div></div>
   </section>`;
   const root = window.AppShell.mount({ title: '订单管理', content });
   let rows = [];
@@ -82,7 +82,7 @@
     document.getElementById('orderGoodsBody').innerHTML = rows.length ? rows.map(({ order, ...line }, index) => `<tr>
       <td>${index + 1}</td><td><a class="cell-link order-goods-link" href="./order-detail.html?id=${encodeURIComponent(order.id)}"><span>${esc(order.orderNo)}</span><small>${esc(order.createdAt || '--')}</small></a></td><td>${productIsNetVegetable(line) ? '<span class="net-vegetable-tag">净菜</span>' : ''}${esc(line.goodsName)}</td><td>${esc(order.customerName)}</td><td>${esc(order.canteen)}</td><td>${esc(order.customerType)}</td><td>${esc(order.orderTag)}</td><td>${esc(line.unit)}</td><td>${money(line.unitPrice)}</td><td>${line.quantity || 0}</td><td>${money((line.quantity || 0) * (line.unitPrice || 0))}</td><td>${line.shippedQty || 0}</td><td>${money(line.shippedAmount)}</td><td>${esc(order.expectedAt)}</td><td class="status-column"><span class="operation-status ${statusClassMap[order.status] || 'info'}">${esc(statusMap[order.status] || order.status)}</span></td><td>${esc(order.receiptStatus || '--')}</td><td>${esc(order.warehouse || '--')}</td><td>${esc(line.remark || order.remark || '--')}</td><td>${esc(order.route || '--')}</td><td>${esc(order.creator || '--')}</td>
     </tr>`).join('') : '<tr><td class="empty-cell" colspan="20">暂无数据</td></tr>';
-    document.getElementById('orderGoodsPagination').textContent = `共 ${rows.length} 条数据`;
+    document.querySelector('#orderGoodsPagination .page-total').textContent = `共 ${rows.length} 条数据`;
   }
 
   root.addEventListener('click', (event) => {

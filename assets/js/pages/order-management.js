@@ -92,7 +92,7 @@
             <tbody id="tableBody"></tbody>
           </table>
         </div>
-        <div class="operations-pagination" id="pagination"></div>
+        <div class="pagination" id="pagination"></div>
       </div>
     </section>
     <div id="operationsOverlay"></div>
@@ -373,7 +373,6 @@
 
   state.pagination = window.Pagination.create({
     container: '#pagination',
-    mode: 'compact',
     page: state.page,
     pageSize: state.pageSize,
     total: state.total,

@@ -10,6 +10,7 @@
     keyword: '',
     points: [],
     selectedId: '',
+    warehouseId: '',
     editingId: '',
     confirmingId: ''
   };
@@ -22,6 +23,7 @@
             <span class="warehouse-monitor-points-title">视频点位</span>
             <button id="addMonitorPointButton" class="btn btn-primary btn-sm" type="button">新增点位</button>
           </div>
+          <div id="monitorWarehouseScope" class="warehouse-monitor-warehouse-scope"></div>
           <div class="warehouse-monitor-point-search">
             <input id="pointSearchInput" class="warehouse-monitor-point-search-input" type="search" placeholder="搜索点位">
           </div>
@@ -60,6 +62,43 @@
     return state.points.find((point) => point.id === state.selectedId) || null;
   }
 
+  function accessContext() {
+    return window.WarehouseMonitorService.getAccessContext();
+  }
+
+  function normalizeWarehouseSelection(context) {
+    if (!context.canSwitch) {
+      state.warehouseId = '';
+      return;
+    }
+    if (!context.warehouses.some((warehouse) => warehouse.id === state.warehouseId)) {
+      state.warehouseId = context.warehouses[0]?.id || '';
+    }
+  }
+
+  function visibleWarehouseIds(context) {
+    return context.canSwitch ? [state.warehouseId].filter(Boolean) : context.warehouseIds;
+  }
+
+  function renderWarehouseScope(context) {
+    const host = $('#monitorWarehouseScope');
+    const warehouses = context.warehouses || [];
+    if (context.canSwitch) {
+      host.innerHTML = `<label class="warehouse-monitor-warehouse-switcher" for="monitorWarehouseSelect">
+        <span>所属仓库</span>
+        <select id="monitorWarehouseSelect"${warehouses.length ? '' : ' disabled'}>
+          ${warehouses.length ? warehouses.map((warehouse) => `<option value="${escapeHtml(warehouse.id)}" ${warehouse.id === state.warehouseId ? 'selected' : ''}>${escapeHtml(warehouse.warehouseName)}</option>`).join('') : '<option value="">暂无仓库</option>'}
+        </select>
+      </label>`;
+      return;
+    }
+    const names = warehouses.map((warehouse) => warehouse.warehouseName).join('、');
+    host.innerHTML = `<div class="warehouse-monitor-warehouse-switcher is-fixed" title="分公司仅可查看当前运营的仓库">
+      <span>所属仓库</span>
+      <select id="monitorWarehouseSelect" disabled aria-label="固定运营仓库"><option value="">${escapeHtml(names || '暂无运营仓库')}</option></select>
+    </div>`;
+  }
+
   function showSnapshotLoadFailure(pointId) {
     const snapshot = $('#monitorVideoSnapshot');
     const elapsed = Date.now() - Number(snapshot.dataset.loadingStartedAt || Date.now());
@@ -83,6 +122,7 @@
     list.innerHTML = state.points.map((point) => `
       <div class="warehouse-monitor-point-item ${point.id === state.selectedId ? 'is-active' : ''}" role="button" tabindex="0" data-point-id="${escapeHtml(point.id)}">
         <span class="warehouse-monitor-point-name">${escapeHtml(point.name)}</span>
+        <span class="warehouse-monitor-point-warehouse">${escapeHtml(window.WarehouseMonitorService.getWarehouseName(point.warehouseId))}</span>
         <span class="warehouse-monitor-point-description">${escapeHtml(point.description || '暂无描述')}</span>
         <span class="warehouse-monitor-point-actions">
           <button type="button" data-action="edit-point" data-point-id="${escapeHtml(point.id)}">编辑</button>
@@ -147,7 +187,10 @@
   }
 
   function render() {
-    state.points = window.WarehouseMonitorService.list(state.keyword);
+    const context = accessContext();
+    normalizeWarehouseSelection(context);
+    renderWarehouseScope(context);
+    state.points = window.WarehouseMonitorService.list(state.keyword, { warehouseIds: visibleWarehouseIds(context) });
     if (!state.points.some((point) => point.id === state.selectedId)) state.selectedId = state.points[0]?.id || '';
     renderPointList();
     renderView();
@@ -168,9 +211,20 @@
       <option value="${escapeHtml(option.value)}" ${option.value === currentValue ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}`;
   }
 
+  function renderWarehouseOptions(currentValue = '', context = accessContext()) {
+    const options = context.warehouses || [];
+    return `<option value="">请选择所属仓库</option>${options.map((warehouse) => `
+      <option value="${escapeHtml(warehouse.id)}" ${warehouse.id === currentValue ? 'selected' : ''}>${escapeHtml(warehouse.warehouseName)}</option>`).join('')}`;
+  }
+
   function showPointForm(point = null) {
     state.editingId = point?.id || '';
     const isEdit = Boolean(point);
+    const context = accessContext();
+    const warehouseOptions = context.warehouses || [];
+    const currentWarehouseId = warehouseOptions.some((warehouse) => warehouse.id === point?.warehouseId)
+      ? point.warehouseId
+      : warehouseOptions[0]?.id || '';
     $('#monitorPointOverlay').innerHTML = `
       <div class="operations-modal-backdrop">
         <section class="operations-modal warehouse-monitor-modal" role="dialog" aria-modal="true" aria-label="${isEdit ? '编辑视频点位' : '新增视频点位'}">
@@ -178,6 +232,7 @@
           <div class="operations-modal-body">
             <form id="monitorPointForm" class="warehouse-monitor-form">
               <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointName">点位名称</label><input id="monitorPointName" name="name" value="${escapeHtml(point?.name || '')}" placeholder="请输入点位名称" maxlength="50"><div id="monitorPointNameError" class="warehouse-monitor-form-error"></div></div>
+              <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointWarehouse">所属仓库</label><select id="monitorPointWarehouse" name="warehouseId"${warehouseOptions.length ? '' : ' disabled'}>${renderWarehouseOptions(currentWarehouseId, context)}</select><div id="monitorPointWarehouseError" class="warehouse-monitor-form-error"></div></div>
               <div class="warehouse-monitor-form-field"><label for="monitorPointDescription">点位描述</label><textarea id="monitorPointDescription" name="description" placeholder="请输入点位描述（选填）" maxlength="200">${escapeHtml(point?.description || '')}</textarea></div>
               <div class="warehouse-monitor-form-field"><label class="required" for="monitorPointVideoAddress">视频地址</label><select id="monitorPointVideoAddress" name="videoAddress">${renderVideoOptions(point?.videoAddress || '')}</select><div id="monitorPointVideoError" class="warehouse-monitor-form-error"></div></div>
               <div id="monitorPointFormError" class="warehouse-monitor-form-error"></div>
@@ -191,21 +246,26 @@
 
   function savePoint() {
     const name = $('#monitorPointName').value.trim();
+    const warehouseId = $('#monitorPointWarehouse').value.trim();
     const description = $('#monitorPointDescription').value.trim();
     const videoAddress = $('#monitorPointVideoAddress').value.trim();
     const nameError = $('#monitorPointNameError');
+    const warehouseError = $('#monitorPointWarehouseError');
     const videoError = $('#monitorPointVideoError');
     const formError = $('#monitorPointFormError');
     nameError.textContent = '';
+    warehouseError.textContent = '';
     videoError.textContent = '';
     formError.textContent = '';
     if (!name) { nameError.textContent = '请输入点位名称'; return; }
+    if (!warehouseId) { warehouseError.textContent = '请选择所属仓库'; return; }
     if (!videoAddress) { videoError.textContent = '请输入视频地址'; return; }
     try {
       const saved = state.editingId
-        ? window.WarehouseMonitorService.update(state.editingId, { name, description, videoAddress })
-        : window.WarehouseMonitorService.create({ name, description, videoAddress });
+        ? window.WarehouseMonitorService.update(state.editingId, { name, warehouseId, description, videoAddress })
+        : window.WarehouseMonitorService.create({ name, warehouseId, description, videoAddress });
       state.selectedId = saved.id;
+      if (accessContext().canSwitch) state.warehouseId = warehouseId;
       closeModal();
       render();
     } catch (error) {
@@ -297,6 +357,14 @@
   root.addEventListener('input', (event) => {
     if (event.target.id === 'pointSearchInput') {
       state.keyword = event.target.value.trim();
+      render();
+    }
+  });
+
+  root.addEventListener('change', (event) => {
+    if (event.target.id === 'monitorWarehouseSelect' && event.target.value) {
+      state.warehouseId = event.target.value;
+      state.selectedId = '';
       render();
     }
   });

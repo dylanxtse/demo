@@ -1,5 +1,6 @@
 (function () {
   const resource = 'warehouseMonitorPoints';
+  const warehouseResource = 'warehouses';
   const videoOptions = [
     {
       label: '仓储装卸口 · 公开实景视频',
@@ -40,13 +41,68 @@
     return window.BusinessRules?.now?.() || new Date().toISOString().slice(0, 19).replace('T', ' ');
   }
 
-  function list() {
+  function allWarehouses() {
+    return window.DemoStore?.get(warehouseResource) || [];
+  }
+
+  function currentSession() {
+    return window.DemoStore?.getSession?.() || {};
+  }
+
+  function isHeadquartersSession() {
+    const session = currentSession();
+    const company = window.DemoStore?.get('companies')?.find((item) => item.id === session.companyId);
+    return session.role === 'HQ_ADMIN' || company?.type === 'HEADQUARTERS';
+  }
+
+  function warehouseAccess() {
+    const warehouses = allWarehouses();
+    const session = currentSession();
+    const isHeadquarters = isHeadquartersSession();
+    const available = isHeadquarters
+      ? warehouses
+      : warehouses.filter((warehouse) => {
+        const companyIds = Array.isArray(warehouse.operatingCompanyIds)
+          ? warehouse.operatingCompanyIds
+          : [warehouse.operatingCompanyId, warehouse.companyId].filter(Boolean);
+        return companyIds.includes(session.companyId);
+      });
+    return {
+      isHeadquarters,
+      canSwitch: isHeadquarters,
+      warehouses: clone(available),
+      warehouseIds: available.map((warehouse) => warehouse.id)
+    };
+  }
+
+  function inferWarehouseId(point, warehouses) {
+    const explicit = normalize(point.warehouseId || point.warehouseCode);
+    const matched = warehouses.find((warehouse) => (
+      warehouse.id === explicit
+      || warehouse.warehouseCode === explicit
+      || warehouse.warehouseName === explicit
+      || (point.name && String(point.name).includes(warehouse.warehouseName))
+    ));
+    return matched?.id || warehouses[0]?.id || '';
+  }
+
+  function normalizePoint(point, warehouses) {
+    const warehouseId = inferWarehouseId(point, warehouses);
+    return warehouseId === point.warehouseId ? point : { ...point, warehouseId };
+  }
+
+  function readPoints() {
     const points = window.DemoStore?.get(resource) || [];
+    const warehouses = allWarehouses();
     const migrated = points.map((point) => {
       const nextAddress = legacyVideoAddressMap[point.videoAddress];
-      return nextAddress ? { ...point, videoAddress: nextAddress } : point;
+      const normalizedPoint = normalizePoint(point, warehouses);
+      return nextAddress ? { ...normalizedPoint, videoAddress: nextAddress } : normalizedPoint;
     });
-    if (migrated.some((point, index) => point.videoAddress !== points[index]?.videoAddress)) {
+    if (migrated.some((point, index) => (
+      point.videoAddress !== points[index]?.videoAddress
+      || point.warehouseId !== points[index]?.warehouseId
+    ))) {
       window.DemoStore?.replace?.(resource, migrated);
       return migrated;
     }
@@ -84,26 +140,54 @@
       ...current,
       name: normalize(data.name ?? current.name),
       description: normalize(data.description ?? current.description),
+      warehouseId: normalize(data.warehouseId ?? current.warehouseId),
       videoAddress: normalize(data.videoAddress ?? data.videoUrl ?? current.videoAddress)
     };
+  }
+
+  function assertWarehouseAccess(warehouseId) {
+    if (!warehouseId) {
+      const error = new Error('请选择所属仓库');
+      error.code = 'INVALID_MONITOR_WAREHOUSE';
+      throw error;
+    }
+    const access = warehouseAccess();
+    if (!access.warehouseIds.includes(warehouseId)) {
+      const error = new Error('当前账号不可关联该仓库');
+      error.code = 'MONITOR_WAREHOUSE_FORBIDDEN';
+      throw error;
+    }
   }
 
   window.WarehouseMonitorService = {
     videoOptions: clone(videoOptions),
 
-    list(keyword = '') {
+    getAccessContext() {
+      return warehouseAccess();
+    },
+
+    getWarehouseName(id) {
+      return allWarehouses().find((warehouse) => warehouse.id === id)?.warehouseName || '未分配仓库';
+    },
+
+    list(keyword = '', options = {}) {
       const query = normalize(keyword).toLocaleLowerCase();
-      return list().filter((point) => !query || normalize(point.name).toLocaleLowerCase().includes(query));
+      const warehouseIds = Array.isArray(options) ? options : options.warehouseIds;
+      return readPoints().filter((point) => {
+        if (Array.isArray(warehouseIds) && !warehouseIds.includes(point.warehouseId)) return false;
+        return !query || normalize(point.name).toLocaleLowerCase().includes(query);
+      });
     },
 
     get(id) {
-      return list().find((point) => point.id === id) || null;
+      return readPoints().find((point) => point.id === id) || null;
     },
 
     create(data) {
-      const current = list();
+      const current = readPoints();
       const values = payload(data);
       if (!values.name) throw new Error('请输入点位名称');
+      assertWarehouseAccess(values.warehouseId);
       if (!values.videoAddress) throw new Error('请输入视频地址');
       assertVideoAddress(values.videoAddress);
       assertUnique(current, values.name);
@@ -123,11 +207,12 @@
     },
 
     update(id, data) {
-      const current = list();
+      const current = readPoints();
       const index = current.findIndex((point) => point.id === id);
       if (index < 0) throw new Error('点位不存在或已删除');
       const values = payload(data, current[index]);
       if (!values.name) throw new Error('请输入点位名称');
+      assertWarehouseAccess(values.warehouseId);
       if (!values.videoAddress) throw new Error('请输入视频地址');
       assertVideoAddress(values.videoAddress, !videoOptions.some((option) => option.value === values.videoAddress));
       assertUnique(current, values.name, id);
@@ -140,7 +225,7 @@
     },
 
     remove(id) {
-      const current = list();
+      const current = readPoints();
       const index = current.findIndex((point) => point.id === id);
       if (index < 0) throw new Error('点位不存在或已删除');
       const removed = current[index];

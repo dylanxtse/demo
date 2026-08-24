@@ -45,6 +45,14 @@
     }).filter(Boolean);
     return names.length ? names.join('、') : (item?.operatingCompanyName || '未分配');
   };
+  const getRandomLockedCompanyIds = (count = 1) => {
+    const shuffled = [...subsidiaryOptions];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+    return shuffled.slice(0, Math.min(count, shuffled.length)).map((option) => option.value);
+  };
 
   const operatingCompanyColumn = {
     key: 'operatingCompanyIds',
@@ -195,7 +203,16 @@
       { key: 'address', label: '地址', required: true, fullRow: true, placeholder: '请输入地址' },
       { key: 'manager', label: '负责人', placeholder: '请输入负责人' },
       { key: 'phone', label: '联系电话', placeholder: '请输入联系电话' },
-      { key: 'operatingCompanyIds', label: '运营分公司', options: subsidiaryOptions, multiple: true, fullRow: true, placeholder: '可多选运营分公司' }
+      {
+        key: 'operatingCompanyIds',
+        label: '运营分公司',
+        options: subsidiaryOptions,
+        multiple: true,
+        fullRow: true,
+        placeholder: '可多选运营分公司',
+        getLockedValues: () => getRandomLockedCompanyIds(1),
+        lockedOptionTitle: '已被其他仓库关联，无法取消选择'
+      }
     ],
     createDefaults: { status: 'ENABLE', referenced: false },
     deleteMessage: '请再次确定是否删除该仓库？'

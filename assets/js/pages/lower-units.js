@@ -10,6 +10,15 @@
   let credential = null;
   let filterState = { keyword: '', district: '', status: '' };
 
+  function getRandomLockedDistricts(count = 2) {
+    const shuffled = [...districtOptions];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+    }
+    return new Set(shuffled.slice(0, Math.min(count, shuffled.length)));
+  }
+
   function render() {
     const allCompanies = window.OrganizationService.list();
     const companies = allCompanies.filter((company) => {
@@ -77,6 +86,7 @@
   function openCompanyModal(company = null) {
     editingId = company?.id || '';
     const selectedDistricts = new Set(window.OrganizationService.getAdmin(company?.id)?.districts || company?.districts || []);
+    const lockedDistricts = getRandomLockedDistricts(2);
     const modal = document.getElementById('companyModal');
     modal.innerHTML = `<div class="lower-units-dialog" role="dialog" aria-modal="true">
       <div class="lower-units-dialog-header"><h2>${company ? '编辑下属单位' : '新增下属单位'}</h2><button class="lower-units-dialog-close" type="button" data-action="close-company">×</button></div>
@@ -87,7 +97,10 @@
         <div class="lower-units-form-field"><label>联系人</label><input id="companyContact" value="${escapeHtml(company?.contact || '')}" placeholder="请输入联系人"></div>
         <div class="lower-units-form-field"><label>联系电话</label><input id="companyPhone" value="${escapeHtml(company?.phone || '')}" placeholder="请输入联系电话"></div>
         <div class="lower-units-form-field full"><label>地址</label><input id="companyAddress" value="${escapeHtml(company?.address || '')}" placeholder="请输入"></div>
-        <div class="lower-units-form-field full"><label>绑定负责区域</label><div class="district-check-grid">${districtOptions.map((district) => `<label class="district-check"><input type="checkbox" name="companyDistrict" value="${escapeHtml(district)}" ${selectedDistricts.has(district) ? 'checked' : ''}><span>${escapeHtml(district)}</span></label>`).join('')}</div></div>
+        <div class="lower-units-form-field full"><label>绑定负责区域</label><div class="district-check-grid">${districtOptions.map((district) => {
+          const isLocked = lockedDistricts.has(district);
+          return `<label class="district-check${isLocked ? ' is-locked' : ''}"${isLocked ? ' title="已被其他下属单位关联，无法取消选择"' : ''}><input type="checkbox" name="companyDistrict" value="${escapeHtml(district)}" ${selectedDistricts.has(district) || isLocked ? 'checked' : ''} ${isLocked ? 'disabled' : ''}><span>${escapeHtml(district)}</span></label>`;
+        }).join('')}</div></div>
       </div></div>
       <div class="lower-units-dialog-footer"><button class="btn" type="button" data-action="close-company">取消</button><button class="btn btn-primary" type="button" data-action="save-company">保存</button></div>
     </div>`;

@@ -164,7 +164,7 @@
     const total = rows.reduce((sum, row) => sum + Number(row.subtotal || 0), 0);
     const totalText = formatMoney(quote?.total || total);
     const itemRows = rows.map((row) => `<tr><td><span class="bidding-quote-image-placeholder">--</span></td><td><strong>${display(row.name)}</strong><small>${display(row.code)}</small></td><td>${display(row.category)}</td><td>${display(row.quantity)}</td><td>${display(row.latest)}</td><td>${display(row.quote)}</td><td>${display(formatMoney(row.subtotal))}</td></tr>`).join('');
-    return `<div class="bidding-quote-modal" data-quote-modal role="dialog" aria-modal="true" aria-label="供应商报价详情"><div class="bidding-quote-modal-card"><header class="bidding-quote-modal-header"><h3>供应商报价详情</h3><button type="button" class="bidding-quote-modal-close" data-quote-modal-close aria-label="关闭">×</button></header><div class="bidding-quote-modal-meta"><span>供应商名称：<strong>${display(supplier.name)}</strong></span><span>统一社会信用代码：<strong>${display(supplier.licenseCode)}</strong></span><span>联系方式：<strong>${display(supplier.contact || '默认')}（${display(supplier.phone)}</strong>）</span></div><div class="bidding-quote-modal-table-wrap"><table class="bidding-quote-modal-table"><thead><tr><th>图片</th><th>商品（编号/品牌/规格/指标说明）</th><th>分类</th><th>预估数量</th><th>最新一次<br>中标价(元)</th><th>报价(元)</th><th>小计(元)</th></tr></thead><tbody>${itemRows}<tr class="bidding-quote-modal-total"><td>总计</td><td colspan="5"></td><td>${totalText}</td></tr></tbody></table></div><footer class="bidding-quote-modal-footer"><span>共 ${rows.length} 条数据</span><div class="bidding-quote-modal-pagination"><select aria-label="每页条数"><option>10 条/页</option></select><button type="button" disabled>‹</button><button type="button" class="is-active">1</button><button type="button" disabled>›</button><span>跳至</span><input value="1" aria-label="跳转页码" readonly><span>/ 1 页</span></div></footer></div></div>`;
+    return `<div class="bidding-quote-modal" data-quote-modal role="dialog" aria-modal="true" aria-label="供应商报价详情"><div class="bidding-quote-modal-card"><header class="bidding-quote-modal-header"><h3>供应商报价详情</h3><button type="button" class="bidding-quote-modal-close" data-quote-modal-close aria-label="关闭">×</button></header><div class="bidding-quote-modal-meta"><span>供应商名称：<strong>${display(supplier.name)}</strong></span><span>统一社会信用代码：<strong>${display(supplier.licenseCode)}</strong></span><span>联系方式：<strong>${display(supplier.contact || '默认')}（${display(supplier.phone)}</strong>）</span></div><div class="bidding-quote-modal-table-wrap"><table class="bidding-quote-modal-table"><thead><tr><th>图片</th><th>商品（编号/品牌/规格/指标说明）</th><th>分类</th><th>预估数量</th><th>最新一次<br>中标价(元)</th><th>报价(元)</th><th>小计(元)</th></tr></thead><tbody>${itemRows}<tr class="bidding-quote-modal-total"><td>总计</td><td colspan="5"></td><td>${totalText}</td></tr></tbody></table></div><footer class="bidding-quote-modal-footer"><div class="pagination" id="quoteDetailPagination"></div></footer></div></div>`;
   }
 
   function renderSummaryPanel() {
@@ -251,16 +251,36 @@
 
   const root = window.AppShell.mount({ title: '查看竞价', content, variant: 'education', emptyText: '竞价详情' });
   const detail = root.querySelector('#bidDetailPage');
+  let quoteDetailPagination = null;
+
+  function mountQuoteDetailPagination() {
+    quoteDetailPagination?.destroy();
+    quoteDetailPagination = window.Pagination.create({
+      container: '#quoteDetailPagination',
+      page: 1,
+      pageSize: 10,
+      total: detail.querySelectorAll('.bidding-quote-modal-table tbody tr:not(.bidding-quote-modal-total)').length,
+      pageSizeOptions: [10],
+      onChange: () => {}
+    });
+  }
+
+  function closeQuoteDetailModal() {
+    quoteDetailPagination?.destroy();
+    quoteDetailPagination = null;
+    detail.querySelector('[data-quote-modal]')?.remove();
+  }
 
   detail.addEventListener('click', (event) => {
     const quoteTrigger = event.target.closest('[data-quote-detail]');
     if (quoteTrigger) {
-      detail.querySelector('[data-quote-modal]')?.remove();
+      closeQuoteDetailModal();
       detail.insertAdjacentHTML('beforeend', renderQuoteDetailModal(quoteTrigger.dataset.quoteDetail));
+      mountQuoteDetailPagination();
       return;
     }
     if (event.target.closest('[data-quote-modal-close]') || event.target.matches('[data-quote-modal]')) {
-      detail.querySelector('[data-quote-modal]')?.remove();
+      closeQuoteDetailModal();
       return;
     }
     const tab = event.target.closest('[data-detail-tab]');

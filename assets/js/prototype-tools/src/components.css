@@ -150,6 +150,19 @@
   pointer-events: auto;
 }
 
+/* 作用域不满足时由标注引擎设置 hidden，覆盖层定位样式不能把它重新显示出来。 */
+.record-annotation-overlay .record-annotation-anchor[hidden] {
+  display: none !important;
+}
+
+/* 弹窗作用域标注在桌面状态强制不可见，只能随可见弹窗进入标注层。 */
+.record-annotation-overlay:not(.is-modal-open) .record-annotation-anchor[data-annotation-scope="modal"],
+.record-annotation-overlay:not(.is-modal-open) .record-annotation-popover[data-annotation-scope="modal"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .record-annotation-overlay .record-annotation-anchor.is-open {
   z-index: 20;
 }
@@ -176,6 +189,10 @@
 }
 
 .record-annotation-editor[hidden] {
+  display: none !important;
+}
+
+.record-annotation-overlay.is-readonly .record-annotation-editor {
   display: none !important;
 }
 
@@ -822,6 +839,8 @@ textarea[aria-invalid="true"]:focus {
 /* 企业端统一分页规范，供各端列表页复用。 */
 .pagination {
   display: flex;
+  box-sizing: border-box;
+  min-height: 56px;
   align-items: center;
   justify-content: flex-end;
   padding: 12px 24px;
@@ -829,15 +848,18 @@ textarea[aria-invalid="true"]:focus {
   font-size: 14px;
   color: var(--text-secondary);
   flex-shrink: 0;
-  border: 0;
+  border-top: 1px solid var(--border-light);
   background: var(--bg-white);
 }
 .pagination .page-total { margin-right: auto; white-space: nowrap; }
 .pagination .page-size-select {
   height: 32px;
+  min-width: 92px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 0 28px 0 8px;
+  color: var(--text-primary);
+  font: inherit;
   font-size: 14px;
   background: #fff;
   appearance: none;
@@ -848,16 +870,18 @@ textarea[aria-invalid="true"]:focus {
 }
 .pagination .page-btns { display: flex; gap: 4px; }
 .pagination .page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 32px;
   height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background: #fff;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font: inherit;
   transition: all 0.2s;
 }
 .pagination .page-btn:hover { border-color: var(--primary); color: var(--primary); }
@@ -868,8 +892,13 @@ textarea[aria-invalid="true"]:focus {
 .pagination .pagination-jump-input {
   width: 48px;
   height: 32px;
+  box-sizing: border-box;
+  padding: 0 6px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
   text-align: center;
   font-size: 14px;
   outline: none;

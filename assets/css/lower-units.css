@@ -68,6 +68,8 @@
 .district-check-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 3px; }
 .district-check { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
 .district-check input { width: 15px; height: 15px; }
+.district-check.is-locked { color: var(--text-tertiary); cursor: not-allowed; }
+.district-check.is-locked input { cursor: not-allowed; }
 .lower-units-dialog-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px 20px; }
 
 .lower-units-credential { padding: 4px 0 8px; color: var(--text-secondary); font-size: 14px; line-height: 28px; }

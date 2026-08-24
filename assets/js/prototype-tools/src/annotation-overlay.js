@@ -1,6 +1,20 @@
 (function () {
   let activeController = null;
 
+  function resolveReadOnly(options = {}) {
+    if (typeof options.readOnly === 'boolean') return options.readOnly;
+    if (typeof window.PrototypeToolsConfig?.readOnly === 'boolean') {
+      return window.PrototypeToolsConfig.readOnly;
+    }
+    const protocol = window.location?.protocol || '';
+    const hostname = window.location?.hostname || '';
+    const isLocal = protocol === 'file:'
+      || hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '::1';
+    return /^(http:|https:)$/.test(protocol) && !isLocal;
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replace(/&/g, '&amp;')
@@ -38,7 +52,27 @@
       ]);
     return new Map(entries.map(([key, definition], index) => {
       const id = definition.id || key || `annotation-${index + 1}`;
-      return [id, { ...definition, number: String(index + 1) }];
+      const legacyPosition = {};
+      if (definition.markerPosition) legacyPosition.markerPosition = definition.markerPosition;
+      if (definition.popoverPosition) legacyPosition.popoverPosition = definition.popoverPosition;
+      let positionByScope = definition.positionByScope && typeof definition.positionByScope === 'object'
+        ? { ...definition.positionByScope }
+        : null;
+      const legacyScope = definition.scope || 'page';
+      if (Object.keys(legacyPosition).length) {
+        positionByScope = {
+          ...(positionByScope || {}),
+          [legacyScope]: {
+            ...legacyPosition,
+            ...(positionByScope?.[legacyScope] || {})
+          }
+        };
+      }
+      return [id, {
+        ...definition,
+        number: String(index + 1),
+        ...(positionByScope ? { positionByScope } : {})
+      }];
     }));
   }
 
@@ -46,13 +80,26 @@
     const source = Array.isArray(definition.items)
       ? definition.items
       : String(definition.content || '').split(/\n+/);
-    return source.map((item) => String(item || '')
+    return source.map((item) => String(typeof item === 'object'
+      ? (item?.text ?? item?.content ?? '')
+      : item || '')
       .replace(/^\s*(?:\d+[、.．)]|[-•])\s*/, '')
       .trim()).filter(Boolean);
   }
 
+  function getAnnotationItems(definition) {
+    const source = Array.isArray(definition.items)
+      ? definition.items
+      : String(definition.content || '').split(/\n+/);
+    return source.map((item) => String(typeof item === 'object'
+        ? (item?.text ?? item?.content ?? '')
+        : item || '')
+        .replace(/^\s*(?:\d+[、.．)]|[-•])\s*/, '')
+        .trim()).filter(Boolean);
+  }
+
   function renderPopoverItems(definition) {
-    const items = normaliseItems(definition);
+    const items = getAnnotationItems(definition);
     if (!items.length) return '';
     return `<ol class="record-annotation-popover-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ol>`;
   }
@@ -87,6 +134,8 @@
 
     const overlay = document.createElement('div');
     overlay.className = 'record-annotation-overlay';
+    const readOnly = resolveReadOnly(options);
+    overlay.classList.toggle('is-readonly', readOnly);
     overlay.setAttribute('aria-label', '页面标注');
     document.body.appendChild(overlay);
     if (options.theme !== false) {
@@ -116,6 +165,23 @@
     let repositionFrame = null;
     let queuedRepositionOptions = null;
     let syncFrame = null;
+    const modalTargetSelector = [
+      '[role="dialog"]',
+      '.operations-modal',
+      '.bidding-dialog',
+      '.lower-units-dialog',
+      '.price-detail-dialog',
+      '.processing-submit-dialog',
+      '.review-modal-dialog',
+      '.unit-modal-dialog'
+    ].join(', ');
+    const visibleModalSelector = [
+      modalTargetSelector,
+      '.operations-modal-backdrop',
+      '.bidding-modal-mask.open',
+      '.lower-units-modal.is-visible',
+      '.qr-modal.is-visible'
+    ].join(', ');
 
     const scheduleFrame = (callback) => typeof window.requestAnimationFrame === 'function'
       ? window.requestAnimationFrame(callback)
@@ -135,8 +201,10 @@
     };
 
     const hasVisibleModal = () => [...root.querySelectorAll(
-      '[role="dialog"], .operations-modal-backdrop, .bidding-modal-mask.open, .lower-units-modal.is-visible, .qr-modal.is-visible'
+      visibleModalSelector
     )].some(isVisibleElement);
+
+    const isModalTarget = (element) => Boolean(element?.closest?.(modalTargetSelector));
 
     const close = (anchor) => {
       anchor.classList.remove('is-open');
@@ -176,6 +244,30 @@
       return definitionById.get(placeholder?.dataset.annotationBase) || null;
     };
 
+    const getAnnotationScope = (anchor) => {
+      const placeholder = findPlaceholder(anchor?.dataset.annotationOverlayId);
+      return placeholder?.dataset.annotationScope
+        || anchor?.dataset.annotationScope
+        || getDefinitionForAnchor(anchor)?.scope
+        || 'page';
+    };
+
+    const getStoredPosition = (definition, scope = 'page') => {
+      const positionByScope = definition?.positionByScope;
+      if (positionByScope && Object.prototype.hasOwnProperty.call(positionByScope, scope)) {
+        const scopedPosition = positionByScope[scope] || {};
+        return {
+          markerPosition: scopedPosition.markerPosition || definition.markerPosition,
+          popoverPosition: scopedPosition.popoverPosition || definition.popoverPosition
+        };
+      }
+      if (positionByScope) return {};
+      return {
+        markerPosition: definition?.markerPosition,
+        popoverPosition: definition?.popoverPosition
+      };
+    };
+
     const getHorizontalScrollHost = (element) => {
       let node = element?.parentElement;
       while (node && node !== document.body) {
@@ -199,10 +291,13 @@
       const modalHeader = placeholder.dataset.annotationPosition === 'modal-header-right'
         ? placeholder.closest('.operations-modal-header')
         : null;
+      const scope = getAnnotationScope(anchor);
       const targetElement = placeholder.dataset.annotationTargetSelector
         ? root.querySelector(placeholder.dataset.annotationTargetSelector)
         : null;
-      if (placeholder.dataset.annotationTarget === 'custom' && !targetElement) return null;
+      if (placeholder.dataset.annotationTarget === 'custom'
+        && (!targetElement || !isVisibleElement(targetElement))) return null;
+      if (scope === 'modal' && !hasVisibleModal()) return null;
       const entryTarget = placeholder.previousElementSibling || entryHost;
       const hostElement = targetElement || entryTarget || cornerHost || placeholder.parentElement;
       const hostRect = hostElement?.getBoundingClientRect() || placeholderRect;
@@ -231,7 +326,8 @@
         isEntry,
         isRight,
         isExportEntry,
-        entryMarkerPosition
+        entryMarkerPosition,
+        scope
       };
     };
 
@@ -311,7 +407,7 @@
       const markerRect = marker.getBoundingClientRect();
       const popoverWidth = Math.min(popover.offsetWidth || 340, window.innerWidth - 32);
       const popoverHeight = popover.offsetHeight || 0;
-      const storedPosition = definition?.popoverPosition;
+      const storedPosition = getStoredPosition(definition, getAnnotationScope(anchor)).popoverPosition;
       if (storedPosition && Number.isFinite(Number(storedPosition.x)) && Number.isFinite(Number(storedPosition.y))) {
         const storedLeft = markerRect.left + Number(storedPosition.x);
         const storedTop = markerRect.top + Number(storedPosition.y);
@@ -340,7 +436,7 @@
       anchor.hidden = false;
       const definition = getDefinitionForAnchor(anchor);
       const autoPosition = getAutoPosition(context);
-      const storedPosition = definition?.markerPosition;
+      const storedPosition = getStoredPosition(definition, context.scope).markerPosition;
       const markerPosition = storedPosition
         && Number.isFinite(Number(storedPosition.x))
         && Number.isFinite(Number(storedPosition.y))
@@ -424,7 +520,9 @@
         'data-filter',
         'data-row-action',
         'data-record-close',
-        'data-operations-filter-toggle'
+        'data-operations-filter-toggle',
+        'aria-label',
+        'aria-labelledby'
       ];
       for (const attribute of stableAttributes) {
         const value = element.getAttribute(attribute);
@@ -490,7 +588,35 @@
     const findAnnotationTarget = (eventTarget) => {
       const target = eventTarget?.nodeType === 1 ? eventTarget : eventTarget?.parentElement;
       if (!target || !root.contains(target)) return null;
-      const candidate = target.closest('button, input, select, textarea, a, th, td, label, [role="button"], .operations-toolbar, .operations-filter, .bidding-toolbar, .bidding-filter-panel, .page-card');
+      const candidate = target.closest([
+        'button',
+        'input',
+        'select',
+        'textarea',
+        'a',
+        'th',
+        'td',
+        'label',
+        '[role="button"]',
+        '.operations-toolbar',
+        '.operations-filter',
+        '.bidding-toolbar',
+        '.bidding-filter-panel',
+        '.page-card',
+        '[role="dialog"] h1',
+        '[role="dialog"] h2',
+        '[role="dialog"] h3',
+        '[role="dialog"] h4',
+        '[role="dialog"] p',
+        '[role="dialog"] li',
+        '[role="dialog"] dt',
+        '[role="dialog"] dd',
+        '[role="dialog"] > *',
+        '.operations-modal > *',
+        '.bidding-dialog > *',
+        '.lower-units-dialog > *',
+        '[role="dialog"]'
+      ].join(', '));
       return candidate && root.contains(candidate) && candidate !== root ? candidate : null;
     };
 
@@ -584,9 +710,9 @@
       const actions = Array.isArray(definition.popoverActions)
         ? definition.popoverActions.filter((action) => action && action.key && action.label)
         : [];
-      const actionsHtml = actions.length
-        ? `<div class="record-annotation-popover-actions">${actions.map((action) => `<button class="${escapeHtml(action.className || 'btn btn-sm record-annotation-action')}" type="button" data-annotation-popover-action="${escapeHtml(action.key)}">${escapeHtml(action.label)}</button>`).join('')}</div>`
-        : '';
+    const actionsHtml = actions.length
+      ? `<div class="record-annotation-popover-actions">${actions.map((action) => `<button class="${escapeHtml(action.className || 'btn btn-sm record-annotation-action')}" type="button" data-annotation-popover-action="${escapeHtml(action.key)}">${escapeHtml(action.label)}</button>`).join('')}</div>`
+      : '';
       return `<strong class="record-annotation-popover-title">${title}</strong>${renderPopoverItems(definition)}${actionsHtml}`;
     };
 
@@ -626,6 +752,7 @@
     };
 
     const openAnnotationEditor = (anchor) => {
+      if (readOnly) return;
       const definition = getDefinitionForAnchor(anchor);
       const popover = anchor._recordAnnotationPopover;
       if (!definition || !popover) return;
@@ -646,6 +773,7 @@
     };
 
     const showAnnotationEditor = (anchor) => {
+      if (readOnly) return;
       const popover = anchor._recordAnnotationPopover;
       if (!popover?._recordAnnotationEditing) return;
       const savedPopoverPosition = readPopoverPosition(popover);
@@ -675,6 +803,7 @@
     };
 
     const saveAnnotationText = async (anchor) => {
+      if (readOnly) return false;
       const definition = getDefinitionForAnchor(anchor);
       const popover = anchor._recordAnnotationPopover;
       if (!definition || !popover) return false;
@@ -690,7 +819,8 @@
         bodyInput?.focus();
         return false;
       }
-      const next = { ...definition, title, items };
+      const next = { ...definition, items };
+      next.title = title;
       popover._recordAnnotationSaving = true;
       if (saveButton) {
         saveButton.disabled = true;
@@ -732,6 +862,7 @@
     };
 
     const deleteAnnotation = async (anchor) => {
+      if (readOnly) return false;
       const definition = getDefinitionForAnchor(anchor);
       const popover = anchor._recordAnnotationPopover;
       if (!definition || !popover) return false;
@@ -782,9 +913,21 @@
     };
 
     const saveAnnotationPosition = (anchor, positionPatch) => {
+      if (readOnly) return;
       const definition = getDefinitionForAnchor(anchor);
       if (!definition) return;
-      const next = { ...definition, ...positionPatch };
+      const scope = getAnnotationScope(anchor);
+      const currentPosition = getStoredPosition(definition, scope);
+      const next = {
+        ...definition,
+        positionByScope: {
+          ...(definition.positionByScope || {}),
+          [scope]: {
+            ...currentPosition,
+            ...positionPatch
+          }
+        }
+      };
       definitionById.set(next.id, next);
       anchor._recordAnnotationPopover._recordAnnotationDefinition = next;
       const positionPromise = persistDefinition(next);
@@ -922,6 +1065,7 @@
         target: 'custom',
         targetSelector,
         placement: 'right',
+        scope: isModalTarget(draft.target) ? 'modal' : 'page',
         title,
         items
       };
@@ -955,7 +1099,7 @@
     };
 
     const createDraft = (target) => {
-      if (!annotationMode || !markersVisible || !target || modalOpen) return;
+      if (readOnly || !annotationMode || !markersVisible || !target) return;
       closeAll();
       const id = `draft-${++draftSequence}`;
       const number = definitionById.size + drafts.size + 1;
@@ -1009,8 +1153,8 @@
     const setMarkerVisibility = (visible) => {
       markersVisible = Boolean(visible);
       overlay.classList.toggle('is-markers-hidden', !markersVisible);
-      editor.hidden = !markersVisible;
-      modeToggle.hidden = !markersVisible;
+      editor.hidden = readOnly || !markersVisible;
+      modeToggle.hidden = readOnly || !markersVisible;
       if (!markersVisible) {
         closeAll();
         if (annotationMode && !modeTransitioning) exitAnnotationMode();
@@ -1080,7 +1224,7 @@
     };
 
     const setAnnotationMode = (enabled) => {
-      if (modeTransitioning) return;
+      if (readOnly || modeTransitioning) return;
       const nextMode = Boolean(enabled);
       if (nextMode && !markersVisible) return;
       if (nextMode === annotationMode) return;
@@ -1197,7 +1341,7 @@
     };
 
     const handleDoubleClick = (event) => {
-      if (!annotationMode || modalOpen || event.target.closest?.('.record-annotation-overlay')) return;
+      if (readOnly || !annotationMode || event.target.closest?.('.record-annotation-overlay')) return;
       const target = findAnnotationTarget(event.target);
       if (!target) return;
       event.preventDefault();
@@ -1206,7 +1350,7 @@
     };
 
     const handlePointerDown = (event) => {
-      if (!annotationMode || event.button !== 0) return;
+      if (readOnly || !annotationMode || event.button !== 0) return;
       const popover = event.target.closest?.('.record-annotation-popover');
       if (popover && !event.target.closest?.('input, textarea, select, button, [data-annotation-popover-action]')) {
         const anchor = anchors.get(popover.dataset.annotationPopover);
@@ -1333,6 +1477,7 @@
     modalObserver.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-hidden', 'style'] });
 
     const attachModeControl = (target) => {
+      if (readOnly) return false;
       const host = target?.querySelector?.('[data-project-iteration-annotation-mode-host]');
       if (!host) return false;
       host.appendChild(editor);
@@ -1344,6 +1489,7 @@
 
     const controller = {
       pageKey,
+      readOnly,
       sync,
       setAnnotationMode,
       setMarkerVisibility,
@@ -1351,6 +1497,7 @@
       attachModeControl,
       getDefinitions: () => [...definitionById.values()].map((definition) => ({ ...definition })),
       destroy() {
+        textStyleRegistration?.();
         overlay.removeEventListener('click', handleClick);
         overlay.removeEventListener('pointerdown', handlePointerDown);
         overlay.removeEventListener('pointermove', handlePointerMove);

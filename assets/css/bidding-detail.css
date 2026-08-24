@@ -419,50 +419,10 @@
 }
 
 .bidding-quote-modal-footer {
-  display: flex;
-  min-height: 76px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 28px;
-  color: #737e8b;
-  font-size: 13px;
-}
-
-.bidding-quote-modal-pagination {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.bidding-quote-modal-pagination select,
-.bidding-quote-modal-pagination input {
-  height: 32px;
-  padding: 0 9px;
-  border: 1px solid #dfe4eb;
-  border-radius: 3px;
-  background: #fff;
-  color: #525d6a;
-  font: inherit;
-  font-size: 12px;
-}
-
-.bidding-quote-modal-pagination input { width: 42px; text-align: center; }
-
-.bidding-quote-modal-pagination button {
-  width: 28px;
-  height: 30px;
+  display: block;
+  min-height: 0;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: #85909d;
-  font-size: 18px;
-}
-
-.bidding-quote-modal-pagination button.is-active {
-  border-radius: 3px;
-  background: var(--primary);
-  color: #fff;
+  color: #737e8b;
   font-size: 13px;
 }
 

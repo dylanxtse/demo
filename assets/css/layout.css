@@ -279,6 +279,47 @@
 }
 .icon-svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+/* 项目级查询区：默认两行，超过两行时由 QueryFilterLayout 折叠。 */
+[data-query-filter-field][hidden],
+.operations-field[hidden],
+.operations-filter-toggle[hidden],
+.query-filter-toggle[hidden],
+.operations-filter-advanced[hidden],
+.filter-advanced[hidden] {
+  display: none !important;
+}
+
+.query-filter-actions {
+  width: auto !important;
+  min-width: max-content;
+}
+
+.query-filter-toggle {
+  display: inline-flex;
+  height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 32px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.query-filter-toggle:hover { opacity: .82; }
+.query-filter-toggle-arrow {
+  display: inline-flex;
+  transition: transform .2s ease;
+}
+.query-filter-toggle.is-active .query-filter-toggle-arrow { transform: rotate(180deg); }
+
 @media (max-width: 1100px) {
   :root { --sidebar-width: 200px; }
   .app-header { padding: 0 16px; }

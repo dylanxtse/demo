@@ -35,7 +35,7 @@
       .replace(/'/g, '&#039;');
   }
 
-  const renderAnnotationMarker = (...args) => window.AnnotationOverlay.renderPlaceholder(...args);
+  const renderAnnotationMarker = (...args) => window.AnnotationOverlay?.renderPlaceholder?.(...args) || '';
 
   function mount(config) {
     const statusMap = { ...defaultStatusMap, ...(config.statusMap || {}) };
@@ -47,6 +47,8 @@
       items: [],
       selected: new Set(),
       condition: {},
+      filterExpanded: false,
+      pagination: null,
       activeTab: config.tabs?.[0]?.key,
       activeStatus: config.tabs?.[0]?.statusTabs?.[0]?.value ?? config.statusTabs?.[0]?.value ?? ''
     };
@@ -82,6 +84,8 @@
       ? ''
       : '<button class="operations-filter-toggle" type="button" data-operations-filter-toggle hidden>高级筛选<span class="toggle-arrow">▾</span></button>';
     const toolbarActions = config.toolbar || [];
+    const hasConfiguredToolbar = toolbarActions.length > 0
+      || (config.tabs || []).some((tab) => Array.isArray(tab.toolbar) && tab.toolbar.length > 0);
     const isSideToolbarAction = (action) => action.key === 'export' || action.side === true;
     const isToolbarActionVisible = (action) => !action.visibleStatuses
       || String(state.activeStatus).split(',').some((status) => action.visibleStatuses.includes(status));
@@ -135,7 +139,7 @@
           </div>
           ${filterAnnotations.length ? `<div class="record-annotation-corner record-filter-annotation-corner ${filterAnnotations[0].placement === 'left' ? 'is-left' : 'is-right'}">${filterAnnotations.map(renderAnnotationMarker).join('')}</div>` : ''}
         </div>
-        <div class="operations-toolbar">
+        <div class="operations-toolbar"${hasConfiguredToolbar ? '' : ' hidden'}>
           <div class="operations-toolbar-main">${toolbarHtml}</div>
           <div class="operations-toolbar-side">${toolbarSideHtml}</div>
         </div>
@@ -143,7 +147,7 @@
           ${tableHeaderAnnotations.length ? `<div class="record-annotation-corner record-table-annotation-corner ${tableHeaderAnnotations[0].placement === 'left' ? 'is-left' : 'is-right'}">${tableHeaderAnnotations.map(renderAnnotationMarker).join('')}</div>` : ''}
           <div class="operations-table-container">
             <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
-            <div class="operations-pagination" id="recordPagination"></div>
+            <div class="pagination" id="recordPagination"></div>
           </div>
         </div>
       </section>
@@ -156,9 +160,9 @@
           <div class="operations-filter-grid">${filterHtml}</div>
           <div class="operations-filter-actions"><button class="btn btn-primary" id="recordQuery">查询</button><button class="btn" id="recordReset">重置</button></div>
         </div>
-        <div class="operations-toolbar">${legacyToolbarHtml}<span class="toolbar-spacer"></span></div>
+        <div class="operations-toolbar"${hasConfiguredToolbar ? '' : ' hidden'}>${legacyToolbarHtml}<span class="toolbar-spacer"></span></div>
         <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
-        <div class="operations-pagination" id="recordPagination"></div>
+        <div class="pagination" id="recordPagination"></div>
       </section>
       <div id="recordOverlay"></div>`;
     const content = config.pageClass ? standardContent : legacyContent;
@@ -172,8 +176,10 @@
     // AppShell 的公共兜底标注挂载点是 #pageContent；业务页也必须复用同一挂载点，
     // 否则 #app 和 #pageContent 会各自创建一套覆盖层，导致标注模式按钮重复。
     const annotationRoot = root.querySelector('#pageContent') || root;
-    const annotationOverlay = window.AnnotationOverlay.mount(annotationRoot, annotationById);
-    const syncAnnotationOverlay = () => annotationOverlay.sync();
+    const annotationOverlay = window.AnnotationOverlay?.mount?.(annotationRoot, annotationById) || {
+      sync() {}
+    };
+    const syncAnnotationOverlay = () => annotationOverlay.sync?.();
     const datePickers = new Map();
 
     function updateFilterLayout() {
@@ -181,26 +187,42 @@
       const toggle = root.querySelector('[data-operations-filter-toggle]');
       if (!grid || !toggle) return;
 
-      const wasExpanded = toggle.classList.contains('is-active');
+      const isExpanded = grid.dataset.filterExpanded === 'true';
+      const sharedLayout = window.RecordFilterLayout?.update?.(grid, isExpanded);
+      if (sharedLayout?.handled) {
+        state.filterExpanded = sharedLayout.expanded;
+        toggle.hidden = !sharedLayout.hasAdvanced;
+        toggle.classList.toggle('is-active', sharedLayout.expanded);
+        toggle.setAttribute('aria-expanded', String(sharedLayout.expanded));
+        return;
+      }
+
+      // 兼容公共壳层尚未刷新到新版本的旧页面，业务页仍可独立完成布局。
       const fields = [...grid.children].filter((element) => element.classList.contains('operations-field'));
       fields.forEach((field) => {
         field.hidden = false;
         delete field.dataset.filterOverflow;
       });
-
-      const rowTops = [...new Set(fields.map((field) => field.offsetTop))].sort((a, b) => a - b);
-      const overflowTop = rowTops[2];
-      const overflowFields = overflowTop == null
-        ? []
-        : fields.filter((field) => field.offsetTop >= overflowTop);
+      const firstRowTop = fields[0]?.offsetTop;
+      const firstRowCount = fields.findIndex((field) => field.offsetTop > firstRowTop);
+      const template = window.getComputedStyle(grid).gridTemplateColumns;
+      const computedColumns = template && template !== 'none'
+        ? template.trim().split(/\s+/).filter(Boolean).length
+        : 1;
+      const columns = firstRowCount > 0 ? firstRowCount : Math.max(1, computedColumns);
+      const overflowFields = fields.slice(columns * 2);
       const hasAdvanced = overflowFields.length > 0;
+      const nextExpanded = hasAdvanced && isExpanded;
 
+      state.filterExpanded = nextExpanded;
       toggle.hidden = !hasAdvanced;
-      toggle.classList.toggle('is-active', hasAdvanced && wasExpanded);
-      grid.classList.toggle('is-expanded', hasAdvanced && wasExpanded);
+      toggle.classList.toggle('is-active', nextExpanded);
+      toggle.setAttribute('aria-expanded', String(nextExpanded));
+      grid.classList.toggle('is-expanded', nextExpanded);
+      grid.dataset.filterExpanded = String(nextExpanded);
       overflowFields.forEach((field) => {
         field.dataset.filterOverflow = 'true';
-        field.hidden = !(hasAdvanced && wasExpanded);
+        field.hidden = !nextExpanded;
       });
     }
 
@@ -232,7 +254,7 @@
         $('#recordCategorySearch').addEventListener('input', (event) => renderCategoryTree(event.target.value.trim()));
       }
     }
-    if (config.statusActionsInline) {
+    if (config.statusActionsInline && !window.QueryFilterLayout) {
       const statusRow = root.querySelector('.operations-status-row');
       const filterActions = root.querySelector('.operations-filter-actions');
       if (statusRow && filterActions) {
@@ -241,6 +263,19 @@
       }
     }
     window.requestAnimationFrame?.(updateFilterLayout);
+
+    state.pagination = window.Pagination.create({
+      container: '#recordPagination',
+      page: state.page,
+      pageSize: state.pageSize,
+      total: state.total,
+      pageSizeOptions: [10, 20, 50],
+      onChange: ({ page, pageSize }) => {
+        state.page = page;
+        state.pageSize = pageSize;
+        return load();
+      }
+    });
 
     function currentResource() {
       const active = config.tabs?.find((tab) => tab.key === state.activeTab);
@@ -393,20 +428,15 @@
     }
 
     function renderPagination() {
-      const pages = Math.max(1, Math.ceil(state.total / state.pageSize));
-      $('#recordPagination').innerHTML = `
-        <span>共 ${state.total} 条数据</span>
-        <select id="recordPageSize" aria-label="每页条数">${[10, 20, 50].map((size) => `<option value="${size}" ${size === state.pageSize ? 'selected' : ''}>${size} 条/页</option>`).join('')}</select>
-        <button class="btn btn-sm" id="recordPrev" ${state.page <= 1 ? 'disabled' : ''}>上一页</button>
-        <span>${state.page} / ${pages}</span>
-        <button class="btn btn-sm" id="recordNext" ${state.page >= pages ? 'disabled' : ''}>下一页</button>
-        <span>跳至</span><input id="recordJump" aria-label="跳转页码" value="${state.page}">`;
+      state.pagination?.update({ page: state.page, pageSize: state.pageSize, total: state.total });
     }
 
     function renderToolbar() {
       const actions = currentToolbar();
+      const toolbar = root.querySelector('.operations-toolbar');
       const main = root.querySelector('.operations-toolbar-main');
       const side = root.querySelector('.operations-toolbar-side');
+      if (toolbar) toolbar.hidden = actions.length === 0;
       if (!main || !side) return;
       const isSideToolbarAction = (action) => action.key === 'export' || action.side === true;
       main.innerHTML = actions.filter((action) => !isSideToolbarAction(action)).map((action) =>
@@ -531,12 +561,24 @@
       let value = item?.[field.key] ?? defaultValue ?? '';
       if (field.type === 'datetime-local') value = String(value).replace(' ', 'T');
       const selectedValues = Array.isArray(value) ? value.map(String) : (value === '' ? [] : [String(value)]);
+      const configuredLockedValues = field.multiple && typeof field.getLockedValues === 'function'
+        ? field.getLockedValues({ item, selectedValues, options: field.options || [] })
+        : field.multiple ? field.lockedValues : [];
+      const lockedValues = new Set(
+        (configuredLockedValues instanceof Set
+          ? [...configuredLockedValues]
+          : Array.isArray(configuredLockedValues) ? configuredLockedValues : [])
+          .map((optionValue) => String(optionValue))
+      );
       const input = field.options
         ? field.multiple
           ? `<div class="operations-multi-select" role="group" aria-label="${escapeHtml(field.label)}">${field.options.map((option) => {
             const optionValue = typeof option === 'string' ? option : option.value;
             const optionLabel = typeof option === 'string' ? option : option.label;
-            return `<label class="operations-multi-option"><input type="checkbox" name="${escapeHtml(field.key)}" value="${escapeHtml(optionValue)}" ${selectedValues.includes(String(optionValue)) ? 'checked' : ''}><span>${escapeHtml(optionLabel)}</span></label>`;
+            const isLocked = lockedValues.has(String(optionValue));
+            const checked = selectedValues.includes(String(optionValue)) || isLocked;
+            const lockTitle = field.lockedOptionTitle || '已被其他数据关联，无法取消选择';
+            return `<label class="operations-multi-option${isLocked ? ' is-locked' : ''}"${isLocked ? ` title="${escapeHtml(lockTitle)}"` : ''}><input type="checkbox" name="${escapeHtml(field.key)}" value="${escapeHtml(optionValue)}" ${checked ? 'checked' : ''}${isLocked ? ' disabled' : ''}><span>${escapeHtml(optionLabel)}</span></label>`;
           }).join('')}</div>`
           : `<select name="${field.key}"><option value="">请选择</option>${field.options.map((option) => {
           const optionValue = typeof option === 'string' ? option : option.value;
@@ -787,12 +829,10 @@
       if (event.target.closest('[data-record-close]')) return closeModal();
       const filterToggle = event.target.closest('[data-operations-filter-toggle]');
       if (filterToggle) {
-        const expanded = filterToggle.classList.toggle('is-active');
+        state.filterExpanded = !state.filterExpanded;
         const filterGrid = root.querySelector('[data-operations-filter-grid]');
-        filterGrid?.classList.toggle('is-expanded', expanded);
-        filterGrid?.querySelectorAll('[data-filter-overflow="true"]').forEach((field) => {
-          field.hidden = !expanded;
-        });
+        if (filterGrid) filterGrid.dataset.filterExpanded = String(state.filterExpanded);
+        updateFilterLayout();
         return;
       }
       const categoryButton = event.target.closest('[data-record-category]');
@@ -884,14 +924,6 @@
         state.selected.clear();
         return load();
       }
-      if (event.target.id === 'recordPrev' && state.page > 1) {
-        state.page -= 1;
-        return load();
-      }
-      if (event.target.id === 'recordNext' && state.page < Math.ceil(state.total / state.pageSize)) {
-        state.page += 1;
-        return load();
-      }
     });
 
     root.addEventListener('change', (event) => {
@@ -919,11 +951,6 @@
         event.target.checked ? state.selected.add(id) : state.selected.delete(id);
         updateSelection();
       }
-      if (event.target.id === 'recordPageSize') {
-        state.pageSize = Number(event.target.value);
-        state.page = 1;
-        load();
-      }
     });
 
     root.addEventListener('keydown', (event) => {
@@ -932,10 +959,6 @@
         event.preventDefault();
         customCheckbox.click();
         return;
-      }
-      if (event.key === 'Enter' && event.target.id === 'recordJump') {
-        state.page = Math.min(Math.max(1, Math.ceil(state.total / state.pageSize)), Math.max(1, Number(event.target.value) || 1));
-        load();
       }
       if (event.key === 'Enter' && event.target.closest('.operations-filter')) {
         state.condition = collectCondition();

@@ -12,6 +12,20 @@
     { name: '运维管理平台', variants: ['operations'], tokens: ['运维管理平台'] }
   ];
 
+  function resolveReadOnly(options = {}) {
+    if (typeof options.readOnly === 'boolean') return options.readOnly;
+    if (typeof window.PrototypeToolsConfig?.readOnly === 'boolean') {
+      return window.PrototypeToolsConfig.readOnly;
+    }
+    const protocol = window.location?.protocol || '';
+    const hostname = window.location?.hostname || '';
+    const isLocal = protocol === 'file:'
+      || hostname === 'localhost'
+      || hostname === '127.0.0.1'
+      || hostname === '::1';
+    return /^(http:|https:)$/.test(protocol) && !isLocal;
+  }
+
   const escapeHtml = (value) => String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -478,6 +492,7 @@
         <div class="project-iteration-record-content" data-project-iteration-record-content>
           <div class="project-iteration-record-heading" data-project-iteration-record-heading>
             <strong>${escapeHtml(record.name)}</strong>
+            <button type="button" class="project-iteration-record-toggle project-iteration-record-heading-toggle" data-project-iteration-toggle aria-expanded="false" aria-label="展开" title="展开">${chevronDownIcon}</button>
             <div class="project-iteration-record-heading-actions">
               <time>${escapeHtml(formatDisplayDate(record.date))}</time>
               <button
@@ -490,7 +505,7 @@
           </div>
           ${renderRecordChanges(record)}
           <div class="project-iteration-record-footer">
-            <button type="button" class="project-iteration-record-toggle" data-project-iteration-toggle aria-expanded="false" aria-label="展开" title="展开">${chevronDownIcon}</button>
+            <button type="button" class="project-iteration-record-toggle project-iteration-record-footer-toggle" data-project-iteration-toggle aria-expanded="false" aria-label="展开" title="展开">展开</button>
             <button type="button" class="project-iteration-record-edit" data-project-iteration-edit="${escapeHtml(record.id)}">修改</button>
           </div>
         </div>
@@ -644,7 +659,7 @@
           data-platform-index="${index}"
           role="tabpanel"
           aria-label="${escapeHtml(option)}"${isSelected ? '' : ' hidden'}>
-          <button type="button" class="project-iteration-add-change-button" data-project-iteration-add-change>＋新增功能-描述</button>
+          <button type="button" class="project-iteration-add-change-button" data-project-iteration-add-change>＋新增描述</button>
           <div class="project-iteration-change-pairs" data-project-iteration-change-items>
             ${displayItems.map((item, itemIndex) => renderChangePair(
               option,
@@ -700,7 +715,7 @@
         </div>
         <div class="project-iteration-form-actions">
           <button type="button" class="project-iteration-secondary-button" data-project-iteration-cancel>取消</button>
-          <button type="submit" class="project-iteration-primary-button">${isEditing ? '保存修改' : '保存记录'}</button>
+          <button type="submit" class="project-iteration-primary-button">保存</button>
         </div>
       </form>`;
   }
@@ -720,8 +735,11 @@
 
     let currentRecords = loadRecords(records, options);
     let currentPlatforms = loadPlatforms(currentRecords, options);
+    const readOnly = resolveReadOnly(options);
     const root = document.createElement('div');
     root.className = 'project-iteration-panel-root';
+    root.classList.toggle('is-readonly', readOnly);
+    root.dataset.projectIterationReadOnly = String(readOnly);
     root.dataset.projectIterationPanel = 'true';
     root.innerHTML = `
       <div class="project-iteration-backdrop" data-project-iteration-close></div>
@@ -1236,6 +1254,7 @@
     };
 
     const openForm = (recordId = null) => {
+      if (readOnly) return;
       editingId = recordId;
       resetPendingDeleteConfirmation();
       trashOpen = false;
@@ -1344,8 +1363,14 @@
         }))
         .filter((item) => item.feature || hasDescriptionContent(item.description))
         .sort((left, right) => left.order - right.order)
-        .map(({ feature, description }) => ({ feature, description }));
-      return { platform, items };
+        .map(({ feature, description }) => ({
+          feature,
+          description
+        }));
+      return {
+        platform,
+        items
+      };
     }).filter((change) => change.items.length);
 
     const refreshForm = (form, draftChanges = collectFormChanges(form), selectedPlatform = '') => {
@@ -1714,7 +1739,48 @@
       }
     };
 
+    const toggleRecordDetails = (record) => {
+      const details = record?.querySelector('[data-project-iteration-record-details]');
+      const toggleButtons = [...(record?.querySelectorAll('[data-project-iteration-toggle]') || [])];
+      const toggleButton = toggleButtons[0];
+      if (!details || !toggleButton) return false;
+      const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+      const nextExpanded = !isExpanded;
+      details.hidden = isExpanded;
+      toggleButtons.forEach((button) => {
+        button.setAttribute('aria-expanded', String(nextExpanded));
+        button.setAttribute('aria-label', isExpanded ? '展开' : '收起');
+        button.title = isExpanded ? '展开' : '收起';
+        button.innerHTML = button.classList.contains('project-iteration-record-footer-toggle')
+          ? (isExpanded ? '展开' : '收起')
+          : (isExpanded ? chevronDownIcon : chevronUpIcon);
+      });
+      record.classList.toggle('is-record-expanded', nextExpanded);
+      syncNestedRecordStickyOffsets();
+      buildNestedRecordLayoutCache();
+      syncNestedRecordOcclusion();
+      return true;
+    };
+
     const handleClick = (event) => {
+      if (readOnly && event.target.closest([
+        '[data-project-iteration-new]',
+        '[data-project-iteration-edit]',
+        '[data-project-iteration-delete]',
+        '[data-project-iteration-trash-toggle]',
+        '[data-project-iteration-permanent-delete]',
+        '[data-project-iteration-restore]',
+        '[data-project-iteration-platform-settings]',
+        '[data-project-iteration-platform-add]',
+        '[data-project-iteration-platform-create]',
+        '[data-project-iteration-platform-delete]',
+        '[data-project-iteration-add-change]',
+        '[data-project-iteration-remove-change]'
+      ].join(', '))) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (!root.classList.contains('is-open')
         && root.classList.contains('is-peeking')
         && event.target.closest('.project-iteration-drawer')) {
@@ -1813,20 +1879,18 @@
       }
       const toggleButton = event.target.closest('[data-project-iteration-toggle]');
       if (toggleButton) {
-        const record = toggleButton.closest('.project-iteration-record');
-        const details = record?.querySelector('[data-project-iteration-record-details]');
-        if (!details) return;
-        const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-        const nextExpanded = !isExpanded;
-        details.hidden = isExpanded;
-        toggleButton.setAttribute('aria-expanded', String(nextExpanded));
-        toggleButton.setAttribute('aria-label', isExpanded ? '展开' : '收起');
-        toggleButton.title = isExpanded ? '展开' : '收起';
-        toggleButton.innerHTML = isExpanded ? chevronDownIcon : chevronUpIcon;
-        record.classList.toggle('is-record-expanded', nextExpanded);
-        syncNestedRecordStickyOffsets();
-        buildNestedRecordLayoutCache();
-        syncNestedRecordOcclusion();
+        toggleRecordDetails(toggleButton.closest('.project-iteration-record'));
+        return;
+      }
+      const recordCard = event.target.closest('.project-iteration-record');
+      const recordContent = recordCard?.querySelector('[data-project-iteration-record-content]');
+      const isBlankCardArea = event.target === recordCard
+        || event.target === recordContent
+        || event.target.matches?.(
+          '[data-project-iteration-record-heading], .project-iteration-record-heading-actions, .project-iteration-record-footer, .project-iteration-record-change, .project-iteration-record-detail-content'
+        );
+      if (recordCard && isBlankCardArea) {
+        toggleRecordDetails(recordCard);
         return;
       }
       if (event.target.closest('[data-project-iteration-new]')) {
@@ -1847,6 +1911,7 @@
     };
 
     const handleDoubleClick = (event) => {
+      if (readOnly) return;
       const platformDelete = event.target.closest('[data-project-iteration-platform-delete]');
       if (platformDelete) {
         event.preventDefault();
@@ -1865,6 +1930,7 @@
       const form = event.target.closest('[data-project-iteration-form]');
       if (!form) return;
       event.preventDefault();
+      if (readOnly) return;
       const changes = collectFormChanges(form);
       if (!changes.length || changes.some((change) => change.items.some((item) => !item.feature || !hasDescriptionContent(item.description)))) {
         showToast('请至少填写一个端的功能-描述；每条涉及功能都需填写对应描述。', 'error');
@@ -1900,7 +1966,7 @@
       } catch (saveError) {
         if (submitButton) {
           submitButton.disabled = false;
-          submitButton.textContent = isEditing ? '保存修改' : '保存记录';
+          submitButton.textContent = '保存';
         }
         showToast('无法写入项目代码，请先启动项目代码保存服务。', 'error');
         return;
@@ -1922,6 +1988,7 @@
 
     const controller = {
       root,
+      readOnly,
       open: () => setOpen(true),
       close: () => setOpen(false),
       toggle: () => setOpen(!root.classList.contains('is-open')),
@@ -1936,6 +2003,7 @@
       setAnnotationMarkerVisibility: (visible) => applyAnnotationMarkerVisibility(visible),
       getAnnotationMarkerVisibility: () => annotationMarkersVisible,
       destroy() {
+        textStyleRegistration?.();
         window.clearTimeout(toastTimer);
         resetPendingDeleteConfirmation();
         document.removeEventListener('mousemove', handleDocumentMouseMove);

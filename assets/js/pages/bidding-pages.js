@@ -112,8 +112,10 @@
     return `<span class="status-tag bidding-status-tag ${statusClass(status)}">${esc(status)}</span>`;
   }
 
-  const renderAnnotationMarker = (...args) => window.AnnotationOverlay.renderPlaceholder(...args);
-  const mountAnnotationOverlay = (root, definitions) => window.AnnotationOverlay.mount(root, definitions);
+  const renderAnnotationMarker = (...args) => window.AnnotationOverlay?.renderPlaceholder?.(...args) || '';
+  const mountAnnotationOverlay = (root, definitions) => window.AnnotationOverlay?.mount?.(root, definitions) || {
+    sync() {}
+  };
 
   function categoriesOptions(selected = []) {
     return service.categories.map((category) => `<label class="bidding-category-option"><input type="checkbox" value="${esc(category)}" ${selected.includes(category) ? 'checked' : ''}>${esc(category)}</label>`).join('');

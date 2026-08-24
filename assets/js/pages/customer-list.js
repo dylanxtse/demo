@@ -21,7 +21,7 @@
       <div class="operations-toolbar"><div class="operations-toolbar-main"><button class="btn btn-primary btn-sm" data-action="add">新增客户</button></div></div>
       <div class="operations-table-container">
         <div class="operations-table-wrap"><table class="operations-table"><thead><tr><th>客户编码</th><th>客户名称</th><th>客户类型</th><th>食堂数量</th><th>状态</th><th>操作</th></tr></thead><tbody id="customerBody"></tbody></table></div>
-        <div class="operations-pagination" id="customerPagination"></div>
+        <div class="pagination" id="customerPagination"><span class="page-total"></span></div>
       </div>
     </section>
     <div id="customerOverlay"></div>`;
@@ -49,7 +49,7 @@
         <td>${statusHtml(customer.status)}</td>
         <td><button class="btn-text" data-row-action="edit">编辑</button></td>
       </tr>`).join('') : '<tr><td class="empty-cell" colspan="6">暂无数据</td></tr>';
-    root.querySelector('#customerPagination').textContent = `共 ${state.customers.length} 条数据`;
+    root.querySelector('#customerPagination .page-total').textContent = `共 ${state.customers.length} 条数据`;
   }
 
   function closeForm() { overlay.innerHTML = ''; }

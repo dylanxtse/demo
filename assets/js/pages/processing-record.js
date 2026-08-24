@@ -79,16 +79,7 @@
             <tbody id="recTableBody"></tbody>
           </table>
         </div>
-        <div class="pagination">
-          <span class="page-total">共 0 条数据</span>
-          <select class="page-size-select" aria-label="每页数量"><option>20 条/页</option><option>50 条/页</option><option>100 条/页</option></select>
-          <div class="page-btns" id="recPageBtns"></div>
-          <div class="page-jump">
-            <span>跳至</span>
-            <input type="text" value="1" aria-label="跳转页码">
-            <span>页</span>
-          </div>
-        </div>
+        <div class="pagination" id="recPagination"></div>
       </div>
 
     </div>
@@ -110,7 +101,11 @@
 
   const state = {
     orders: [],
+    filteredOrders: [],
     visibleOrders: [],
+    page: 1,
+    pageSize: 20,
+    pagination: null,
     selectedIds: new Set(),
     dateStart: '',
     dateEnd: ''
@@ -267,8 +262,15 @@
     state.visibleOrders = orders;
     const tbody = document.getElementById('recTableBody');
     tbody.innerHTML = orders.map(renderOrderRows).join('');
-    document.querySelector('.processing-record-page .page-total').textContent = `共 ${orders.length} 条数据`;
     updateToggleAllCheckbox();
+  }
+
+  function renderPage() {
+    const totalPages = Math.max(1, Math.ceil(state.filteredOrders.length / state.pageSize));
+    if (state.page > totalPages) state.page = totalPages;
+    const start = (state.page - 1) * state.pageSize;
+    renderTable(state.filteredOrders.slice(start, start + state.pageSize));
+    state.pagination?.update({ page: state.page, pageSize: state.pageSize, total: state.filteredOrders.length });
   }
 
   function updateToggleAllCheckbox() {
@@ -297,7 +299,9 @@
       (!dateStart || order.processingDate >= dateStart) &&
       (!dateEnd || order.processingDate <= dateEnd)
     ));
-    renderTable(result);
+    state.filteredOrders = result;
+    state.page = 1;
+    renderPage();
   }
 
   function resetFilters() {
@@ -890,9 +894,21 @@
       filterOrders();
     }
   });
+  state.pagination = window.Pagination.create({
+    container: '#recPagination',
+    page: state.page,
+    pageSize: state.pageSize,
+    total: state.filteredOrders.length,
+    pageSizeOptions: [20, 50, 100],
+    onChange: ({ page, pageSize }) => {
+      state.page = page;
+      state.pageSize = pageSize;
+      renderPage();
+    }
+  });
   loadOrders();
-  state.visibleOrders = [...state.orders];
-  renderTable();
+  state.filteredOrders = [...state.orders];
+  renderPage();
   bindEvents();
 
   if (detailId) {

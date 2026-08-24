@@ -36,7 +36,7 @@
           <thead><tr><th><input id="detailSelectAll" type="checkbox" aria-label="选择全部"></th><th>序号</th><th>商品名称（计量单位/品牌/规格）</th><th>客户名称</th><th>食堂</th><th>下单数量</th><th>实际数量</th><th>是否发货</th><th>计量单位</th><th>分拣进度</th><th>备注</th><th>库存</th><th>分拣状态</th><th>分拣员</th><th>分拣时间</th><th>线路</th><th>操作</th></tr></thead>
           <tbody id="detailBody"></tbody>
         </table></div>
-        <div class="operations-pagination"><span id="detailTotal">共 0 条数据</span></div>
+        <div class="pagination"><span class="page-total" id="detailTotal">共 0 条数据</span></div>
       </div>
       <div id="detailOverlay"></div>
     </section>`;

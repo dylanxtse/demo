@@ -308,17 +308,6 @@
   justify-content: center;
 }
 
-.order-module-page .operations-pagination {
-  min-height: 52px;
-  flex-shrink: 0;
-  padding: 0 16px;
-  border-top: 1px solid var(--border-light);
-}
-
-.order-module-page .operations-pagination > span:first-child {
-  margin-right: auto;
-}
-
 /* 仓库档案字段较多，保持可读列宽，超出容器时通过横向滚动查看。 */
 .warehouse-archive-page .operations-table-wrap {
   overflow-x: auto;

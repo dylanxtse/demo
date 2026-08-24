@@ -196,6 +196,25 @@ test('分拣列表的发货状态和库存来自关联业务数据', async ({ pa
   expect(cells.join('')).toContain(String(sample.stock || 0));
 });
 
+test('分拣管理筛选默认两行且列表滚动和分页保留', async ({ page }) => {
+  await page.goto('/sorting-management.html', { waitUntil: 'networkidle' });
+  const fields = page.locator('[data-operations-filter-grid] > .operations-field');
+  const visibleFieldCount = () => fields.evaluateAll((items) => items.filter((item) => !item.hidden).length);
+  const toggle = page.locator('[data-operations-filter-toggle]');
+
+  await expect.poll(visibleFieldCount).toBe(6);
+  await expect(toggle).toBeVisible();
+  await expect(page.locator('#recordPagination')).toBeVisible();
+  await expect.poll(() => page.locator('.operations-table-wrap').evaluate((element) => (
+    getComputedStyle(element).overflowY === 'auto' && element.scrollHeight > element.clientHeight
+  ))).toBe(true);
+
+  await toggle.click();
+  await expect.poll(visibleFieldCount).toBe(13);
+  await toggle.click();
+  await expect.poll(visibleFieldCount).toBe(6);
+});
+
 test('种子加工单不再伪造草稿状态', async ({ page }) => {
   await page.goto('/processing-record.html', { waitUntil: 'networkidle' });
   const seedDrafts = await page.evaluate(() => window.ProcessingService.getList().filter((record) => (

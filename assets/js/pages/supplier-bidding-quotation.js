@@ -44,46 +44,48 @@
     const content = `
       <div class="page-card supplier-quotation-page" id="supplierQuotationPage">
         <form class="supplier-quotation-filters" id="supplierQuotationFilters">
-          <div class="supplier-filter-item">
-            <label for="supplierBidKeyword">竞价编号/名称</label>
-            <input id="supplierBidKeyword" data-filter="keyword" type="text" placeholder="请输入">
-          </div>
-          <div class="supplier-filter-item">
-            <label for="supplierSupplyStart">供货周期</label>
-            <div class="supplier-date-range">
-              <input id="supplierSupplyStart" data-filter="start" type="text" value="2026-07-15" placeholder="请选择日期" aria-label="供货周期开始日期">
-              <span aria-hidden="true">—</span>
-              <input id="supplierSupplyEnd" data-filter="end" type="text" value="2026-08-14" placeholder="请选择日期" aria-label="供货周期结束日期">
-              <svg class="supplier-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2.5" x2="16" y2="6"></line><line x1="8" y1="2.5" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line></svg>
+          <div class="supplier-filter-fields">
+            <div class="supplier-filter-item">
+              <label for="supplierBidKeyword">竞价编号/名称</label>
+              <input id="supplierBidKeyword" data-filter="keyword" type="text" placeholder="请输入">
             </div>
-          </div>
-          <div class="supplier-filter-item">
-            <label for="supplierBidSegment">标段</label>
-            <select id="supplierBidSegment" data-filter="segment">
-              <option value="">全部</option>
-              ${segmentOptions.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('')}
-            </select>
+            <div class="supplier-filter-item">
+              <label for="supplierSupplyStart">供货周期</label>
+              <div class="supplier-date-range">
+                <input id="supplierSupplyStart" data-filter="start" type="text" value="2026-07-15" placeholder="请选择日期" aria-label="供货周期开始日期">
+                <span aria-hidden="true">—</span>
+                <input id="supplierSupplyEnd" data-filter="end" type="text" value="2026-08-14" placeholder="请选择日期" aria-label="供货周期结束日期">
+                <svg class="supplier-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2.5" x2="16" y2="6"></line><line x1="8" y1="2.5" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line></svg>
+              </div>
+            </div>
+            <div class="supplier-filter-item">
+              <label for="supplierBidSegment">标段</label>
+              <select id="supplierBidSegment" data-filter="segment">
+                <option value="">全部</option>
+                ${segmentOptions.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="supplier-filter-item">
+              <label for="supplierBidStatus">竞价状态</label>
+              <select id="supplierBidStatus" data-filter="bidStatus">
+                <option value="">全部</option>
+                <option value="待开标">待开标</option>
+                <option value="已开标">已开标</option>
+              </select>
+            </div>
+            <div class="supplier-filter-item">
+              <label for="supplierQuoteStatus">报价状态</label>
+              <select id="supplierQuoteStatus" data-filter="quoteStatus">
+                <option value="">全部</option>
+                <option value="未报价">未报价</option>
+                <option value="已中标">已中标</option>
+                <option value="未中标">未中标</option>
+              </select>
+            </div>
           </div>
           <div class="supplier-filter-actions">
             <button class="btn btn-primary btn-sm" type="submit">查询</button>
             <button class="btn btn-sm" type="button" data-action="reset">重置</button>
-          </div>
-          <div class="supplier-filter-item">
-            <label for="supplierBidStatus">竞价状态</label>
-            <select id="supplierBidStatus" data-filter="bidStatus">
-              <option value="">全部</option>
-              <option value="待开标">待开标</option>
-              <option value="已开标">已开标</option>
-            </select>
-          </div>
-          <div class="supplier-filter-item">
-            <label for="supplierQuoteStatus">报价状态</label>
-            <select id="supplierQuoteStatus" data-filter="quoteStatus">
-              <option value="">全部</option>
-              <option value="未报价">未报价</option>
-              <option value="已中标">已中标</option>
-              <option value="未中标">未中标</option>
-            </select>
           </div>
         </form>
         <div class="supplier-quotation-table-wrap">
