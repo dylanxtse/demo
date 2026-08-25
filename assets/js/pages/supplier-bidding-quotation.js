@@ -100,11 +100,20 @@
           </table>
         </div>
         <div class="pagination supplier-quotation-pagination" id="supplierBiddingPagination"></div>
+        <div class="supplier-quote-modal" id="supplierQuoteModal" aria-hidden="true">
+          <section class="supplier-quote-dialog" role="dialog" aria-modal="true" aria-labelledby="supplierQuoteTitle">
+            <header class="supplier-quote-dialog-header"><div><h2 id="supplierQuoteTitle">填写竞价报价</h2><p data-quote-summary></p></div><button type="button" data-action="close-quote" aria-label="关闭">×</button></header>
+            <div class="supplier-quote-dialog-body"><p class="supplier-quote-scope-hint">只能填写当前供应商已设置标段内的商品报价。</p><div class="supplier-quote-product-wrap"><table class="supplier-quote-product-table"><thead><tr><th>商品编号</th><th>商品名称</th><th>分类</th><th>计量单位</th><th>报价（元）</th></tr></thead><tbody data-quote-products></tbody></table></div></div>
+            <footer class="supplier-quote-dialog-actions"><button class="btn btn-sm" type="button" data-action="close-quote">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-quote">保存报价</button></footer>
+          </section>
+        </div>
       </div>
     `;
     const root = window.AppShell.mount({ title: '竞价报价', content, variant: 'supplier', emptyText: '竞价报价' });
     const page = root.querySelector('#supplierQuotationPage');
     const state = { rows, filtered: rows, pager: null };
+    const quoteModal = page.querySelector('#supplierQuoteModal');
+    let activeQuoteRow = null;
     const readFilters = () => Object.fromEntries([...page.querySelectorAll('[data-filter]')].map((field) => [field.dataset.filter, field.value]));
     const applyFilters = (resetPage = true) => {
       state.filtered = service.filterRows(state.rows, readFilters());
@@ -122,18 +131,71 @@
     });
     renderRows(page, state);
 
+    function showToast(message, error = false) {
+      let toast = page.querySelector('.supplier-quote-toast');
+      if (!toast) {
+        page.insertAdjacentHTML('beforeend', '<div class="supplier-quote-toast" role="status"></div>');
+        toast = page.querySelector('.supplier-quote-toast');
+      }
+      toast.textContent = message;
+      toast.classList.toggle('is-error', error);
+      toast.classList.add('is-visible');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('is-visible'), 2200);
+    }
+
+    function closeQuoteModal() {
+      activeQuoteRow = null;
+      quoteModal.classList.remove('is-open');
+      quoteModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openQuoteModal(row) {
+      const products = service.getQuoteProducts(row.id);
+      if (!products.length) { showToast('当前标段暂无可报价商品', true); return; }
+      activeQuoteRow = row;
+      quoteModal.querySelector('[data-quote-summary]').textContent = `${row.bidNo}｜${row.name}｜${row.segment}`;
+      quoteModal.querySelector('[data-quote-products]').innerHTML = products.map((product) => `<tr><td>${escapeHtml(product.code)}</td><td class="align-left">${escapeHtml(product.name)}</td><td class="align-left">${escapeHtml(product.category)}</td><td>${escapeHtml(product.unit || '--')}</td><td><input type="number" min="0.01" step="0.01" data-quote-product="${escapeHtml(product.id)}" value="${escapeHtml(product.price)}" placeholder="请输入报价"></td></tr>`).join('');
+      quoteModal.classList.add('is-open');
+      quoteModal.setAttribute('aria-hidden', 'false');
+      quoteModal.querySelector('input[data-quote-product]')?.focus();
+    }
+
     page.querySelector('#supplierQuotationFilters').addEventListener('submit', (event) => {
       event.preventDefault();
       applyFilters(true);
     });
     page.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
+      if (action === 'quote') {
+        const row = state.rows.find((item) => item.id === event.target.closest('[data-id]')?.dataset.id);
+        if (row?.canQuote) openQuoteModal(row);
+        return;
+      }
+      if (action === 'close-quote') { closeQuoteModal(); return; }
+      if (action === 'save-quote') {
+        if (!activeQuoteRow) return;
+        const entries = [...quoteModal.querySelectorAll('[data-quote-product]')].map((input) => ({ productId: input.dataset.quoteProduct, price: input.value.trim() }));
+        try {
+          service.saveQuotes(activeQuoteRow.id, entries);
+          state.rows = service.getRows();
+          applyFilters(false);
+          closeQuoteModal();
+          showToast('报价已保存');
+        } catch (error) {
+          showToast(error.message || '报价保存失败', true);
+        }
+        return;
+      }
       if (action !== 'reset') return;
       page.querySelectorAll('[data-filter]').forEach((field) => {
         if (field.matches('select')) field.value = '';
         else field.value = '';
       });
       applyFilters(true);
+    });
+    quoteModal.addEventListener('click', (event) => {
+      if (event.target === quoteModal) closeQuoteModal();
     });
   }
 

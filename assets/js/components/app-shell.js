@@ -24,14 +24,14 @@
       'wasted-bid-management.html',
       'notice-management.html'
     ]),
-    supplier: new Set(['supplier-product-management.html', 'supplier-bidding-quotation.html', 'supplier-invite.html', 'supplier-export-template.html']),
+    supplier: new Set(['supplier-product-management.html', 'supplier-bidding-quotation.html', 'supplier-notice-management.html', 'supplier-invite.html', 'supplier-export-template.html']),
     operations: new Set([
       'operations.html',
       'operations-education-management.html',
       'operations-enterprise-management.html',
       'operations-school-management.html'
     ]),
-    school: new Set(['school-product-management.html'])
+    school: new Set(['school-product-management.html', 'school-notice-management.html'])
   };
   const switchRoutes = {
     enterprise: './index.html',
@@ -387,7 +387,7 @@
   const toolkitAssets = Object.freeze({
     theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260824-9',
     annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260824-31',
-    iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-56',
+    iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260826-57',
     iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60',
     annotationData: './assets/js/config/annotation-data.js?v=20260822-2',
     iterationData: './assets/js/data/project-iteration-records.js?v=20260822-4'
@@ -427,7 +427,7 @@
   }
 
   window.AppShell = {
-    mount({ title, content, emptyText = '当前没有打开的页面', variant = 'enterprise' }) {
+    mount({ title, content, emptyText = '当前没有打开的页面', variant = 'enterprise', showPageTitle = true }) {
       const root = document.getElementById('app');
       if (!root) throw new Error('缺少 #app 页面挂载节点');
       const shellOptions = { variant };
@@ -447,7 +447,7 @@
           ${window.AppSidebar.render(shellOptions)}
           <section class="main-section">
             ${window.AppHeader.render(shellOptions)}
-            ${window.AppPageTabs.render(title, { variant })}
+            ${showPageTitle ? window.AppPageTabs.render(title, { variant }) : ''}
             <div class="page-empty-state">${emptyText}</div>
             <main class="content-area" id="pageContent">${content}</main>
           </section>

@@ -60,7 +60,7 @@
   });
   const root = shell.querySelector('#noticePageRoot');
   const state = {
-    rows: initialRows,
+    rows: window.NoticeService?.load(initialRows, { persistFallback: true }) || initialRows,
     filters: { title: '', startDate: '', endDate: '', status: '' },
     statusDraft: '',
     selected: new Set(),
@@ -77,7 +77,7 @@
       pageSize: 10,
       pagination: null
     },
-    form: { title: '', recipients: [], force: '否', expire: '', content: '', attachments: [] }
+    form: { title: '', recipients: [], recipientTargets: { 学校: [], 供应商: [] }, force: '否', expire: '', content: '', attachments: [] }
   };
 
   function todayPlus(days) {
@@ -145,6 +145,7 @@
 
   const recipientDirectory = {
     学校: [
+      { name: '第一实验学校', contact: '默认(13800000001)' },
       { name: '康璐高中', contact: '--(19203551949)' },
       { name: '东城职业学校', contact: '李老师(13800000001)' },
       { name: '实验幼儿园', contact: '王老师(13800000002)' },
@@ -158,15 +159,70 @@
       { name: '山西农品供应链', code: '91140100MA0K000001', contact: '王经理(13800000011)' },
       { name: '鲜选食品有限公司', code: '91140100MA0K000002', contact: '李经理(13800000012)' },
       { name: '晋味粮油商行', code: '91140100MA0K000003', contact: '赵经理(13800000013)' },
-      { name: '校园优选配送中心', code: '91140100MA0K000004', contact: '刘经理(13800000014)' }
+      { name: '校园优选配送中心', code: '91140100MA0K000004', contact: '刘经理(13800000014)' },
+      { name: '南皮供应商01', code: '91130927MA0A000004', contact: '默认(13659999999)' }
     ]
   };
 
+  const recipientKinds = ['学校', '供应商'];
+
+  function getSavedRecipientTargets(recipient) {
+    const targets = Array.isArray(recipient?.targetNames)
+      ? recipient.targetNames
+      : Array.isArray(recipient?.targets) ? recipient.targets : [];
+    return targets.map((item) => typeof item === 'string' ? item : item?.name).filter(Boolean);
+  }
+
+  function renderRecipientTargetPanel(kind) {
+    const options = recipientDirectory[kind] || [];
+    const selected = new Set(state.form.recipientTargets?.[kind] || []);
+    const allSelected = options.length > 0 && options.every((item) => selected.has(item.name));
+    const panelOptions = options.length
+      ? options.map((item) => `<label class="notice-recipient-target-option"><input type="checkbox" data-recipient-target="${esc(kind)}" data-target-name="${esc(item.name)}" ${selected.has(item.name) ? 'checked' : ''}><span>${esc(item.name)}</span></label>`).join('')
+      : '<span class="notice-recipient-target-empty">暂无可选对象</span>';
+    return `<div class="notice-recipient-target-panel ${state.form.recipients.includes(kind) ? '' : 'is-hidden'}" data-recipient-target-panel="${esc(kind)}"><div class="notice-recipient-target-heading"><span>${esc(kind)}选择</span><label class="notice-recipient-target-select-all"><input type="checkbox" data-recipient-target-all="${esc(kind)}" ${allSelected ? 'checked' : ''}>全选</label></div><div class="notice-recipient-target-options">${panelOptions}</div></div>`;
+  }
+
+  function syncRecipientTargetSelectAll(kind) {
+    const options = [...root.querySelectorAll(`[data-recipient-target="${kind}"]`)];
+    const selectAll = root.querySelector(`[data-recipient-target-all="${kind}"]`);
+    if (!selectAll) return;
+    const selectedCount = options.filter((option) => option.checked).length;
+    selectAll.checked = options.length > 0 && selectedCount === options.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < options.length;
+    selectAll.disabled = options.length === 0;
+  }
+
+  function syncRecipientTargetPanels() {
+    const activeKinds = new Set(state.form.recipients);
+    root.querySelectorAll('[data-recipient-target-panel]').forEach((panel) => {
+      panel.classList.toggle('is-hidden', !activeKinds.has(panel.dataset.recipientTargetPanel));
+    });
+  }
+
+  function syncRecipientTargetState() {
+    state.form.recipientTargets = state.form.recipientTargets || {};
+    recipientKinds.forEach((kind) => {
+      state.form.recipientTargets[kind] = [...root.querySelectorAll(`[data-recipient-target="${kind}"]:checked`)]
+        .map((input) => input.dataset.targetName);
+      syncRecipientTargetSelectAll(kind);
+    });
+  }
+
   function buildRecipientRecords(row, kind) {
     const summary = row.recipients.find((item) => item.name === kind) || { read: 0, total: 0 };
-    const total = Math.max(0, Number(summary.total) || 0);
+    const savedNames = getSavedRecipientTargets(summary);
+    const total = savedNames.length || Math.max(0, Number(summary.total) || 0);
     const read = Math.min(total, Math.max(0, Number(summary.read) || 0));
     const directory = recipientDirectory[kind] || [];
+    if (savedNames.length) {
+      return savedNames.map((name, index) => {
+        const source = directory.find((item) => item.name === name) || (kind === '学校'
+          ? { name, contact: '--' }
+          : { name, code: '--', contact: '--' });
+        return { ...source, status: index < read ? '已读' : '未读' };
+      });
+    }
     return Array.from({ length: total }, (_, index) => {
       const source = directory[index] || (kind === '学校'
         ? { name: `接收学校${index + 1}`, contact: '--' }
@@ -384,11 +440,12 @@
     state.view = 'form';
     const checkedSchools = state.form.recipients.includes('学校');
     const checkedSuppliers = state.form.recipients.includes('供应商');
+    const recipientTargetPanels = recipientKinds.map(renderRecipientTargetPanel).join('');
     root.innerHTML = `<section class="page-card notice-page notice-form-page" id="noticeFormPage">
       <div class="notice-form-heading"><button class="notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><h2>添加公告</h2></div>
       <div class="notice-form-body">
         <div class="notice-form-field required"><label for="noticeFormTitle">公告标题</label><input id="noticeFormTitle" data-form="title" placeholder="请输入" value="${esc(state.form.title)}"></div>
-        <div class="notice-form-field required"><label>接收对象</label><div class="notice-check-group"><label><input type="checkbox" data-recipient="学校" ${checkedSchools ? 'checked' : ''}>学校</label><label><input type="checkbox" data-recipient="供应商" ${checkedSuppliers ? 'checked' : ''}>供应商</label></div></div>
+        <div class="notice-form-field required notice-recipient-field"><label>接收对象</label><div class="notice-recipient-selector"><div class="notice-check-group"><label><input type="checkbox" data-recipient-kind="学校" ${checkedSchools ? 'checked' : ''}>学校</label><label><input type="checkbox" data-recipient-kind="供应商" ${checkedSuppliers ? 'checked' : ''}>供应商</label></div><div class="notice-recipient-targets">${recipientTargetPanels}</div></div></div>
         <div class="notice-form-field required"><label>强制弹框</label><div class="notice-radio-group"><label><input type="radio" name="notice-force" value="是" data-force-radio ${state.form.force === '是' ? 'checked' : ''}>是</label><label><input type="radio" name="notice-force" value="否" data-force-radio ${state.form.force !== '是' ? 'checked' : ''}>否</label></div></div>
         <p class="notice-help">若开启强制弹框，接收对象在每次登录系统时，会强制以弹框形式将公告展示给接收对象，直至失效时间。</p>
         <div class="notice-form-field notice-date-field notice-expire-field ${state.form.force === '是' ? '' : 'is-hidden'}" data-expiry-field><label for="noticeExpiry">失效时间</label><div class="notice-date-input-wrap notice-form-date"><input id="noticeExpiry" type="text" data-form="expire" placeholder="请选择日期" readonly value="${esc(state.form.expire)}">${calendarIcon}</div></div>
@@ -406,6 +463,8 @@
     const expiry = root.querySelector('[data-form="expire"]');
     if (state.form.force === '是') createDatePicker(expiry, 'form');
     renderAttachmentList();
+    syncRecipientTargetPanels();
+    recipientKinds.forEach(syncRecipientTargetSelectAll);
   }
 
   function openModal(markup) {
@@ -430,14 +489,17 @@
   function openPreviewModal() {
     syncFormState();
     const body = state.form.content || '<p class="notice-preview-empty">暂无公告内容</p>';
-    const recipients = state.form.recipients.length ? state.form.recipients.join('、') : '未选择';
+    const recipients = state.form.recipients.length
+      ? state.form.recipients.map((kind) => `${kind}（${(state.form.recipientTargets[kind] || []).length}个）`).join('、')
+      : '未选择';
     openModal(`<div class="notice-modal-mask" data-modal="preview" role="dialog" aria-modal="true"><section class="notice-modal notice-preview-modal"><header><h3>预览</h3><button type="button" data-action="close-modal" aria-label="关闭">×</button></header><div class="notice-preview-body"><h2>${esc(state.form.title || '未填写标题')}</h2><div class="notice-preview-meta">接收对象：${esc(recipients)}${state.form.force === '是' ? `　失效时间：${esc(state.form.expire || '--')}` : ''}</div><article>${body}</article>${state.form.attachments.length ? `<div class="notice-preview-attachments"><strong>附件：</strong>${state.form.attachments.map((file) => `<span>${esc(file.name)}</span>`).join('')}</div>` : ''}</div><footer><button class="btn btn-primary btn-sm" type="button" data-action="close-modal">关闭</button></footer></section></div>`);
   }
 
   function syncFormState() {
     if (state.view !== 'form') return;
     state.form.title = root.querySelector('[data-form="title"]')?.value?.trim() || '';
-    state.form.recipients = [...root.querySelectorAll('[data-recipient]:checked')].map((input) => input.dataset.recipient);
+    state.form.recipients = [...root.querySelectorAll('[data-recipient-kind]:checked')].map((input) => input.dataset.recipientKind);
+    syncRecipientTargetState();
     state.form.force = root.querySelector('[data-force-radio]:checked')?.value || '否';
     state.form.expire = root.querySelector('[data-form="expire"]')?.value || '';
     state.form.content = root.querySelector('[data-editor="content"]')?.innerHTML || '';
@@ -448,6 +510,8 @@
     const contentText = root.querySelector('[data-editor="content"]')?.innerText?.trim() || '';
     if (!state.form.title) { showToast('请填写公告标题', true); return; }
     if (!state.form.recipients.length) { showToast('请选择至少一个接收对象', true); return; }
+    const missingTargetKind = state.form.recipients.find((kind) => !(state.form.recipientTargets[kind] || []).length);
+    if (missingTargetKind) { showToast(`请选择${missingTargetKind}接收对象`, true); return; }
     if (!contentText) { showToast('请填写公告内容', true); return; }
     if (state.form.force === '是' && !state.form.expire) { showToast('请选择失效时间', true); return; }
     const now = new Date();
@@ -455,7 +519,10 @@
     const row = {
       id: `NOTICE-${Date.now()}`,
       title: state.form.title,
-      recipients: state.form.recipients.map((name) => ({ name, read: 0, total: 1 })),
+      recipients: state.form.recipients.map((name) => {
+        const targetNames = [...new Set(state.form.recipientTargets[name] || [])];
+        return { name, read: 0, total: targetNames.length, targetNames };
+      }),
       force: state.form.force,
       expire: state.form.force === '是' ? state.form.expire : '',
       time,
@@ -465,6 +532,7 @@
       attachments: state.form.attachments.map((file) => ({ ...file }))
     };
     state.rows.unshift(row);
+    window.NoticeService?.save(state.rows);
     state.selected.clear();
     state.filters = { title: '', startDate: '', endDate: '', status: '' };
     state.statusDraft = '';
@@ -504,8 +572,24 @@
       state.page = 1;
       renderListRows();
     }
-    if (event.target.matches('[data-recipient]')) {
-      state.form.recipients = [...root.querySelectorAll('[data-recipient]:checked')].map((input) => input.dataset.recipient);
+    if (event.target.matches('[data-recipient-kind]')) {
+      state.form.recipients = [...root.querySelectorAll('[data-recipient-kind]:checked')].map((input) => input.dataset.recipientKind);
+      syncRecipientTargetPanels();
+    }
+    if (event.target.matches('[data-recipient-target]')) {
+      const kind = event.target.dataset.recipientTarget;
+      const selected = new Set(state.form.recipientTargets?.[kind] || []);
+      if (event.target.checked) selected.add(event.target.dataset.targetName);
+      else selected.delete(event.target.dataset.targetName);
+      state.form.recipientTargets[kind] = [...selected];
+      syncRecipientTargetSelectAll(kind);
+    }
+    if (event.target.matches('[data-recipient-target-all]')) {
+      const kind = event.target.dataset.recipientTargetAll;
+      const options = [...root.querySelectorAll(`[data-recipient-target="${kind}"]`)];
+      options.forEach((option) => { option.checked = event.target.checked; });
+      state.form.recipientTargets[kind] = event.target.checked ? options.map((option) => option.dataset.targetName) : [];
+      syncRecipientTargetSelectAll(kind);
     }
     if (event.target.matches('[data-force-radio]')) {
       state.form.force = event.target.value;
@@ -531,7 +615,7 @@
     const actionEl = event.target.closest('[data-action]');
     if (!actionEl) return;
     const action = actionEl.dataset.action;
-    if (action === 'add-notice') { state.form = { title: '', recipients: [], force: '否', expire: '', content: '', attachments: [] }; renderFormView(); return; }
+    if (action === 'add-notice') { state.form = { title: '', recipients: [], recipientTargets: { 学校: [], 供应商: [] }, force: '否', expire: '', content: '', attachments: [] }; renderFormView(); return; }
     if (action === 'back') { renderListView(); return; }
     if (action === 'recipient-tab') { const row = selectedRow(state.recipientDetail.rowId); if (row) renderRecipientDetailView(row, actionEl.dataset.recipient || '学校'); return; }
     if (action === 'recipient-query') {
@@ -595,10 +679,10 @@
     if (action === 'show-recipient') { const row = selectedRow(actionEl.dataset.id); if (row) renderRecipientDetailView(row, actionEl.dataset.recipient || '学校'); return; }
     if (action === 'force-row') { const row = selectedRow(actionEl.dataset.id); if (row) openForceModal(row); return; }
     if (action === 'retract-row') { const row = selectedRow(actionEl.dataset.id); if (row?.status === '已发布') openRetractModal(row); return; }
-    if (action === 'confirm-retract') { const row = selectedRow(actionEl.dataset.id); if (row) row.status = '已撤回'; closeModal(actionEl.closest('[data-modal]')); renderListRows(); showToast('公告已撤回'); return; }
-    if (action === 'edit-row') { const row = selectedRow(actionEl.dataset.id); if (row) { showToast('已进入公告编辑'); state.form.title = row.title; state.form.recipients = row.recipients.map((item) => item.name); state.form.force = row.force; state.form.expire = row.expire; state.form.content = row.content || ''; state.form.attachments = Array.isArray(row.attachments) ? row.attachments.map((file) => ({ ...file })) : []; renderFormView(); } return; }
-    if (action === 'delete-row') { const row = selectedRow(actionEl.dataset.id); if (row?.status !== '已发布') { state.rows = state.rows.filter((item) => item.id !== row.id); renderListRows(); showToast('公告已删除'); } return; }
-    if (action === 'batch-delete') { if (!state.selected.size) { showToast('请先选择公告', true); return; } state.rows = state.rows.filter((row) => !state.selected.has(row.id)); state.selected.clear(); renderListRows(); showToast('已删除选中的公告'); return; }
+    if (action === 'confirm-retract') { const row = selectedRow(actionEl.dataset.id); if (row) { row.status = '已撤回'; window.NoticeService?.save(state.rows); } closeModal(actionEl.closest('[data-modal]')); renderListRows(); showToast('公告已撤回'); return; }
+    if (action === 'edit-row') { const row = selectedRow(actionEl.dataset.id); if (row) { showToast('已进入公告编辑'); state.form.title = row.title; state.form.recipients = row.recipients.map((item) => item.name); state.form.recipientTargets = { 学校: [], 供应商: [] }; row.recipients.forEach((item) => { if (recipientKinds.includes(item.name)) state.form.recipientTargets[item.name] = getSavedRecipientTargets(item); }); state.form.force = row.force; state.form.expire = row.expire; state.form.content = row.content || ''; state.form.attachments = Array.isArray(row.attachments) ? row.attachments.map((file) => ({ ...file })) : []; renderFormView(); } return; }
+    if (action === 'delete-row') { const row = selectedRow(actionEl.dataset.id); if (row?.status !== '已发布') { state.rows = state.rows.filter((item) => item.id !== row.id); window.NoticeService?.save(state.rows); renderListRows(); showToast('公告已删除'); } return; }
+    if (action === 'batch-delete') { if (!state.selected.size) { showToast('请先选择公告', true); return; } state.rows = state.rows.filter((row) => !state.selected.has(row.id)); window.NoticeService?.save(state.rows); state.selected.clear(); renderListRows(); showToast('已删除选中的公告'); return; }
     if (action === 'upload-attachment') { root.querySelector('[data-attachment-input]')?.click(); return; }
     if (action === 'remove-attachment') { state.form.attachments.splice(Number(actionEl.dataset.attachmentIndex), 1); renderAttachmentList(); return; }
     if (action === 'preview-form') { openPreviewModal(); return; }

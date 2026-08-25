@@ -481,14 +481,14 @@
   function renderRecords(records, pendingDeleteId = '') {
     const activeRecords = getActiveRecords(records);
     if (!activeRecords.length) return '';
-    return activeRecords
-      .slice()
-      .reverse()
-      .map((record) => {
+    const displayRecords = activeRecords.slice().reverse();
+    return displayRecords
+      .map((record, displayIndex) => {
         const pendingDelete = pendingDeleteId === record.id;
+        const displaySequence = displayRecords.length - displayIndex;
         return `
       <article class="project-iteration-record">
-        <div class="project-iteration-record-marker" aria-hidden="true">${record.sequence}</div>
+        <div class="project-iteration-record-marker" aria-hidden="true">${displaySequence}</div>
         <div class="project-iteration-record-content" data-project-iteration-record-content>
           <div class="project-iteration-record-heading" data-project-iteration-record-heading>
             <strong>${escapeHtml(record.name)}</strong>

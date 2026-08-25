@@ -4,7 +4,47 @@
     '主食（米面粉点心类）', '食油', '果蔬', '肉（豆）制品',
     '水产品', '蛋奶类', '调料', '其他材料'
   ];
+  const segmentScopeVersion = '20260825-segment-supplier-v1';
   const clone = (value) => JSON.parse(JSON.stringify(value));
+
+  function normalizeSegmentCategory(value) {
+    return String(value || '').trim().replace(/\s+/g, '');
+  }
+
+  // 父级分类覆盖其下级分类，因此父级/子级也不能被分配到不同标段。
+  function segmentCategoryOverlaps(left, right) {
+    const first = normalizeSegmentCategory(left);
+    const second = normalizeSegmentCategory(right);
+    return Boolean(first && second && (first === second || first.startsWith(`${second}-`) || second.startsWith(`${first}-`)));
+  }
+
+  function normalizeSegmentCategories(values) {
+    return [...new Set((Array.isArray(values) ? values : []).map(normalizeSegmentCategory).filter(Boolean))];
+  }
+
+  function validationError(message, code) {
+    const error = new Error(message);
+    error.code = code;
+    return error;
+  }
+
+  function validateSegmentDraft(state, draft, id = '') {
+    const name = String(draft?.name || '').trim();
+    const categoriesValue = normalizeSegmentCategories(draft?.categories);
+    if (!name) throw validationError('标段名称不能为空', 'SEGMENT_NAME_REQUIRED');
+    if (!categoriesValue.length) throw validationError('商品分类不能为空', 'SEGMENT_CATEGORIES_REQUIRED');
+    if ((state.segments || []).some((item) => item.id !== id && String(item.name || '').trim() === name)) {
+      throw validationError('标段名称不能重复', 'SEGMENT_NAME_DUPLICATE');
+    }
+    const conflict = (state.segments || [])
+      .filter((item) => item.id !== id)
+      .flatMap((item) => normalizeSegmentCategories(item.categories).map((category) => ({ category, segment: item.name })))
+      .find(({ category }) => categoriesValue.some((selected) => segmentCategoryOverlaps(selected, category)));
+    if (conflict) {
+      throw validationError(`商品分类已关联标段“${conflict.segment}”，不能重复分配`, 'SEGMENT_CATEGORY_DUPLICATE');
+    }
+    return { ...clone(draft), name, categories: categoriesValue };
+  }
 
   function seedProducts() {
     const names = [
@@ -65,6 +105,7 @@
       {
         id: 'SUP-004', name: '南皮供应商01', username: 'nanpi_supplier01', contact: '默认', phone: '13659999999',
         cooperationStart: '', cooperationEnd: '', status: '启用', licenseCode: '91130927MA0A000004', address: '南皮县城区',
+        segmentIds: ['SEG-001'], segmentNames: ['演示标段'], demoVersion: 2,
         jointVenture: false, hideCustomerPrice: false, qualifications: []
       },
       {
@@ -137,7 +178,7 @@
         id: 'BID-004', projectNo: 'XM0100019', bidNo: 'JJ01000023', name: '学校食材公开竞价',
         supplyStart: '2026-08-20', supplyEnd: '2026-09-20', demandDeadline: '2026-08-18 09:30:00',
         quoteStart: '2026-08-18 09:35:00', quoteEnd: '2026-08-18 10:00:00', openTime: '2026-08-18 10:05:00',
-        supplierIds: ['SUP-002', 'SUP-003'], supplierNames: ['七鲜', '南皮供应商02'], school: '南皮县第四中学', segmentId: 'SEG-001', segmentName: '演示标段',
+        supplierIds: ['SUP-002', 'SUP-003', 'SUP-004'], supplierNames: ['七鲜', '南皮供应商02', '南皮供应商01'], school: '南皮县第四中学', segmentId: 'SEG-001', segmentName: '演示标段',
         categories: ['果蔬（三级）', '肉制品（三级）'], varietyCount: 12, quoteSupplierCount: 2, winnerSupplier: '--',
         status: '需求提报中', encryption: true, winnerLimit: 0, openPlace: '线上开标', ruleId: 'RULE-002', itemQuantity: ''
       },
@@ -203,6 +244,7 @@
         { id: 'WASTE-001', projectNo: 'XM0100008', bidNo: 'JJ01000009', name: '姜测试003', supplyPeriod: '2026-07-16 ~ 2026-08-16', segment: '姜标段2', categories: '调料（三级），干货（三级）', varieties: 2, suppliers: 2, wastedSupplier: '南皮供应商02', reason: '434放' },
         { id: 'WASTE-002', projectNo: 'XM0100015', bidNo: 'JJ01000019', name: '演示数据2（勿动）', supplyPeriod: '2026-07-16 ~ 2026-08-16', segment: '演示标段', categories: '冻品（三级），水产品（三级）', varieties: 2, suppliers: 2, wastedSupplier: '南皮供应商01', reason: '飞镖原因' }
       ],
+      segmentScopeVersion,
       relationships: [
         { id: 'REL-001', supplierId: 'SUP-004', supplierName: '南皮供应商01', projectNo: 'XM0100017', bidNo: 'JJ01000021', bidName: '模拟演示05', segment: '姜0004', supplyStart: '2026-08-16', supplyEnd: '2026-08-23', startSupplyAt: '2026-08-16', executionPrice: '中标价', changeLog: '--' },
         { id: 'REL-002', supplierId: 'SUP-003', supplierName: '南皮供应商02', projectNo: 'XM0100014', bidNo: 'JJ01000018', bidName: '演示数据', segment: '姜0004', supplyStart: '2026-08-27', supplyEnd: '2026-08-27', startSupplyAt: '2026-08-27', executionPrice: '中标价', changeLog: '--' },
@@ -217,6 +259,7 @@
       if (raw) {
         const state = JSON.parse(raw);
         if (!Array.isArray(state.suppliers)) state.suppliers = [];
+        if (!Array.isArray(state.segments)) state.segments = seedState().segments;
         if (!state.suppliers.some((item) => item.id === 'SUP-005')) {
           state.suppliers.push(seedState().suppliers.find((item) => item.id === 'SUP-005'));
         }
@@ -227,6 +270,21 @@
           if (!Array.isArray(supplier.segmentIds)) supplier.segmentIds = [...(seedSupplier?.segmentIds || [])];
           if (!Array.isArray(supplier.segmentNames)) supplier.segmentNames = supplier.segmentIds.map((segmentId) => segmentMap.get(segmentId)).filter(Boolean);
         });
+        if (state.segmentScopeVersion !== segmentScopeVersion) {
+          const demoSupplier = state.suppliers.find((item) => item.id === 'SUP-004');
+          const seedSupplier = seedSuppliers.find((item) => item.id === 'SUP-004');
+          if (demoSupplier && (!Array.isArray(demoSupplier.segmentIds) || !demoSupplier.segmentIds.length)) {
+            demoSupplier.segmentIds = [...(seedSupplier?.segmentIds || [])];
+            demoSupplier.segmentNames = demoSupplier.segmentIds.map((segmentId) => segmentMap.get(segmentId)).filter(Boolean);
+          }
+          const demoBid = (state.bids || []).find((item) => item.segmentId === 'SEG-001');
+          if (demoBid && !demoBid.supplierIds?.includes('SUP-004')) {
+            demoBid.supplierIds = [...(demoBid.supplierIds || []), 'SUP-004'];
+            demoBid.supplierNames = [...(demoBid.supplierNames || []), demoSupplier?.name || '南皮供应商01'];
+            demoBid.quoteSupplierCount = demoBid.supplierIds.length;
+          }
+          state.segmentScopeVersion = segmentScopeVersion;
+        }
         const pendingDemo = state.suppliers.find((item) => item.id === 'SUP-005');
         if (pendingDemo?.auditStatus === '待审核') pendingDemo.username = '';
         writeState(state);
@@ -235,7 +293,9 @@
     } catch (error) {
       // file:// 页面可能禁用 localStorage，继续使用内存演示数据即可。
     }
-    return seedState();
+    const seeded = seedState();
+    seeded.segmentScopeVersion = segmentScopeVersion;
+    return seeded;
   }
 
   function writeState(state) {
@@ -265,6 +325,7 @@
       return transact((state) => {
         const records = state[resource] || (state[resource] = []);
         const item = { ...clone(value), id: value.id || nextId(prefix || resource.slice(0, 3).toUpperCase(), records) };
+        if (resource === 'segments') Object.assign(item, validateSegmentDraft(state, item, item.id));
         records.unshift(item);
         return item;
       });
@@ -273,7 +334,9 @@
       return transact((state) => {
         const item = (state[resource] || []).find((record) => record.id === id);
         if (!item) return null;
-        Object.assign(item, clone(patch));
+        const next = { ...item, ...clone(patch) };
+        if (resource === 'segments') Object.assign(item, validateSegmentDraft(state, next, id));
+        else Object.assign(item, clone(patch));
         return item;
       });
     },
@@ -291,8 +354,20 @@
     },
     reset() {
       const state = seedState();
+      state.segmentScopeVersion = segmentScopeVersion;
       writeState(state);
       return clone(state);
+    },
+    validateSegment(value, id = '') {
+      return validateSegmentDraft(readState(), value, id);
+    },
+    segmentCategoryOverlaps,
+    getSuppliersForSegment(segmentId, { enabledOnly = true } = {}) {
+      return readState().suppliers.filter((supplier) => (
+        Array.isArray(supplier.segmentIds)
+        && supplier.segmentIds.includes(segmentId)
+        && (!enabledOnly || supplier.status === '启用')
+      ));
     }
   };
 })();

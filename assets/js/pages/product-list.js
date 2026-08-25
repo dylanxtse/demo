@@ -34,10 +34,10 @@
                   <label class="filter-label" for="statusFilter">上架状态</label>
                   <select class="filter-select" id="statusFilter"><option>全部</option><option>已上架</option><option>已下架</option></select>
                 </div>
-                <div class="filter-group">
+                ${isSupplierProductPage ? '' : `<div class="filter-group">
                   <label class="filter-label" for="purchaseTypeFilter">采购类型</label>
                   <select class="filter-select" id="purchaseTypeFilter"><option>全部</option><option>供应商送货</option><option>市场自采</option><option>企业自加工</option></select>
-                </div>
+                </div>`}
                 <div class="filter-group">
                   <label class="filter-label" for="sourceFilter">商品来源</label>
                   <select class="filter-select" id="sourceFilter"><option>全部</option><option>平台添加</option><option>供应商添加</option></select>
@@ -273,7 +273,7 @@
     const nameOrCode = value('productNameFilter').toLowerCase();
     const brand = value('brandFilter').toLowerCase();
     const status = value('statusFilter');
-    const purchaseType = value('purchaseTypeFilter');
+    const purchaseType = isSupplierProductPage ? '全部' : value('purchaseTypeFilter');
     const source = value('sourceFilter');
     const netVegetable = isSupplierProductPage ? '全部' : value('netVegetableFilter');
     const result = state.products.filter((product) => (
@@ -292,7 +292,8 @@
 
   function resetFilters() {
     ['productNameFilter', 'brandFilter'].forEach((id) => { document.getElementById(id).value = ''; });
-    ['statusFilter', 'purchaseTypeFilter', 'sourceFilter'].forEach((id) => { document.getElementById(id).value = '全部'; });
+    ['statusFilter', 'sourceFilter'].forEach((id) => { document.getElementById(id).value = '全部'; });
+    if (!isSupplierProductPage) document.getElementById('purchaseTypeFilter').value = '全部';
     if (!isSupplierProductPage) document.getElementById('netVegetableFilter').value = '全部';
     filterProducts(true);
   }

@@ -244,6 +244,17 @@
       return definitionById.get(placeholder?.dataset.annotationBase) || null;
     };
 
+    const syncAnnotationMarkerState = (anchor, definition = getDefinitionForAnchor(anchor)) => {
+      if (!anchor) return;
+      const muted = definition?.muted === true;
+      anchor.classList.toggle('is-muted', muted);
+      const marker = anchor.querySelector('[data-annotation-toggle]');
+      if (!marker) return;
+      marker.classList.toggle('is-muted', muted);
+      const number = definition?.number || marker.textContent || '1';
+      marker.setAttribute('aria-label', `${muted ? '查看历史迭代标注' : '查看标注'}${number}`);
+    };
+
     const getAnnotationScope = (anchor) => {
       const placeholder = findPlaceholder(anchor?.dataset.annotationOverlayId);
       return placeholder?.dataset.annotationScope
@@ -691,6 +702,7 @@
       anchor.dataset.annotationEntryPosition = definition.entryMarkerPosition || '';
       anchor.dataset.annotationScope = scope;
       anchor.innerHTML = `<button class="record-annotation-marker" type="button" data-annotation-toggle="${escapeHtml(id)}" aria-expanded="false" aria-label="查看标注${number}">${number}</button>`;
+      syncAnnotationMarkerState(anchor, definition);
 
       const popover = document.createElement('div');
       popover.className = 'record-annotation-popover';
@@ -729,6 +741,7 @@
           marker.textContent = number;
           marker.setAttribute('aria-label', `查看标注${number}`);
         }
+        syncAnnotationMarkerState(anchor, next);
         const popover = anchor?._recordAnnotationPopover;
         if (popover) {
           popover._recordAnnotationDefinition = next;
@@ -740,7 +753,19 @@
     const renderPopoverEditor = (definition) => {
       const title = escapeHtml(definition.title || '');
       const body = normaliseItems(definition).map((item, index) => `${index + 1}. ${item}`).join('\n') || '1. ';
-      return `<div class="record-annotation-edit-header"><strong class="record-annotation-popover-title record-annotation-edit-handle">编辑标注</strong><span class="record-annotation-delete-hint" data-annotation-delete-hint hidden>再次点击 × 删除标注</span><button class="record-annotation-delete" type="button" data-annotation-delete aria-label="删除标注" title="删除标注">${deleteIcon}</button></div><label class="record-annotation-draft-field">标题<input class="record-annotation-draft-title" type="text" value="${title}"></label><label class="record-annotation-draft-field">正文<textarea class="record-annotation-draft-content" rows="5">${escapeHtml(body)}</textarea></label><div class="record-annotation-draft-error" hidden></div><div class="record-annotation-draft-actions"><button class="btn btn-primary btn-sm" type="button" data-annotation-save>保存</button><button class="btn btn-sm" type="button" data-annotation-cancel>取消</button></div>`;
+      const muted = definition.muted === true;
+      return `<div class="record-annotation-edit-header"><strong class="record-annotation-popover-title record-annotation-edit-handle">编辑标注</strong><span class="record-annotation-delete-hint" data-annotation-delete-hint hidden>再次点击 × 删除标注</span><button class="record-annotation-muted-toggle${muted ? ' is-muted' : ''}" type="button" data-annotation-toggle-muted aria-pressed="${muted}" aria-label="${muted ? '取消标记为历史迭代标注' : '标记为历史迭代标注'}" title="${muted ? '取消置灰' : '置灰'}">${muted ? '取消置灰' : '置灰'}</button><button class="record-annotation-delete" type="button" data-annotation-delete aria-label="删除标注" title="删除标注">${deleteIcon}</button></div><label class="record-annotation-draft-field">标题<input class="record-annotation-draft-title" type="text" value="${title}"></label><label class="record-annotation-draft-field">正文<textarea class="record-annotation-draft-content" rows="5">${escapeHtml(body)}</textarea></label><div class="record-annotation-draft-error" hidden></div><div class="record-annotation-draft-actions"><button class="btn btn-primary btn-sm" type="button" data-annotation-save>保存</button><button class="btn btn-sm" type="button" data-annotation-cancel>取消</button></div>`;
+    };
+
+    const syncAnnotationMutedToggle = (popover, definition) => {
+      const button = popover?.querySelector('[data-annotation-toggle-muted]');
+      if (!button) return;
+      const muted = definition?.muted === true;
+      button.classList.toggle('is-muted', muted);
+      button.setAttribute('aria-pressed', String(muted));
+      button.setAttribute('aria-label', muted ? '取消标记为历史迭代标注' : '标记为历史迭代标注');
+      button.title = muted ? '取消置灰' : '置灰';
+      button.textContent = muted ? '取消置灰' : '置灰';
     };
 
     const setAnnotationError = (anchor, message) => {
@@ -831,9 +856,11 @@
         try {
           const saved = await persistDefinition(next);
           const savedDefinition = { ...next, ...(saved || {}) };
+          if (Object.prototype.hasOwnProperty.call(next, 'muted')) savedDefinition.muted = next.muted === true;
           definitionById.set(savedDefinition.id, savedDefinition);
           notifyChange('update', savedDefinition);
           popover._recordAnnotationDefinition = savedDefinition;
+          syncAnnotationMarkerState(anchor, savedDefinition);
           const savedPopoverPosition = readPopoverPosition(popover);
           // 正文保存会携带当前最新位置，覆盖此前可能失败的单独位置写入。
           anchor._recordAnnotationPositionPromise = Promise.resolve();
@@ -859,6 +886,36 @@
       })();
       popover._recordAnnotationSavePromise = savePromise;
       return savePromise;
+    };
+
+    const toggleAnnotationMuted = async (anchor) => {
+      if (readOnly) return false;
+      const definition = getDefinitionForAnchor(anchor);
+      const popover = anchor?._recordAnnotationPopover;
+      const button = popover?.querySelector('[data-annotation-toggle-muted]');
+      if (!definition || !popover || !button || popover._recordAnnotationSaving || popover._recordAnnotationDeleting) return false;
+      const next = { ...definition, muted: definition.muted !== true };
+      button.disabled = true;
+      button.textContent = '保存中...';
+      setAnnotationError(anchor, '');
+      try {
+        const saved = await persistDefinition(next);
+        const savedDefinition = { ...next, ...(saved || {}), muted: next.muted };
+        definitionById.set(savedDefinition.id, savedDefinition);
+        popover._recordAnnotationDefinition = savedDefinition;
+        syncAnnotationMarkerState(anchor, savedDefinition);
+        syncAnnotationMutedToggle(popover, savedDefinition);
+        notifyChange('update', savedDefinition);
+        return true;
+      } catch (error) {
+        setAnnotationError(anchor, '无法保存标注状态，请检查项目代码保存服务');
+        return false;
+      } finally {
+        if (button.isConnected) {
+          button.disabled = false;
+          syncAnnotationMutedToggle(popover, getDefinitionForAnchor(anchor));
+        }
+      }
     };
 
     const deleteAnnotation = async (anchor) => {
@@ -953,7 +1010,10 @@
         const definition = definitionById.get(placeholder.dataset.annotationBase);
         if (!id || !definition) return;
         activeIds.add(id);
-        if (anchors.has(id)) return;
+        if (anchors.has(id)) {
+          syncAnnotationMarkerState(anchors.get(id), definition);
+          return;
+        }
         const annotation = createAnnotation(definition, placeholder);
         anchors.set(id, annotation.anchor);
         overlay.appendChild(annotation.anchor);
@@ -1298,6 +1358,14 @@
         const popover = annotationDelete.closest('.record-annotation-popover');
         const anchor = anchors.get(popover?.dataset.annotationPopover);
         if (anchor) deleteAnnotation(anchor);
+        event.stopPropagation();
+        return;
+      }
+      const annotationMutedToggle = event.target.closest?.('[data-annotation-toggle-muted]');
+      if (annotationMutedToggle) {
+        const popover = annotationMutedToggle.closest('.record-annotation-popover');
+        const anchor = anchors.get(popover?.dataset.annotationPopover);
+        if (anchor) toggleAnnotationMuted(anchor);
         event.stopPropagation();
         return;
       }

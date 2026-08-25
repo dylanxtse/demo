@@ -363,7 +363,7 @@
   min-height: 32px;
   align-items: center;
   gap: 8px;
-  padding-right: 40px;
+  padding-right: 94px;
 }
 
 .record-annotation-edit-header .record-annotation-popover-title {
@@ -385,6 +385,37 @@
   background: transparent;
   color: var(--annotation-accent);
   cursor: pointer;
+}
+
+.record-annotation-muted-toggle {
+  position: absolute;
+  top: 1px;
+  right: 38px;
+  min-width: 48px;
+  height: 30px;
+  padding: 0 7px;
+  border: 1px solid var(--annotation-border);
+  border-radius: 15px;
+  background: transparent;
+  color: var(--annotation-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.record-annotation-muted-toggle:hover,
+.record-annotation-muted-toggle:focus-visible,
+.record-annotation-muted-toggle.is-muted {
+  border-color: var(--annotation-muted);
+  background: rgba(100, 116, 139, .1);
+  color: var(--annotation-muted);
+  outline: none;
+}
+
+.record-annotation-muted-toggle:disabled {
+  cursor: wait;
+  opacity: .65;
 }
 
 .record-annotation-delete svg {
@@ -518,6 +549,25 @@
   color: var(--annotation-accent-strong);
   outline: none;
   box-shadow: 0 0 0 4px var(--annotation-accent-faint), 0 2px 8px var(--annotation-accent-shadow);
+}
+
+.record-annotation-anchor.is-muted .record-annotation-marker {
+  border-color: var(--annotation-muted);
+  background-color: #f3f5f8;
+  background-image: none;
+  color: var(--annotation-muted);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 2px 8px rgba(100, 116, 139, .14);
+}
+
+.record-annotation-anchor.is-muted .record-annotation-marker:hover,
+.record-annotation-anchor.is-muted .record-annotation-marker:focus-visible,
+.record-annotation-anchor.is-muted.is-open .record-annotation-marker {
+  border-color: var(--annotation-secondary);
+  background-color: #fff;
+  background-image: none;
+  color: var(--annotation-secondary);
+  box-shadow: 0 0 0 4px rgba(100, 116, 139, .1), 0 2px 8px rgba(100, 116, 139, .14);
+  outline: none;
 }
 
 .record-annotation-popover {

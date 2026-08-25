@@ -117,8 +117,140 @@
     sync() {}
   };
 
-  function categoriesOptions(selected = []) {
-    return service.categories.map((category) => `<label class="bidding-category-option"><input type="checkbox" value="${esc(category)}" ${selected.includes(category) ? 'checked' : ''}>${esc(category)}</label>`).join('');
+  const segmentCategoryTree = [
+    { value: '主食（米面粉点心类）', label: '主食（米面粉点心类）', expanded: true, children: [
+      { value: '主食（米面粉点心类）-米（二级）', label: '米（二级）', children: [{ value: '主食（米面粉点心类）-米（二级）-米面（三级）', label: '米面（三级）' }] },
+      { value: '主食（米面粉点心类）-点心（二级）', label: '点心（二级）', children: [{ value: '主食（米面粉点心类）-点心（二级）-点心（三级）', label: '点心（三级）' }] },
+      { value: '主食（米面粉点心类）-主食其他（二级）', label: '主食其他（二级）', children: [
+        { value: '主食（米面粉点心类）-主食其他（二级）-主食其他（三级）', label: '主食其他（三级）' },
+        { value: '主食（米面粉点心类）-主食其他（二级）-主食冻品（三级）', label: '主食冻品（三级）' }
+      ] }
+    ] },
+    { value: '食油', label: '食油', children: [{ value: '食油-食油（二级）', label: '食油（二级）', children: [{ value: '食油-食油（二级）-食油（三级）', label: '食油（三级）' }] }] },
+    { value: '果蔬', label: '果蔬', children: [
+      { value: '果蔬-蔬菜（二级）', label: '蔬菜（二级）', children: [{ value: '果蔬-蔬菜（二级）-蔬菜（三级）', label: '蔬菜（三级）' }] },
+      { value: '果蔬-水果（二级）', label: '水果（二级）', children: [{ value: '果蔬-水果（二级）-水果（三级）', label: '水果（三级）' }] }
+    ] },
+    { value: '肉（豆）制品', label: '肉（豆）制品', children: [
+      { value: '肉（豆）制品-鲜肉（二级）', label: '鲜肉（二级）', children: [{ value: '肉（豆）制品-鲜肉（二级）-鲜肉（三级）', label: '鲜肉（三级）' }] },
+      { value: '肉（豆）制品-豆制品（二级）', label: '豆制品（二级）', children: [{ value: '肉（豆）制品-豆制品（二级）-豆制品（三级）', label: '豆制品（三级）' }] },
+      { value: '肉（豆）制品-冻肉（二级）', label: '冻肉（二级）', children: [{ value: '肉（豆）制品-冻肉（二级）-冻肉（三级）', label: '冻肉（三级）' }] }
+    ] },
+    { value: '水产品', label: '水产品', children: [
+      { value: '水产品-冻品（二级）', label: '冻品（二级）', children: [{ value: '水产品-冻品（二级）-冻品（三级）', label: '冻品（三级）' }] },
+      { value: '水产品-水产品（二级）', label: '水产品（二级）', children: [{ value: '水产品-水产品（二级）-水产品（三级）', label: '水产品（三级）' }] }
+    ] },
+    { value: '蛋奶类', label: '蛋奶类', children: [
+      { value: '蛋奶类-鲜鸡蛋（二级）', label: '鲜鸡蛋（二级）', children: [{ value: '蛋奶类-鲜鸡蛋（二级）-鲜鸡蛋（三级）', label: '鲜鸡蛋（三级）' }] },
+      { value: '蛋奶类-奶制品（二级）', label: '奶制品（二级）', children: [{ value: '蛋奶类-奶制品（二级）-奶制品（三级）', label: '奶制品（三级）' }] }
+    ] },
+    { value: '调料', label: '调料', children: [
+      { value: '调料-调料（二级）', label: '调料（二级）', children: [{ value: '调料-调料（二级）-调料（三级）', label: '调料（三级）' }] },
+      { value: '调料-干货（二级）', label: '干货（二级）', children: [{ value: '调料-干货（二级）-干货（三级）', label: '干货（三级）' }] }
+    ] },
+    { value: '其他材料', label: '其他材料', children: [{ value: '其他材料-其他材料（二级）', label: '其他材料（二级）', children: [{ value: '其他材料-其他材料（二级）-其他材料（三级）', label: '其他材料（三级）' }] }] }
+  ];
+
+  function cloneSegmentCategoryTree() {
+    return JSON.parse(JSON.stringify(segmentCategoryTree));
+  }
+
+  function flattenSegmentCategoryTree(nodes, result = []) {
+    nodes.forEach((node) => {
+      result.push(node);
+      if (node.children) flattenSegmentCategoryTree(node.children, result);
+    });
+    return result;
+  }
+
+  function getSegmentCategoryTree(rows = []) {
+    const tree = cloneSegmentCategoryTree();
+    const known = new Set(flattenSegmentCategoryTree(tree).map((node) => node.value));
+    const configured = [
+      ...service.categories,
+      ...rows.flatMap((row) => Array.isArray(row.categories) ? row.categories : [])
+    ];
+    configured.forEach((value) => {
+      const category = String(value || '').trim();
+      if (!category || known.has(category)) return;
+      const rootName = category.split('-')[0];
+      const parent = tree.find((node) => node.value === rootName);
+      if (parent) {
+        parent.children ||= [];
+        parent.children.push({ value: category, label: category.replace(`${rootName}-`, '') });
+      } else {
+        tree.push({ value: category, label: category });
+      }
+      known.add(category);
+    });
+    return tree;
+  }
+
+  function renderSegmentCategoryNodes(nodes, occupied, selected) {
+    return nodes.map((node) => {
+      const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+      const overlaps = (value) => [...occupied].some((category) => service.segmentCategoryOverlaps?.(value, category) || value === category);
+      const disabled = overlaps(node.value) && !selected.has(node.value);
+      const checked = selected.has(node.value) || disabled;
+      return `<div class="bidding-category-node ${hasChildren ? 'has-children' : ''} ${node.expanded ? 'is-expanded' : ''}">
+        <div class="bidding-category-row">
+          ${hasChildren ? `<button class="bidding-category-toggle" type="button" data-action="toggle-category-node" aria-label="展开或收起${esc(node.label)}" aria-expanded="${Boolean(node.expanded)}">⌄</button>` : '<span class="bidding-category-toggle-placeholder"></span>'}
+          <label class="bidding-category-option ${disabled ? 'is-disabled' : ''}">
+            <input type="checkbox" data-segment-category data-category-group="${hasChildren ? 'true' : 'false'}" value="${esc(node.value)}" data-label="${esc(node.label)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+            <span>${esc(node.label)}</span>
+          </label>
+        </div>
+        ${hasChildren ? `<div class="bidding-category-children">${renderSegmentCategoryNodes(node.children, occupied, selected)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function updateSegmentCategoryPicker(root) {
+    const picker = root.querySelector('#segmentCategorySelect');
+    if (!picker) return;
+    const inputs = all(picker, 'input[data-segment-category]');
+    const enabledInputs = inputs.filter((input) => !input.disabled);
+    const selectedInputs = inputs.filter((input) => input.checked && !input.disabled);
+    const allInput = picker.querySelector('input[data-category-all]');
+    if (allInput) {
+      allInput.checked = enabledInputs.length > 0 && enabledInputs.every((input) => input.checked);
+      allInput.indeterminate = enabledInputs.some((input) => input.checked) && !allInput.checked;
+    }
+    all(picker, '.bidding-category-node.has-children').forEach((node) => {
+      const groupInput = node.querySelector('.bidding-category-row input[data-segment-category]');
+      const childInputs = all(node.querySelector('.bidding-category-children'), 'input[data-segment-category]');
+      const enabledChildren = childInputs.filter((input) => !input.disabled);
+      const checkedChildren = enabledChildren.filter((input) => input.checked);
+      if (groupInput && enabledChildren.length) {
+        groupInput.indeterminate = !groupInput.checked && checkedChildren.length > 0 && checkedChildren.length < enabledChildren.length;
+      }
+    });
+    const valueNode = picker.querySelector('[data-category-value]');
+    const names = selectedInputs.map((input) => input.dataset.label || input.value);
+    if (valueNode) {
+      valueNode.textContent = names.length > 1 ? `${names[0]} 等${names.length}项` : names[0] || '请选择';
+      valueNode.classList.toggle('is-placeholder', !names.length);
+    }
+    picker.querySelector('[data-action="toggle-category-picker"]')?.setAttribute('aria-expanded', picker.classList.contains('open') ? 'true' : 'false');
+  }
+
+  function setSegmentCategoryPickerOpen(root, open) {
+    const picker = root.querySelector('#segmentCategorySelect');
+    const dialog = root.querySelector('#segmentModal .bidding-dialog');
+    picker?.classList.toggle('open', open);
+    dialog?.classList.toggle('segment-category-picker-open', open);
+    updateSegmentCategoryPicker(root);
+  }
+
+  function renderSegmentCategoryPicker(root, row) {
+    const selected = new Set(row?.categories || []);
+    const occupied = new Set(root.__segmentRows
+      .filter((item) => item.id !== row?.id)
+      .flatMap((item) => Array.isArray(item.categories) ? item.categories : []));
+    const tree = getSegmentCategoryTree(root.__segmentRows);
+    const picker = root.querySelector('#segmentCategorySelect');
+    picker.innerHTML = `<button class="bidding-category-trigger" type="button" data-action="toggle-category-picker" aria-expanded="false"><span data-category-value class="is-placeholder">请选择</span><span class="bidding-category-trigger-arrow">⌄</span></button><div class="bidding-category-menu" data-category-menu><label class="bidding-category-option bidding-category-select-all"><span class="bidding-category-toggle-placeholder"></span><input type="checkbox" data-category-all><span>全部</span></label><div class="bidding-category-tree">${renderSegmentCategoryNodes(tree, occupied, selected)}</div></div>`;
+    updateSegmentCategoryPicker(root);
   }
 
   function selectOptions(values, selected = '', placeholder = '请选择') {
@@ -303,21 +435,28 @@
     const segments = service.get('segments');
     const schools = ['南皮县第一中学', '南皮县第二中学', '南皮县第三中学', '南皮县第四中学', '南皮县实验小学'];
     const title = mode === 'edit' ? '编辑竞价' : mode === 'append' ? '追加竞价' : '添加竞价';
-    const supplierSelected = existing?.supplierIds || [];
+    const initialSegmentId = existing?.segmentId || '';
+    const suppliersForSegment = (segmentId) => suppliers.filter((item) => (
+      item.status === '启用' && Array.isArray(item.segmentIds) && item.segmentIds.includes(segmentId)
+    ));
+    const initialEligibleSuppliers = suppliersForSegment(initialSegmentId);
+    const initialSupplierSelected = (existing?.supplierIds || []).filter((supplierId) => initialEligibleSuppliers.some((item) => item.id === supplierId));
+    const renderSupplierOptions = (options, selectedIds, disabled = false) => options.map((item) => `<label class="bidding-select-option ${selectedIds.includes(item.id) ? 'selected' : ''}"><input type="checkbox" value="${esc(item.id)}" data-multi-option data-label="${esc(item.name)}" ${selectedIds.includes(item.id) ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span>${esc(item.name)}</span></label>`).join('');
+    const initialSupplierDisabled = !initialSegmentId || !initialEligibleSuppliers.length || mode === 'append';
     const form = `
       <div class="page-card bidding-form-page" id="bidFormPage">
         <div class="bidding-form-title-row"><button class="btn btn-sm bidding-back-button" type="button" data-action="back"><span class="bidding-back-icon" aria-hidden="true"></span><span>返回</span></button><h2>${title}</h2></div>
         <div class="bidding-form-grid">
-          ${mode === 'append' ? `<div class="bidding-form-field required full-width"><label for="appendProject">选择项目编号</label><select id="appendProject" data-field="appendProject"><option value="">请选择项目编号</option>${bids.map((item) => `<option value="${item.id}">${esc(item.projectNo)} ${esc(item.name)}</option>`).join('')}</select></div>` : ''}
-          <div class="bidding-form-field required"><label for="bidName">竞价名称</label><input id="bidName" data-field="name" placeholder="请输入竞价名称..." value="${inputValue(existing?.name)}"></div>
-          <div class="bidding-form-field required"><label>供货周期</label><div class="bidding-range"><input type="date" data-field="supplyStart" value="${inputValue(toDateInput(existing?.supplyStart))}"><span>至</span><input type="date" data-field="supplyEnd" value="${inputValue(toDateInput(existing?.supplyEnd))}"></div></div>
-          <div class="bidding-form-field required"><label for="demandDeadline">需求截止时间</label><input id="demandDeadline" data-field="demandDeadline" type="datetime-local" value="${inputValue(toDateTimeInput(existing?.demandDeadline))}"></div>
-          <div class="bidding-form-field required"><label for="quoteStart">开始报价时间</label><input id="quoteStart" data-field="quoteStart" type="datetime-local" value="${inputValue(toDateTimeInput(existing?.quoteStart))}"></div>
-          <div class="bidding-form-field required"><label for="quoteEnd">截止报价时间</label><input id="quoteEnd" data-field="quoteEnd" type="datetime-local" value="${inputValue(toDateTimeInput(existing?.quoteEnd))}"></div>
-          <div class="bidding-form-field required"><label for="openTime">开标时间</label><input id="openTime" data-field="openTime" type="datetime-local" value="${inputValue(toDateTimeInput(existing?.openTime))}"></div>
-          <div class="bidding-form-field required"><label for="bidSuppliers">参与竞价供应商</label><div class="bidding-control-stack"><div id="bidSuppliers" class="bidding-multi-select ${mode === 'append' ? 'is-disabled' : ''}" data-field="supplierIds" data-multi-select="supplierIds"><button class="bidding-select-trigger" type="button" data-action="toggle-multi-select" aria-expanded="false" ${mode === 'append' ? 'disabled' : ''}><span class="bidding-select-text ${supplierSelected.length ? '' : 'is-placeholder'}" data-multi-value>${esc(suppliers.filter((item) => supplierSelected.includes(item.id)).map((item) => item.name).join('、') || '请选择')}</span><svg class="bidding-select-arrow" viewBox="0 0 12 12" aria-hidden="true"><polyline points="2,4 6,8 10,4"></polyline></svg></button><div class="bidding-select-dropdown">${suppliers.map((item) => `<label class="bidding-select-option ${supplierSelected.includes(item.id) ? 'selected' : ''}"><input type="checkbox" value="${esc(item.id)}" data-multi-option data-label="${esc(item.name)}" ${supplierSelected.includes(item.id) ? 'checked' : ''} ${mode === 'append' ? 'disabled' : ''}><span>${esc(item.name)}</span></label>`).join('')}</div></div><div class="field-hint">可多选供应商</div></div></div>
-          <div class="bidding-form-field required"><label for="bidSchool">学校</label><select id="bidSchool" data-field="school"><option value="">请选择学校</option>${schools.map((school) => `<option value="${esc(school)}" ${school === existing?.school ? 'selected' : ''}>${esc(school)}</option>`).join('')}</select></div>
-          <div class="bidding-form-field required"><label for="bidSegmentSelect">选择标段</label><select id="bidSegmentSelect" data-field="segmentId"><option value="">请选择标段</option>${segments.map((item) => `<option value="${item.id}" ${item.id === existing?.segmentId ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}</select></div>
+          ${mode === 'append' ? `<div class="bidding-form-field required full-width"><label for="appendProject">选择项目编号</label><select class="bidding-form-select is-placeholder" id="appendProject" data-field="appendProject"><option value="">请选择项目编号</option>${bids.map((item) => `<option value="${item.id}">${esc(item.projectNo)} ${esc(item.name)}</option>`).join('')}</select></div>` : ''}
+          <div class="bidding-form-field required"><label for="bidName">竞价名称</label><input id="bidName" data-field="name" placeholder="请输入竞价名称" value="${inputValue(existing?.name)}"></div>
+          <div class="bidding-form-field required"><label>供货周期</label><div class="bidding-range"><input type="date" data-field="supplyStart" placeholder="请选择日期" value="${inputValue(toDateInput(existing?.supplyStart))}"><span>至</span><input type="date" data-field="supplyEnd" placeholder="请选择日期" value="${inputValue(toDateInput(existing?.supplyEnd))}"></div></div>
+          <div class="bidding-form-field required"><label for="demandDeadline">需求截止时间</label><input id="demandDeadline" data-field="demandDeadline" type="datetime-local" placeholder="请选择日期时间" value="${inputValue(toDateTimeInput(existing?.demandDeadline))}"></div>
+          <div class="bidding-form-field required"><label for="quoteStart">开始报价时间</label><input id="quoteStart" data-field="quoteStart" type="datetime-local" placeholder="请选择日期时间" value="${inputValue(toDateTimeInput(existing?.quoteStart))}"></div>
+          <div class="bidding-form-field required"><label for="quoteEnd">截止报价时间</label><input id="quoteEnd" data-field="quoteEnd" type="datetime-local" placeholder="请选择日期时间" value="${inputValue(toDateTimeInput(existing?.quoteEnd))}"></div>
+          <div class="bidding-form-field required"><label for="openTime">开标时间</label><input id="openTime" data-field="openTime" type="datetime-local" placeholder="请选择日期时间" value="${inputValue(toDateTimeInput(existing?.openTime))}"></div>
+          <div class="bidding-form-field required"><label for="bidSegmentSelect">选择标段</label><select class="bidding-form-select is-placeholder" id="bidSegmentSelect" data-field="segmentId"><option value="">请选择标段</option>${segments.filter((item) => item.status === '启用').map((item) => `<option value="${item.id}" ${item.id === existing?.segmentId ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}</select></div>
+          <div class="bidding-form-field required"><label for="bidSuppliers">参与竞价供应商</label><div class="bidding-control-stack"><div id="bidSuppliers" class="bidding-multi-select ${initialSupplierDisabled ? 'is-disabled' : ''}" data-field="supplierIds" data-multi-select="supplierIds"><button class="bidding-select-trigger" type="button" data-action="toggle-multi-select" aria-expanded="false" ${initialSupplierDisabled ? 'disabled' : ''}><span class="bidding-select-text ${initialSupplierSelected.length ? '' : 'is-placeholder'}" data-multi-value>${esc(initialEligibleSuppliers.filter((item) => initialSupplierSelected.includes(item.id)).map((item) => item.name).join('、') || '请先选择标段')}</span><svg class="bidding-select-arrow" viewBox="0 0 12 12" aria-hidden="true"><polyline points="2,4 6,8 10,4"></polyline></svg></button><div class="bidding-select-dropdown">${renderSupplierOptions(initialEligibleSuppliers, initialSupplierSelected, initialSupplierDisabled)}</div></div><div class="field-hint" data-supplier-hint>${initialSegmentId ? (initialEligibleSuppliers.length ? '仅显示所选标段的已启用供货供应商' : '该标段暂无已启用供货供应商') : '请先选择标段'}</div></div></div>
+          <div class="bidding-form-field required"><label for="bidSchool">学校</label><select class="bidding-form-select is-placeholder" id="bidSchool" data-field="school"><option value="">请选择学校</option>${schools.map((school) => `<option value="${esc(school)}" ${school === existing?.school ? 'selected' : ''}>${esc(school)}</option>`).join('')}</select></div>
           <div class="bidding-form-field"><label>需求量加密</label><div class="bidding-check-row"><input id="bidEncryption" data-field="encryption" type="checkbox" ${existing?.encryption ? 'checked' : ''}><label for="bidEncryption">开启后供应商端不显示需求量</label></div></div>
           <div class="bidding-form-field"><label for="winnerLimit">供应商允许中标数量</label><div class="bidding-control-stack"><input id="winnerLimit" data-field="winnerLimit" type="number" min="0" placeholder="请输入" value="${inputValue(existing?.winnerLimit ?? 1)}"><div class="field-hint">输入0，表示不限制供应商中标数量</div></div></div>
           <div class="bidding-form-field required"><label for="openPlace">开标地点</label><input id="openPlace" data-field="openPlace" placeholder="请输入" value="${inputValue(existing?.openPlace)}"></div>
@@ -327,8 +466,35 @@
         <div class="bidding-form-actions"><button class="btn btn-sm" type="button" data-action="save-draft">暂存</button><button class="btn btn-primary btn-sm" type="button" data-action="publish">发布</button></div>
       </div>`;
     const root = mount(title, form);
-    updateBiddingMultiSelect(root, 'supplierIds');
     const selectedProject = root.querySelector('[data-field="appendProject"]');
+
+    function syncFormSelectPlaceholders() {
+      root.querySelectorAll('select.bidding-form-select').forEach((select) => {
+        select.classList.toggle('is-placeholder', !select.value);
+      });
+    }
+    syncFormSelectPlaceholders();
+
+    function syncSupplierSelector(preferredIds = null) {
+      const segmentId = root.querySelector('[data-field="segmentId"]')?.value || '';
+      const allowed = suppliersForSegment(segmentId);
+      const currentIds = preferredIds === null ? selectedMultiValues(root, 'supplierIds') : preferredIds;
+      const selectedIds = currentIds.filter((supplierId) => allowed.some((item) => item.id === supplierId));
+      const disabled = !segmentId || !allowed.length;
+      const box = root.querySelector('[data-multi-select="supplierIds"]');
+      if (!box) return;
+      const names = allowed.filter((item) => selectedIds.includes(item.id)).map((item) => item.name);
+      box.className = `bidding-multi-select ${disabled ? 'is-disabled' : ''}`;
+      box.querySelector('[data-multi-value]').textContent = names.length > 1 ? `${names[0]} 等${names.length}家` : names[0] || (segmentId ? '请选择供应商' : '请先选择标段');
+      box.querySelector('[data-multi-value]').classList.toggle('is-placeholder', !names.length);
+      box.querySelector('.bidding-select-dropdown').innerHTML = renderSupplierOptions(allowed, selectedIds, disabled);
+      setBiddingMultiDisabled(root, 'supplierIds', disabled);
+      updateBiddingMultiSelect(root, 'supplierIds');
+      const hint = root.querySelector('[data-supplier-hint]');
+      if (hint) hint.textContent = !segmentId ? '请先选择标段' : allowed.length ? '仅显示所选标段的已启用供货供应商' : '该标段暂无已启用供货供应商';
+    }
+
+    syncSupplierSelector(initialSupplierSelected);
 
     function fillAppend(projectId) {
       const source = bids.find((item) => item.id === projectId);
@@ -338,15 +504,12 @@
         node.value = !source ? '' : key === 'supplyPeriod' ? `${source.supplyStart} ~ ${source.supplyEnd}` : key === 'name' ? source.name : source[key] || '--';
       });
       if (!source) {
-        setBiddingMultiDisabled(root, 'supplierIds', true);
-        all(root, '[data-multi-select="supplierIds"] input[data-multi-option]').forEach((option) => { option.checked = false; });
-        updateBiddingMultiSelect(root, 'supplierIds');
+        const segmentSelect = root.querySelector('[data-field="segmentId"]');
+        if (segmentSelect) segmentSelect.value = '';
+        syncSupplierSelector([]);
+        syncFormSelectPlaceholders();
         return;
       }
-      setBiddingMultiDisabled(root, 'supplierIds', false);
-      const supplierSelect = root.querySelector('[data-multi-select="supplierIds"]');
-      all(supplierSelect, 'input[data-multi-option]').forEach((option) => { option.checked = source.supplierIds.includes(option.value); });
-      updateBiddingMultiSelect(root, 'supplierIds');
       const setField = (key, value) => { const node = root.querySelector(`[data-field="${key}"]`); if (node) node.value = value ?? ''; };
       setField('name', `${source.name}-追加`);
       setField('supplyStart', source.supplyStart);
@@ -362,6 +525,8 @@
       setField('itemQuantity', source.itemQuantity);
       const encryption = root.querySelector('[data-field="encryption"]');
       if (encryption) { encryption.checked = Boolean(source.encryption); encryption.disabled = true; }
+      syncSupplierSelector(source.supplierIds || []);
+      syncFormSelectPlaceholders();
     }
     selectedProject?.addEventListener('change', (event) => fillAppend(event.target.value));
     if (mode === 'append' && existing) fillAppend(existing.id);
@@ -388,11 +553,15 @@
       if (missing) { showToast(`请完善${missing[0]}`, true); return false; }
       if (payload.supplyStart > payload.supplyEnd) { showToast('供货周期开始日期不能晚于结束日期', true); return false; }
       if (payload.demandDeadline > payload.quoteStart || payload.quoteStart > payload.quoteEnd || payload.quoteEnd > payload.openTime) { showToast('请按时间顺序填写需求截止、报价和开标时间', true); return false; }
+      const eligibleIds = new Set(suppliersForSegment(payload.segmentId).map((item) => item.id));
+      if (payload.supplierIds.some((supplierId) => !eligibleIds.has(supplierId))) { showToast('参与竞价供应商必须属于所选标段', true); return false; }
       return true;
     }
 
     root.addEventListener('change', (event) => {
+      if (event.target.matches('select.bidding-form-select')) syncFormSelectPlaceholders();
       if (event.target.matches('[data-multi-option]')) updateBiddingMultiSelect(root, 'supplierIds');
+      if (event.target.matches('[data-field="segmentId"]')) syncSupplierSelector();
     });
     root.addEventListener('click', (event) => {
       const multiTrigger = event.target.closest('[data-action="toggle-multi-select"]');
@@ -665,15 +834,17 @@
   function renderSegmentManagement() {
     const root = mount('标段管理', `
       <div class="page-card bidding-page" id="segmentManagementPage">
-        <section class="bidding-filter-panel"><div class="bidding-filter-grid"><div class="bidding-filter-item"><label>标段名称</label><input data-filter="keyword" placeholder="请输入"></div></div><div class="bidding-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="query">查询</button><button class="btn btn-sm" type="button" data-action="reset">重置</button></div></section>
+        <section class="bidding-filter-panel"><div class="bidding-filter-grid"><div class="bidding-filter-item"><label>标段名称</label><input data-filter="keyword" placeholder="请输入"></div><div class="bidding-filter-item"><label>状态</label><select data-filter="status"><option value="">全部</option><option value="禁用">禁用</option><option value="启用">启用</option></select></div></div><div class="bidding-filter-actions"><button class="btn btn-primary btn-sm" type="button" data-action="query">查询</button><button class="btn btn-sm" type="button" data-action="reset">重置</button></div></section>
         <div class="bidding-toolbar"><div class="bidding-toolbar-left"><button class="btn btn-primary btn-sm" type="button" data-action="add-segment">添加标段</button></div></div>
         <div class="bidding-table-container"><div class="bidding-table-wrapper"><table class="bidding-table" style="min-width:760px"><thead><tr><th>序号</th><th>标段名称</th><th>商品分类</th><th>状态</th><th>操作</th></tr></thead><tbody id="segmentsBody"></tbody></table></div><div class="pagination bidding-pagination" id="segmentsPagination"></div></div>
       </div>
-      <div class="bidding-modal-mask" id="segmentModal"><div class="bidding-dialog"><div class="bidding-dialog-header"><h2 id="segmentModalTitle">添加标段</h2><button class="bidding-dialog-close" type="button" data-action="close-segment">关闭</button></div><div class="bidding-dialog-body"><div class="bidding-form-grid" style="grid-template-columns:1fr"><div class="bidding-form-field required"><label>标段名称</label><input data-segment-field="name" placeholder="请输入标段名称"></div><div class="bidding-form-field required"><label>商品分类</label><div class="bidding-category-options" id="segmentCategories">${categoriesOptions()}</div></div></div></div><div class="bidding-dialog-footer"><button class="btn btn-sm" type="button" data-action="close-segment">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-segment">确认</button></div></div></div>`);
+      <div class="bidding-modal-mask" id="segmentModal"><div class="bidding-dialog"><div class="bidding-dialog-header"><h2 id="segmentModalTitle">添加标段</h2><button class="bidding-dialog-close" type="button" data-action="close-segment">关闭</button></div><div class="bidding-dialog-body"><div class="bidding-form-grid" style="grid-template-columns:1fr"><div class="bidding-form-field required"><label>标段名称</label><input data-segment-field="name" placeholder="请输入标段名称"></div><div class="bidding-form-field required"><label>商品分类</label><div id="segmentCategorySelect" class="bidding-segment-category-control"></div></div></div></div><div class="bidding-dialog-footer"><button class="btn btn-sm" type="button" data-action="close-segment">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-segment">确认</button></div></div></div>`);
     const state = { rows: service.get('segments'), filtered: [], pager: null, editingId: '' };
+    root.__segmentRows = state.rows;
     function render() {
       const keyword = valueOf(root, '[data-filter="keyword"]').toLowerCase();
-      state.filtered = state.rows.filter((row) => !keyword || row.name.toLowerCase().includes(keyword));
+      const status = valueOf(root, '[data-filter="status"]');
+      state.filtered = state.rows.filter((row) => (!keyword || row.name.toLowerCase().includes(keyword)) && (!status || row.status === status));
       const page = state.pager?.getState() || { page: 1, pageSize: 20 };
       const start = (page.page - 1) * page.pageSize;
       root.querySelector('#segmentsBody').innerHTML = state.filtered.slice(start, start + page.pageSize).map((row, index) => `<tr><td>${start + index + 1}</td><td>${esc(row.name)}</td><td class="align-left">${esc(row.categories.join('，'))}</td><td>${statusTag(row.status)}</td><td><div class="bidding-actions-cell operation-actions"><button class="bidding-link" type="button" data-action="toggle-segment" data-id="${row.id}">${row.status === '启用' ? '禁用' : '启用'}</button><button class="bidding-link" type="button" data-action="edit-segment" data-id="${row.id}">编辑</button><button class="bidding-link danger" type="button" data-action="delete-segment" data-id="${row.id}">删除</button></div></td></tr>`).join('') || '<tr><td class="empty-row" colspan="5">暂无符合条件的数据</td></tr>';
@@ -683,27 +854,57 @@
       state.editingId = row?.id || '';
       root.querySelector('#segmentModalTitle').textContent = row ? '编辑标段' : '添加标段';
       root.querySelector('[data-segment-field="name"]').value = row?.name || '';
-      all(root, '#segmentCategories input').forEach((input) => { input.checked = Boolean(row?.categories?.includes(input.value)); });
+      renderSegmentCategoryPicker(root, row);
       root.querySelector('#segmentModal').classList.add('open');
     }
     state.pager = createPager('segmentsPagination', state.rows.length, render); render();
     root.addEventListener('click', (event) => {
       const action = event.target.closest('[data-action]')?.dataset.action;
       const id = event.target.closest('[data-id]')?.dataset.id;
+      const picker = root.querySelector('#segmentCategorySelect');
+      if (picker?.classList.contains('open') && !event.target.closest('#segmentCategorySelect')) setSegmentCategoryPickerOpen(root, false);
+      if (action === 'toggle-category-picker') {
+        setSegmentCategoryPickerOpen(root, !picker?.classList.contains('open'));
+        return;
+      }
+      if (action === 'toggle-category-node') {
+        const node = event.target.closest('.bidding-category-node');
+        const expanded = node?.classList.toggle('is-expanded');
+        event.target.closest('[data-action="toggle-category-node"]')?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        return;
+      }
       if (action === 'query') { state.pager.update({ page: 1 }); render(); }
-      if (action === 'reset') { root.querySelector('[data-filter="keyword"]').value = ''; state.pager.update({ page: 1 }); render(); }
+      if (action === 'reset') { root.querySelector('[data-filter="keyword"]').value = ''; root.querySelector('[data-filter="status"]').value = ''; state.pager.update({ page: 1 }); render(); }
       if (action === 'add-segment') openModal();
       if (action === 'edit-segment' && id) openModal(state.rows.find((row) => row.id === id));
-      if (action === 'toggle-segment' && id) { const row = state.rows.find((item) => item.id === id); service.toggle('segments', id, row.status !== '启用'); state.rows = service.get('segments'); render(); showToast('状态已更新'); }
-      if (action === 'delete-segment' && id && window.confirm('确定删除这条标段吗？')) { service.remove('segments', id); state.rows = service.get('segments'); render(); showToast('删除成功'); }
-      if (action === 'close-segment') root.querySelector('#segmentModal').classList.remove('open');
+      if (action === 'toggle-segment' && id) { const row = state.rows.find((item) => item.id === id); service.toggle('segments', id, row.status !== '启用'); state.rows = service.get('segments'); root.__segmentRows = state.rows; render(); showToast('状态已更新'); }
+      if (action === 'delete-segment' && id && window.confirm('确定删除这条标段吗？')) { service.remove('segments', id); state.rows = service.get('segments'); root.__segmentRows = state.rows; render(); showToast('删除成功'); }
+      if (action === 'close-segment') { setSegmentCategoryPickerOpen(root, false); root.querySelector('#segmentModal').classList.remove('open'); }
       if (action === 'save-segment') {
         const name = valueOf(root, '[data-segment-field="name"]');
-        const selected = all(root, '#segmentCategories input:checked').map((input) => input.value);
+        const selected = [...new Set(all(root, '#segmentCategorySelect input[data-segment-category]:checked:not(:disabled)').map((input) => input.value))];
         if (!name || !selected.length) { showToast('请完善标段名称和商品分类', true); return; }
-        if (state.editingId) service.update('segments', state.editingId, { name, categories: selected }); else service.add('segments', { name, categories: selected, status: '启用' }, 'SEG');
-        state.rows = service.get('segments'); state.pager.update({ page: 1 }); render(); root.querySelector('#segmentModal').classList.remove('open'); showToast('保存成功');
+        const occupied = new Set(state.rows.filter((row) => row.id !== state.editingId).flatMap((row) => Array.isArray(row.categories) ? row.categories : []));
+        const conflict = selected.find((category) => [...occupied].some((other) => service.segmentCategoryOverlaps?.(category, other) || category === other));
+        if (conflict) { showToast('商品分类已关联其他标段，请重新选择', true); return; }
+        try {
+          if (state.editingId) service.update('segments', state.editingId, { name, categories: selected }); else service.add('segments', { name, categories: selected, status: '启用' }, 'SEG');
+        } catch (error) {
+          showToast(error.message || '标段保存失败', true);
+          return;
+        }
+        state.rows = service.get('segments'); root.__segmentRows = state.rows; state.pager.update({ page: 1 }); render(); setSegmentCategoryPickerOpen(root, false); root.querySelector('#segmentModal').classList.remove('open'); showToast('保存成功');
       }
+    });
+    root.addEventListener('change', (event) => {
+      const input = event.target;
+      if (input.matches('input[data-category-all]')) {
+        all(root, '#segmentCategorySelect input[data-segment-category]:not(:disabled)').forEach((item) => { item.checked = input.checked; item.indeterminate = false; });
+      } else if (input.matches('input[data-segment-category][data-category-group="true"]')) {
+        const node = input.closest('.bidding-category-node');
+        all(node, 'input[data-segment-category]:not(:disabled)').forEach((item) => { item.checked = input.checked; item.indeterminate = false; });
+      }
+      updateSegmentCategoryPicker(root);
     });
   }
 
@@ -1042,7 +1243,7 @@
           <div class="bidding-form-field supplier-license-meta"><label>统一社会信用代码</label><input data-field="licenseCode" placeholder="请输入统一社会信用代码" value="${inputValue(existing?.licenseCode)}" ${readOnly}></div>
           <div class="bidding-form-field supplier-license-meta"><label>住所</label><input data-field="address" placeholder="请输入住所" value="${inputValue(existing?.address)}" ${readOnly}></div>
           <div class="bidding-form-field supplier-qualification-field"><label>其他资质</label><div class="bidding-control-stack"><div class="bidding-file-row"><button class="btn btn-sm supplier-add-qualification" type="button" data-action="choose-qualification" ${uploadDisabled}>+</button><input id="qualificationFile" type="file" accept=".png,.jpg,.jpeg" hidden ${uploadDisabled}></div><div class="bidding-asset-list" id="qualificationNames">${(existing?.qualifications || []).map((item) => `<span class="bidding-asset-chip">${esc(item)}</span>`).join('')}</div><div class="field-hint">支持上传食品经营许可证、质量检测报告等资质图片，单张图片不超过5M</div></div></div>
-          ${showManagedSettings ? `<div class="bidding-form-field supplier-date-field"><label>合作期限</label><div class="bidding-range"><input type="date" data-field="cooperationStart" value="${inputValue(existing?.cooperationStart)}" placeholder="请选择日期"><span>至</span><input type="date" data-field="cooperationEnd" value="${inputValue(existing?.cooperationEnd)}" placeholder="请选择日期"></div></div><div class="bidding-form-field required supplier-segment-field"><label>标段</label><div class="supplier-segment-control"><label class="supplier-segment-option supplier-segment-select-all"><input type="checkbox" data-segment-all>全选</label>${segments.length ? segments.map((segment) => `<label class="supplier-segment-option"><input type="checkbox" value="${esc(segment.id)}" data-segment-option ${segmentSelection.has(segment.id) ? 'checked' : ''}><span>${esc(segment.name)}</span></label>`).join('') : '<span class="supplier-segment-empty">暂无可选标段</span>'}</div></div><div class="bidding-form-field"><label>联营供应商</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.jointVenture ? 'on' : ''}" type="button" data-switch="jointVenture" aria-pressed="${Boolean(existing?.jointVenture)}"></button><span class="bidding-switch-label">保存后无法编辑</span></div></div><div class="bidding-form-field"><label>隐藏客户价格</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.hideCustomerPrice ? 'on' : ''}" type="button" data-switch="hideCustomerPrice" aria-pressed="${Boolean(existing?.hideCustomerPrice)}"></button><span class="bidding-switch-label">开启后，该供应商端将不显示客户的单价和金额</span></div></div>` : ''}
+          ${showManagedSettings ? `<div class="bidding-form-field required supplier-date-field"><label>合作期限</label><div class="bidding-range"><input type="date" data-field="cooperationStart" value="${inputValue(existing?.cooperationStart)}" placeholder="请选择日期"><span>至</span><input type="date" data-field="cooperationEnd" value="${inputValue(existing?.cooperationEnd)}" placeholder="请选择日期"></div></div><div class="bidding-form-field required supplier-segment-field"><label>标段</label><div class="supplier-segment-control"><label class="supplier-segment-option supplier-segment-select-all"><input type="checkbox" data-segment-all>全选</label>${segments.length ? segments.map((segment) => `<label class="supplier-segment-option"><input type="checkbox" value="${esc(segment.id)}" data-segment-option ${segmentSelection.has(segment.id) ? 'checked' : ''}><span>${esc(segment.name)}</span></label>`).join('') : '<span class="supplier-segment-empty">暂无可选标段</span>'}</div></div><div class="bidding-form-field"><label>联营供应商</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.jointVenture ? 'on' : ''}" type="button" data-switch="jointVenture" aria-pressed="${Boolean(existing?.jointVenture)}"></button><span class="bidding-switch-label">保存后无法编辑</span></div></div><div class="bidding-form-field"><label>隐藏客户价格</label><div class="bidding-switch-row"><button class="bidding-switch ${existing?.hideCustomerPrice ? 'on' : ''}" type="button" data-switch="hideCustomerPrice" aria-pressed="${Boolean(existing?.hideCustomerPrice)}"></button><span class="bidding-switch-label">开启后，该供应商端将不显示客户的单价和金额</span></div></div>` : ''}
         </div>
         <div class="bidding-form-actions">${isAudit ? '<button class="btn btn-sm" type="button" data-action="cancel">返回</button><button class="btn btn-danger btn-sm" type="button" data-action="reject-supplier">审核驳回</button><button class="btn btn-primary btn-sm" type="button" data-action="approve-supplier">审核通过</button>' : isInvite ? '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="submit-invite">提交信息</button>' : '<button class="btn btn-sm" type="button" data-action="cancel">取消</button><button class="btn btn-primary btn-sm" type="button" data-action="save-supplier">保存</button>'}</div>
       </div>`);
@@ -1139,6 +1340,7 @@
       }
       if (!payload.name || !payload.contact || !payload.phone || (isSelfManaged && !payload.username)) { showToast(isSelfManaged ? '请完善供应商名称、用户名、联系人和联系电话' : '请完善供应商名称、联系人和联系电话', true); return; }
       if (isSelfManaged && !/^[A-Za-z0-9]{6,20}$/.test(payload.username)) { showToast('用户名需为6~20位字母或数字', true); return; }
+      if (isSelfManaged && (!payload.cooperationStart || !payload.cooperationEnd)) { showToast('请设置合作期限', true); return; }
       if (isSelfManaged && !selectedSegmentIds.length) { showToast('请至少选择一个合作标段', true); return; }
       if (isSelfManaged && payload.cooperationStart && payload.cooperationEnd && payload.cooperationStart > payload.cooperationEnd) { showToast('合作期限开始日期不能晚于结束日期', true); return; }
       if (isInvite && action === 'submit-invite') {

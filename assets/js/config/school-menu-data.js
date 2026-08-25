@@ -6,6 +6,7 @@
     { name: '竞价需求管理', icon: 'tag' },
     { name: '订单管理', icon: 'cart' },
     { name: '财务对账', icon: 'wallet' },
+    { name: '公告管理', icon: 'notice', href: './school-notice-management.html' },
     { name: '食堂管理', icon: 'home' },
     { name: '系统设置', icon: 'settings' }
   ];

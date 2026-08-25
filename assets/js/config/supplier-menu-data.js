@@ -11,6 +11,7 @@
       { name: '竞价报价', href: './supplier-bidding-quotation.html' }
     ] },
     { name: '财务对账', icon: 'wallet' },
+    { name: '公告管理', icon: 'notice', href: './supplier-notice-management.html' },
     { name: '系统管理', icon: 'settings' }
   ];
 
