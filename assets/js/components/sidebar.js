@@ -10,7 +10,11 @@
       'order-add.html': 'order-management.html',
       'order-add': 'order-management',
       'bid-management-detail.html': 'bid-management.html',
-      'bid-management-detail': 'bid-management.html'
+      'bid-management-detail': 'bid-management.html',
+      'supplier-bid-detail.html': 'supplier-bidding-quotation.html',
+      'supplier-bidding-quotation-form.html': 'supplier-bidding-quotation.html',
+      'supplier-bid-detail': 'supplier-bidding-quotation.html',
+      'supplier-bidding-quotation-form': 'supplier-bidding-quotation.html'
     };
     const pageAliases = {
       'bid-management': 'bid-management.html',

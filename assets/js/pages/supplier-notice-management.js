@@ -14,25 +14,49 @@
   const recipientKind = isSchool ? '学校' : '供应商';
   const recipientId = isSchool ? (document.body?.dataset.schoolId || 'SCH-001') : (document.body?.dataset.supplierId || 'SUP-004');
   const recipientName = isSchool ? (document.body?.dataset.schoolName || '第一实验学校') : (document.body?.dataset.supplierName || '南皮供应商01');
+  const demoNoticeRows = [
+    {
+      id: 'NOTICE-DEMO-WIN-001', title: '中标供应商公示—果蔬标段',
+      recipients: [{ name: '学校', read: 0, total: 1 }, { name: '供应商', read: 0, total: 1 }],
+      force: '否', expire: '', time: '2026-08-20 10:30:00', publisher: '管理员', publisherOrg: '唐山市教育局', status: '已发布',
+      content: '<p>根据2026年秋季学校食材采购项目评审结果，现将果蔬标段中标结果公示如下：</p><p>一、项目名称：2026年秋季学校食材采购项目</p><p>二、标段名称：果蔬标段</p><p>三、中标供应商：南皮供应商01</p><p>四、供货期限：2026年8月20日至2026年9月20日。</p><p>请中标供应商按公告要求完成合同签署，并按供货计划做好配送安排。</p>',
+      attachments: [{ name: '果蔬标段中标供应商公示.pdf', size: 128000 }]
+    },
+    {
+      id: 'NOTICE-DEMO-WIN-002', title: '中标供应商公示—米面粮油标段',
+      recipients: [{ name: '学校', read: 0, total: 1 }, { name: '供应商', read: 0, total: 1 }],
+      force: '否', expire: '', time: '2026-08-18 14:20:00', publisher: '管理员', publisherOrg: '唐山市教育局', status: '已发布',
+      content: '<p>2026年秋季学校食材采购项目米面粮油标段评审工作已经完成，现将中标结果公告如下：</p><p>中标供应商：七鲜</p><p>服务学校：唐山市市直学校及所属学校。</p><p>公告期内如有异议，请按采购管理规定向唐山市教育局反馈。</p>',
+      attachments: []
+    },
+    {
+      id: 'NOTICE-DEMO-WIN-003', title: '中标供应商公示—肉蛋奶标段',
+      recipients: [{ name: '学校', read: 0, total: 1 }, { name: '供应商', read: 0, total: 1 }],
+      force: '否', expire: '', time: '2026-08-15 09:10:00', publisher: '管理员', publisherOrg: '唐山市教育局', status: '已发布',
+      content: '<p>经评审委员会评审，2026年秋季学校食材采购项目肉蛋奶标段中标结果已经确定。</p><p>中标供应商：鲜选食品有限公司</p><p>请相关供应商和学校按照采购文件、合同约定及配送计划执行后续工作。</p>',
+      attachments: []
+    }
+  ];
   const fallbackTitles = isSchool
     ? ['2025年3月食材采购时间安排公告', '2025年2月食材采购时间安排公告', '2024年12月食材采购时间安排公告', '2024年11月食材采购时间安排公告', '2024年10月食材采购时间安排公告', '2024年9月食材采购时间安排公告', '2024年7月食材采购时间安排公告', '2024年6月食材采购时间安排公告', '2024年5月食材采购备校提报采购需求安排公告', '2024年5月食材采购时间安排公告']
     : ['中标供应商公示', '秋季供货安排通知', '供应商报价及配送安排公告', '供应商资质审核通知', '食材采购项目供货通知', '月度供货计划确认公告', '供应商商品信息维护通知', '竞价报价时间安排公告', '供应商合同签署通知', '配送服务规范公告'];
-  const fallbackRows = fallbackTitles.map((title, index) => ({
+  const fallbackRows = [...demoNoticeRows, ...fallbackTitles.map((title, index) => ({
     id: `RECIPIENT-NOTICE-${String(index + 1).padStart(3, '0')}`,
     title,
     recipients: [{ name: recipientKind, read: index < 2 ? 0 : 1, total: 1, targetNames: [recipientName] }],
     force: index < 4 ? '是' : '否',
     expire: index < 4 ? '2026-09-30' : '',
     time: `2026-0${Math.max(1, 8 - Math.floor(index / 3))}-${String(Math.max(1, 20 - index)).padStart(2, '0')} 10:00:00`,
-    publisher: '教育局',
+    publisher: '管理员',
+    publisherOrg: '唐山市教育局',
     status: '已发布',
     content: isSchool
       ? '<p>请各学校按照公告要求，及时完成本校相关准备工作，并按采购计划做好食材采购安排。</p>'
       : '<p>请各供应商按照公告要求，及时完成相关准备工作，并按供货计划做好配送安排。</p>',
     attachments: index === 0 ? [{ name: `${title}.pdf`, size: 128000 }] : []
-  }));
+  }))];
 
-  const storedRows = service?.load(fallbackRows) || fallbackRows;
+  const storedRows = service?.load(fallbackRows, { mergeFallback: true }) || fallbackRows;
   const visibleRows = storedRows
     .filter((row) => service?.canRecipientView(row, recipientKind, recipientId, recipientName) === true)
     .map((row, index) => ({ ...row, readStatus: row.readStatus || (index < 2 ? '未读' : '已读') }));
@@ -126,7 +150,7 @@
     const body = root.querySelector('#supplierNoticeRows');
     if (body) {
       body.innerHTML = visible.length
-        ? visible.map((row) => `<tr><td class="supplier-notice-title"><button type="button" data-action="view-notice" data-id="${escapeHtml(row.id)}">${escapeHtml(row.title)}</button></td><td>${escapeHtml(dateOnly(row.time))}</td><td><span class="supplier-notice-read-status ${getReadStatus(row) === '已读' ? 'is-read' : 'is-unread'}">${getReadStatus(row)}</span></td><td><button class="supplier-notice-view-button" type="button" data-action="view-notice" data-id="${escapeHtml(row.id)}">查看</button></td></tr>`).join('')
+        ? visible.map((row) => `<tr><td class="supplier-notice-title"><span>${escapeHtml(row.title)}</span></td><td>${escapeHtml(dateOnly(row.time))}</td><td><span class="supplier-notice-read-status ${getReadStatus(row) === '已读' ? 'is-read' : 'is-unread'}">${getReadStatus(row)}</span></td><td><button class="supplier-notice-view-button" type="button" data-action="view-notice" data-id="${escapeHtml(row.id)}">查看</button></td></tr>`).join('')
         : '<tr><td class="supplier-notice-empty" colspan="4">暂无公告数据</td></tr>';
     }
     renderPagination(filtered.length);
@@ -151,7 +175,10 @@
   }
 
   function renderContent(row) {
-    return String(row.content || '').trim();
+    const content = String(row.content || '').trim();
+    if (content) return content;
+    const audience = isSchool ? '学校' : '供应商';
+    return `<p>${escapeHtml(row.title || '系统公告')}。</p><p>请各${audience}及时查看公告内容，并按照唐山市教育局的采购安排完成相关工作。</p>`;
   }
 
   function renderForceDemoContent(row) {
@@ -233,7 +260,8 @@
     state.view = 'detail';
     row.readStatus = '已读';
     const attachments = Array.isArray(row.attachments) ? row.attachments : [];
-    root.innerHTML = `<section class="page-card supplier-notice-page supplier-notice-detail-page" id="supplierNoticeDetailPage" data-id="${escapeHtml(row.id)}"><div class="supplier-notice-detail-heading"><button class="supplier-notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><span class="supplier-notice-detail-divider" aria-hidden="true"></span><h2>公告详情</h2></div><article class="supplier-notice-detail-content"><h1>${escapeHtml(row.title)}</h1><div class="supplier-notice-detail-meta"><span>${escapeHtml(dateOnly(row.time))}</span><span>${escapeHtml(row.publisher || '教育局')}</span></div><div class="supplier-notice-rich-content">${renderContent(row)}</div><div class="supplier-notice-attachments"><strong>附件：</strong>${attachments.length ? attachments.map((file, index) => `<button type="button" class="supplier-notice-attachment-link" data-action="download-attachment" data-index="${index}">${escapeHtml(file.name || `附件${index + 1}`)}</button>`).join('') : '<span class="supplier-notice-no-attachment">暂无附件</span>'}</div></article><div class="supplier-notice-detail-actions"><button type="button" class="btn btn-sm" data-action="back">返回</button><button type="button" class="btn btn-sm" data-action="print">打印</button></div></section>`;
+    const publisherOrg = row.publisherOrg || '唐山市教育局';
+    root.innerHTML = `<section class="page-card supplier-notice-page supplier-notice-detail-page" id="supplierNoticeDetailPage" data-id="${escapeHtml(row.id)}"><div class="supplier-notice-detail-heading"><button class="supplier-notice-back-button" type="button" data-action="back">${backIcon}<span>返回</span></button><span class="supplier-notice-detail-divider" aria-hidden="true"></span><h2>公告详情</h2></div><article class="supplier-notice-detail-content"><h1>${escapeHtml(row.title)}</h1><div class="supplier-notice-detail-meta"><span>${escapeHtml(dateOnly(row.time))}</span><span class="supplier-notice-detail-publisher">发布单位：${escapeHtml(publisherOrg)}</span></div><div class="supplier-notice-rich-content">${renderContent(row)}</div><div class="supplier-notice-attachments"><strong>附件：</strong>${attachments.length ? attachments.map((file, index) => `<button type="button" class="supplier-notice-attachment-link" data-action="download-attachment" data-index="${index}">${escapeHtml(file.name || `附件${index + 1}`)}</button>`).join('') : '<span class="supplier-notice-no-attachment">暂无附件</span>'}</div></article><div class="supplier-notice-detail-actions"><button type="button" class="btn btn-sm" data-action="back">返回</button><button type="button" class="btn btn-sm" data-action="print">打印</button></div></section>`;
   }
 
   root.addEventListener('click', (event) => {

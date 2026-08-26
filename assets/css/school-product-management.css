@@ -48,8 +48,13 @@
 .school-product-table .col-time { width: 150px; }
 .school-product-table th,
 .school-product-table td { height: 44px; padding: 0 12px; overflow: hidden; border-right: 1px solid #e5e8ed; border-bottom: 1px solid #e5e8ed; color: #333; text-align: center; white-space: nowrap; text-overflow: ellipsis; }
-.school-product-table th { height: 44px; background: #fafafa; color: var(--text-secondary); font-weight: 500; }
+.school-product-table th { position: sticky; top: 0; z-index: 2; height: 44px; background: #fafafa; color: var(--text-secondary); font-weight: 500; box-shadow: 0 2px 5px -5px rgba(31, 43, 67, .45); }
+.school-product-table th:first-child,
+.school-product-table td:first-child { position: sticky; left: 0; box-shadow: 4px 0 6px -6px rgba(31, 43, 67, .45); }
+.school-product-table th:first-child { top: 0; z-index: 4; background: #fafafa; }
+.school-product-table td:first-child { z-index: 3; background: #fff; }
 .school-product-table tbody tr:hover td { background: #f8fbff; }
+.school-product-table tbody tr:hover td:first-child { background: #f8fbff; }
 .school-product-image { display: inline-block; width: 26px; height: 26px; vertical-align: middle; }
 .school-product-code { border: 0; background: transparent; color: #2b74bf; font: inherit; cursor: pointer; }
 .school-product-code:hover { text-decoration: underline; }

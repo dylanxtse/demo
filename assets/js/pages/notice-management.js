@@ -20,6 +20,27 @@
   const redoIcon = '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>';
 
   const seedRows = [
+    {
+      id: 'NOTICE-DEMO-WIN-001', title: '中标供应商公示—果蔬标段',
+      recipients: [{ name: '学校', read: 5, total: 8 }, { name: '供应商', read: 3, total: 6 }],
+      force: '否', expire: '', time: '2026-08-20 10:30:00', publisher: '管理员', publisherOrg: '唐山市教育局', status: '已发布',
+      content: '<p>根据2026年秋季学校食材采购项目评审结果，现将果蔬标段中标结果公示如下：</p><p>一、项目名称：2026年秋季学校食材采购项目</p><p>二、标段名称：果蔬标段</p><p>三、中标供应商：南皮供应商01</p><p>四、供货期限：2026年8月20日至2026年9月20日。</p><p>请中标供应商按公告要求完成合同签署，并按供货计划做好配送安排。</p>',
+      attachments: [{ name: '果蔬标段中标供应商公示.pdf', size: 128000 }]
+    },
+    {
+      id: 'NOTICE-DEMO-WIN-002', title: '中标供应商公示—米面粮油标段',
+      recipients: [{ name: '学校', read: 6, total: 8 }, { name: '供应商', read: 4, total: 6 }],
+      force: '否', expire: '', time: '2026-08-18 14:20:00', publisher: '管理员', publisherOrg: '唐山市教育局', status: '已发布',
+      content: '<p>2026年秋季学校食材采购项目米面粮油标段评审工作已经完成，现将中标结果公告如下：</p><p>中标供应商：七鲜</p><p>服务学校：唐山市市直学校及所属学校。</p><p>公告期内如有异议，请按采购管理规定向唐山市教育局反馈。</p>',
+      attachments: []
+    },
+    {
+      id: 'NOTICE-DEMO-WIN-003', title: '中标供应商公示—肉蛋奶标段',
+      recipients: [{ name: '学校', read: 4, total: 8 }, { name: '供应商', read: 2, total: 6 }],
+      force: '否', expire: '', time: '2026-08-15 09:10:00', publisher: '管理员', publisherOrg: '唐山市教育局', status: '已发布',
+      content: '<p>经评审委员会评审，2026年秋季学校食材采购项目肉蛋奶标段中标结果已经确定。</p><p>中标供应商：鲜选食品有限公司</p><p>请相关供应商和学校按照采购文件、合同约定及配送计划执行后续工作。</p>',
+      attachments: []
+    },
     { title: '1', recipients: [{ name: '学校', read: 1, total: 1 }, { name: '供应商', read: 1, total: 1 }], force: '是', expire: '2026-06-30', time: '2026-06-25 09:47:34', publisher: '--', status: '已发布' },
     { title: '中标供应商公示', recipients: [{ name: '学校', read: 6, total: 7 }, { name: '供应商', read: 3, total: 5 }], force: '是', expire: '2026-05-31', time: '2026-05-26 10:56:32', publisher: '李老师', status: '已发布' },
     { title: '中标供应商公示', recipients: [{ name: '学校', read: 6, total: 7 }, { name: '供应商', read: 2, total: 5 }], force: '是', expire: '2026-05-31', time: '2026-05-26 10:55:08', publisher: '李老师', status: '已发布' },
@@ -32,16 +53,16 @@
     { title: '临汾丸子竞价公告', recipients: [{ name: '学校', read: 0, total: 1 }, { name: '供应商', read: 1, total: 3 }], force: '否', expire: '', time: '2026-03-31 22:32:02', publisher: '默认', status: '已发布' }
   ];
 
-  function cloneRow(row, index) {
+  function cloneRow(row, index, preserveId = false) {
     return {
       ...row,
-      id: `NOTICE-${String(index + 1).padStart(3, '0')}`,
+      id: preserveId && row.id ? row.id : `NOTICE-${String(index + 1).padStart(3, '0')}`,
       recipients: row.recipients.map((item) => ({ ...item }))
     };
   }
 
   const initialRows = Array.from({ length: 37 }, (_, index) => {
-    if (index < seedRows.length) return cloneRow(seedRows[index], index);
+    if (index < seedRows.length) return cloneRow(seedRows[index], index, true);
     const source = seedRows[index % seedRows.length];
     const month = String(Math.max(1, 3 - Math.floor(index / 10))).padStart(2, '0');
     const day = String(Math.max(1, 30 - (index % 20))).padStart(2, '0');
@@ -60,7 +81,7 @@
   });
   const root = shell.querySelector('#noticePageRoot');
   const state = {
-    rows: window.NoticeService?.load(initialRows, { persistFallback: true }) || initialRows,
+    rows: window.NoticeService?.load(initialRows, { persistFallback: true, mergeFallback: true }) || initialRows,
     filters: { title: '', startDate: '', endDate: '', status: '' },
     statusDraft: '',
     selected: new Set(),

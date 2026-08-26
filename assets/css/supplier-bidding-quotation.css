@@ -151,8 +151,41 @@
 }
 
 .supplier-quotation-table tbody tr:hover td { background: #f8fbff; }
-.supplier-quotation-table .supplier-bid-number { color: #0645b6; }
+.supplier-quotation-table .supplier-bid-number { color: #0645b6; text-decoration: none; }
+.supplier-quotation-table .supplier-bid-number:hover { text-decoration: underline; }
 .supplier-cell-ellipsis { text-align: left; }
+
+/* 横向滚动时保留序号和操作入口，避免用户失去当前行定位或操作能力。 */
+.supplier-quotation-table th:first-child,
+.supplier-quotation-table td:first-child {
+  position: sticky;
+  z-index: 2;
+  left: 0;
+  background: #fff;
+  box-shadow: 4px 0 6px -6px rgba(31, 43, 67, .45);
+}
+
+.supplier-quotation-table th:first-child {
+  z-index: 4;
+  background: #f5f6fa;
+}
+
+.supplier-quotation-table th:last-child,
+.supplier-quotation-table td:last-child {
+  position: sticky;
+  z-index: 2;
+  right: 0;
+  background: #fff;
+  box-shadow: -4px 0 6px -6px rgba(31, 43, 67, .45);
+}
+
+.supplier-quotation-table th:last-child {
+  z-index: 4;
+  background: #f5f6fa;
+}
+
+.supplier-quotation-table tbody tr:hover td:first-child,
+.supplier-quotation-table tbody tr:hover td:last-child { background: #f8fbff; }
 
 .supplier-status {
   display: inline-block;
@@ -169,60 +202,19 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #a9bddf;
+  color: var(--primary);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
 }
-.supplier-quote-action:disabled { cursor: not-allowed; }
+.supplier-quote-action:hover { color: #003b9f; }
+.supplier-quote-action:disabled {
+  color: #a9bddf;
+  cursor: not-allowed;
+}
 
 .supplier-empty-row { height: 160px !important; color: var(--text-tertiary) !important; }
 
-.supplier-quote-modal {
-  position: fixed;
-  z-index: 1300;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, .42);
-}
-.supplier-quote-modal.is-open { display: flex; }
-.supplier-quote-dialog {
-  display: flex;
-  width: min(920px, 100%);
-  max-height: min(760px, 90vh);
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, .2);
-}
-.supplier-quote-dialog-header,
-.supplier-quote-dialog-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-.supplier-quote-dialog-header h2 { margin: 0; color: #1f2937; font-size: 18px; font-weight: 600; }
-.supplier-quote-dialog-header p { margin: 6px 0 0; color: #6b7280; font-size: 13px; }
-.supplier-quote-dialog-header > button { padding: 0; border: 0; background: transparent; color: #7b8490; font-size: 24px; line-height: 1; cursor: pointer; }
-.supplier-quote-dialog-body { min-height: 0; overflow: auto; padding: 16px 20px 20px; }
-.supplier-quote-scope-hint { margin: 0 0 12px; color: #6b7280; font-size: 13px; }
-.supplier-quote-product-wrap { overflow: auto; border: 1px solid #e1e4eb; border-radius: 3px; }
-.supplier-quote-product-table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 14px; }
-.supplier-quote-product-table th,
-.supplier-quote-product-table td { height: 44px; padding: 0 12px; border-right: 1px solid #e4e6eb; border-bottom: 1px solid #e4e6eb; text-align: center; white-space: nowrap; }
-.supplier-quote-product-table th { background: #f5f6fa; color: #606873; font-weight: 500; }
-.supplier-quote-product-table td input { width: 140px; height: 30px; box-sizing: border-box; padding: 0 8px; border: 1px solid #dcdfe6; border-radius: 4px; color: #222; font-size: 14px; outline: none; }
-.supplier-quote-product-table td input:focus { border-color: var(--primary); }
-.supplier-quote-product-table td input::placeholder { color: #9a9fa8; font-size: 14px; }
-.supplier-quote-dialog-actions { justify-content: center; gap: 12px; border-top: 1px solid #e5e7eb; border-bottom: 0; }
-.supplier-quote-dialog-actions .btn { min-width: 76px; justify-content: center; }
 .supplier-quote-toast { position: fixed; z-index: 1400; top: 22px; left: 50%; display: none; transform: translateX(-50%); padding: 9px 16px; border-radius: 4px; background: #1f2937; color: #fff; font-size: 14px; box-shadow: 0 5px 16px rgba(0,0,0,.18); }
 .supplier-quote-toast.is-visible { display: block; }
 .supplier-quote-toast.is-error { background: #c0392b; }

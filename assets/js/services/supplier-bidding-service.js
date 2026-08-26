@@ -113,8 +113,28 @@
         unit: product.unit,
         brand: product.brand,
         spec: product.spec,
+        indicator: product.indicator || '',
+        image: product.image || '',
+        type: product.type || '',
         price: quoteMap.get(product.id) || ''
       }));
+    },
+    getBidDetail(rowId) {
+      const state = getState();
+      const row = getRows().find((item) => item.id === rowId);
+      if (!row) return null;
+      const bid = state?.bids?.find((item) => item.id === rowId);
+      return clone({
+        ...row,
+        projectNo: bid?.projectNo || '',
+        demandDeadline: bid?.demandDeadline || '',
+        openTime: bid?.openTime || '',
+        openPlace: bid?.openPlace || '',
+        school: bid?.school || '',
+        schoolContact: bid?.schoolContact || '',
+        encryption: Boolean(bid?.encryption),
+        winnerSupplier: bid?.winnerSupplier || '--'
+      });
     },
     saveQuotes(rowId, entries) {
       const row = getRows().find((item) => item.id === rowId);

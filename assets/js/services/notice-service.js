@@ -48,10 +48,18 @@
     return clone(normalized);
   }
 
-  function load(fallbackRows = [], { persistFallback = false } = {}) {
+  function load(fallbackRows = [], { persistFallback = false, mergeFallback = false } = {}) {
     const stored = readStoredRows();
-    if (stored) return clone(stored);
     const fallback = normalizeRows(fallbackRows);
+    if (stored) {
+      if (!mergeFallback) return clone(stored);
+      const knownIds = new Set(stored.map((row) => row.id).filter(Boolean));
+      const additions = fallback.filter((row) => row.id && !knownIds.has(row.id));
+      if (!additions.length) return clone(stored);
+      const merged = [...additions, ...stored];
+      save(merged);
+      return clone(merged);
+    }
     if (persistFallback) save(fallback);
     return clone(fallback);
   }

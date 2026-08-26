@@ -24,7 +24,7 @@
       'wasted-bid-management.html',
       'notice-management.html'
     ]),
-    supplier: new Set(['supplier-product-management.html', 'supplier-bidding-quotation.html', 'supplier-notice-management.html', 'supplier-invite.html', 'supplier-export-template.html']),
+    supplier: new Set(['supplier-product-management.html', 'supplier-purchase-order.html', 'supplier-bidding-quotation.html', 'supplier-bid-detail.html', 'supplier-bidding-quotation-form.html', 'supplier-notice-management.html', 'supplier-invite.html', 'supplier-export-template.html']),
     operations: new Set([
       'operations.html',
       'operations-education-management.html',

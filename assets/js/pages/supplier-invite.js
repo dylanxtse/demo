@@ -198,7 +198,9 @@
 
   form.addEventListener('click', (event) => {
     if (event.target.closest('[data-action="demo-return"]')) {
-      if (window.AppNavigationGuard?.navigate) window.AppNavigationGuard.navigate('./supplier-archive.html');
+      if (window.AppNavigationGuard?.navigate) {
+        window.AppNavigationGuard.navigate('./supplier-archive.html', { allowCrossEnd: true });
+      }
       else window.location.replace('./supplier-archive.html');
       return;
     }

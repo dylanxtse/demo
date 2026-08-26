@@ -4,7 +4,7 @@
     { name: '商品档案', icon: 'box', children: [
       { name: '商品管理', href: './supplier-product-management.html' }
     ] },
-    { name: '采购单', icon: 'cart' },
+    { name: '采购单', icon: 'cart', href: './supplier-purchase-order.html' },
     { name: '价格管理', icon: 'tag', children: [
       { name: '协议价' },
       { name: '询价报价' },
