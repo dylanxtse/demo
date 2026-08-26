@@ -251,7 +251,7 @@
       return data;
     }
     if (!window.ProjectIterationData || typeof window.ProjectIterationData !== 'object') {
-      window.ProjectIterationData = { schemaVersion: '20260822-4', records: [] };
+      window.ProjectIterationData = { schemaVersion: '20260826-1', records: [] };
     }
     if (!Array.isArray(window.ProjectIterationData.records)) window.ProjectIterationData.records = [];
     return window.ProjectIterationData;

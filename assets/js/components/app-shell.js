@@ -390,7 +390,7 @@
     iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260826-57',
     iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60',
     annotationData: './assets/js/config/annotation-data.js?v=20260822-2',
-    iterationData: './assets/js/data/project-iteration-records.js?v=20260822-4'
+    iterationData: './assets/js/data/project-iteration-records.js?v=20260826-1'
   });
 
   function ensureAnnotationEngine() {
