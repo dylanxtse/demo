@@ -21,6 +21,33 @@
     productName: ''
   };
 
+  const renderAnnotationMarker = (...args) => window.AnnotationOverlay?.renderPlaceholder?.(...args) || '';
+  const enterpriseTimeFilterAnnotation = {
+    id: 'supplier-purchase-enterprise-time-filter',
+    target: 'custom',
+    targetSelector: '#supplierPurchaseOrderFilters .supplier-purchase-date-range',
+    placement: 'right',
+    title: '企业期望送达时间查询',
+    items: ['供应商端隐藏原“期望送达时间”，查询项改为供货企业生成采购单时提交的企业期望送达时间。']
+  };
+  const enterpriseTimeColumnAnnotation = {
+    id: 'supplier-purchase-enterprise-time-column',
+    target: 'custom',
+    targetSelector: '#supplierPurchaseOrderPage .supplier-purchase-table th:nth-child(6)',
+    placement: 'right',
+    title: '企业期望送达时间',
+    items: ['采购单列表展示供货企业生成采购单时提交的企业期望送达时间。']
+  };
+  const winningPriceAnnotation = {
+    id: 'supplier-purchase-winning-price',
+    target: 'custom',
+    targetSelector: '#supplierShippingDialog .supplier-purchase-shipping-table th:nth-child(4)',
+    placement: 'left',
+    scope: 'modal',
+    title: '中标采购单价',
+    items: ['供应商端只展示企业采购单中的中标采购单价，发货时不提供修改入口。']
+  };
+
   const icon = {
     calendar: '<svg class="supplier-purchase-calendar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2.5" x2="16" y2="6"></line><line x1="8" y1="2.5" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line></svg>',
     print: '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
@@ -67,7 +94,7 @@
                 <th>备注</th>
                 <th>计量单位</th>
                 <th>计划采购量</th>
-                <th>采购单价</th>
+                <th>中标采购单价</th>
                 <th>发货数量</th>
                 <th>发货小计</th>
                 <th>生产日期</th>
@@ -130,7 +157,7 @@
         <td>${escapeHtml(row.orderNo)}</td>
         <td>${escapeHtml(row.warehouse)}</td>
         <td>${escapeHtml(row.createdAt)}</td>
-        <td>${escapeHtml(row.expectedDeliveryAt)}</td>
+        <td>${escapeHtml(row.enterpriseExpectedAt || row.expectedDeliveryAt)}</td>
         <td>${numberLabel(row.receivedAmount)}</td>
         <td>${numberLabel(row.returnAmount)}</td>
         <td>${numberLabel(row.reconciliationAmount)}</td>
@@ -237,8 +264,8 @@
   }
 
   function exportRows(rows) {
-    const header = ['采购单号', '仓库', '创建时间', '期望发货时间', '已收货金额', '退货金额', '对账金额', '是否确认', '单据状态', '商品种类数', '供应商状态', '备注'];
-    const lines = [header, ...rows.map((row) => [row.orderNo, row.warehouse, row.createdAt, row.expectedDeliveryAt, row.receivedAmount, row.returnAmount, row.reconciliationAmount, row.confirmStatus, row.orderStatus, row.goodsCount, row.supplierStatus, row.remark])]
+    const header = ['采购单号', '仓库', '创建时间', '企业期望送达时间', '已收货金额', '退货金额', '对账金额', '是否确认', '单据状态', '商品种类数', '供应商状态', '备注'];
+    const lines = [header, ...rows.map((row) => [row.orderNo, row.warehouse, row.createdAt, row.enterpriseExpectedAt || row.expectedDeliveryAt, row.receivedAmount, row.returnAmount, row.reconciliationAmount, row.confirmStatus, row.orderStatus, row.goodsCount, row.supplierStatus, row.remark])]
       .map((line) => line.map(csvCell).join(','));
     const blob = new Blob([`\ufeff${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -257,8 +284,8 @@
         <form class="supplier-purchase-filters" id="supplierPurchaseOrderFilters">
           <div class="supplier-purchase-basic-fields">
             <div class="supplier-purchase-filter-item supplier-purchase-filter-item-wide">
-              <label>期望发货时间</label>
-              ${renderDateRange('expectedStart', 'expectedEnd', defaults.expectedStart, defaults.expectedEnd, '期望发货时间')}
+              <label>企业期望送达时间</label>
+              ${renderAnnotationMarker(enterpriseTimeFilterAnnotation)}${renderDateRange('expectedStart', 'expectedEnd', defaults.expectedStart, defaults.expectedEnd, '企业期望送达时间')}
             </div>
             <div class="supplier-purchase-filter-item">
               <label for="supplierPurchaseOrderStatus">单据状态</label>
@@ -322,7 +349,7 @@
               <th>采购单号</th>
               <th>仓库</th>
               <th>创建时间</th>
-              <th>期望发货时间</th>
+              <th>企业期望送达时间${renderAnnotationMarker(enterpriseTimeColumnAnnotation, 'column', true)}</th>
               <th>已收货金额</th>
               <th>退货金额</th>
               <th>对账金额</th>
@@ -365,7 +392,7 @@
               <div class="supplier-purchase-shipping-table-wrap">
                 <table class="supplier-purchase-shipping-table">
                   <colgroup><col class="shipping-col-code"><col class="shipping-col-product"><col class="shipping-col-unit"><col class="shipping-col-price"><col class="shipping-col-quantity"><col class="shipping-col-amount"><col class="shipping-col-quantity"><col class="shipping-col-date"></colgroup>
-                  <thead><tr><th>商品编号</th><th>商品名称（计量单位/品牌/规格）</th><th>单位</th><th>采购单价</th><th>发货数量</th><th>发货小计</th><th>收货数量</th><th>生产日期</th></tr></thead>
+                  <thead><tr><th>商品编号</th><th>商品名称（计量单位/品牌/规格）</th><th>单位</th><th>中标采购单价${renderAnnotationMarker(winningPriceAnnotation, 'shipping-price', true)}</th><th>发货数量</th><th>发货小计</th><th>收货数量</th><th>生产日期</th></tr></thead>
                   <tbody data-shipping-items></tbody>
                 </table>
               </div>
@@ -384,6 +411,12 @@
     `;
     const root = window.AppShell.mount({ title: '采购单', content, variant: 'supplier', emptyText: '采购单' });
     const page = root.querySelector('#supplierPurchaseOrderPage');
+    const annotationRoot = root.querySelector('#pageContent') || root;
+    window.AnnotationOverlay?.mount?.(annotationRoot, new Map([
+      [enterpriseTimeFilterAnnotation.id, enterpriseTimeFilterAnnotation],
+      [enterpriseTimeColumnAnnotation.id, enterpriseTimeColumnAnnotation],
+      [winningPriceAnnotation.id, winningPriceAnnotation]
+    ]));
     const state = { rows, filtered: rows, visible: [], selected: new Set(), advanced: false, pager: null };
 
     const readFilters = () => Object.fromEntries([...page.querySelectorAll('[data-filter]')].map((field) => [field.dataset.filter, field.value]));

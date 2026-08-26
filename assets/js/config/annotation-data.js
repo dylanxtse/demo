@@ -809,6 +809,52 @@
           }
         }
       }
+    ],
+    "purchase-task.html::采购任务": [
+      {
+        "id": "purchase-task-generate-order",
+        "target": "custom",
+        "targetSelector": "[data-action=\"generate-order\"]",
+        "placement": "left",
+        "title": "生成采购单",
+        "items": [
+          "生成采购单时补录“企业期望送达时间”；默认比学校期望送达时间提前2天，且不能晚于学校期望送达时间。"
+        ],
+        "number": "2",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 250,
+              "y": 325
+            }
+          }
+        },
+        "deleted": true
+      },
+      {
+        "id": "custom-1787761196369-1",
+        "target": "custom",
+        "targetSelector": "[aria-label=\"采购任务\"]",
+        "placement": "right",
+        "scope": "page",
+        "title": "生成采购单",
+        "items": [
+          "需设置企业期望送达时间"
+        ],
+        "number": "2",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 225,
+              "y": 60
+            },
+            "popoverPosition": {
+              "x": 24,
+              "y": 21
+            }
+          }
+        }
+      }
     ]
   }
 };

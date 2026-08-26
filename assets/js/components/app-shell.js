@@ -7,7 +7,18 @@
  */
 (function () {
   const routes = {
-    enterprise: new Set(['index.html', 'warehouse-monitor.html', 'warehouse-export-template.html']),
+    enterprise: new Set([
+      'index.html',
+      'warehouse-monitor.html',
+      'warehouse-export-template.html',
+      'purchase-task.html',
+      'purchase-task-allocation-detail.html',
+      'purchase-task-allocation.html',
+      'purchase-order.html',
+      'purchase-order-detail.html',
+      'purchase-order-form.html',
+      'purchase-order-receipt.html'
+    ]),
     education: new Set([
       'education.html',
       'auction-limit-price.html',
@@ -390,7 +401,7 @@
     iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260826-57',
     iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60',
     annotationData: './assets/js/config/annotation-data.js?v=20260822-2',
-    iterationData: './assets/js/data/project-iteration-records.js?v=20260826-1'
+    iterationData: './assets/js/data/project-iteration-records.js?v=20260827-1'
   });
 
   function ensureAnnotationEngine() {

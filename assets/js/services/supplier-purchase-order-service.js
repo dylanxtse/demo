@@ -196,7 +196,11 @@
 
   function readRows() {
     const stored = window.AppStorage?.read(storageKey, null);
-    return Array.isArray(stored) && stored.length ? stored : clone(seedRows);
+    const rows = Array.isArray(stored) && stored.length ? stored : clone(seedRows);
+    return rows.map((row) => ({
+      ...row,
+      enterpriseExpectedAt: row.enterpriseExpectedAt || row.expectedDeliveryAt
+    }));
   }
 
   function saveRows(rows) {
@@ -223,7 +227,7 @@
         && (!filters.orderStatus || row.orderStatus === filters.orderStatus)
         && (!filters.confirmStatus || row.confirmStatus === filters.confirmStatus)
         && (!filters.warehouse || row.warehouse === filters.warehouse)
-        && inRange(row.expectedDeliveryAt, filters.expectedStart, filters.expectedEnd)
+        && inRange(row.enterpriseExpectedAt || row.expectedDeliveryAt, filters.expectedStart, filters.expectedEnd)
         && inRange(row.createdAt, filters.createdStart, filters.createdEnd);
     });
   }
