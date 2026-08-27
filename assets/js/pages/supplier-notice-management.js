@@ -189,6 +189,12 @@
       : '<p>请各供应商按照公告要求，及时完成相关准备工作，并按供货计划做好配送安排。</p>';
   }
 
+  function renderForceDemoAttachments(row) {
+    const attachments = Array.isArray(row.attachments) ? row.attachments : [];
+    if (!attachments.length) return '';
+    return `<div class="supplier-notice-attachments supplier-notice-force-attachments"><strong>附件：</strong>${attachments.map((file, index) => `<button type="button" class="supplier-notice-attachment-link" data-action="download-attachment" data-notice-id="${escapeHtml(row.id)}" data-index="${index}">${escapeHtml(file.name || `附件${index + 1}`)}</button>`).join('')}</div>`;
+  }
+
   function closeForceDemoNotice() {
     if (state.forceDemoTimer) {
       window.clearInterval(state.forceDemoTimer);
@@ -209,7 +215,9 @@
     modal.setAttribute('data-modal', 'supplier-force-demo');
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.innerHTML = `<section class="notice-modal supplier-notice-force-modal" aria-labelledby="supplierForceDemoTitle"><header><h3 id="supplierForceDemoTitle">公告</h3></header><div class="notice-modal-body"><article class="supplier-notice-force-content"><h4>${escapeHtml(row.title || '系统公告')}</h4>${renderForceDemoContent(row)}</article>${forceAnnotationPlaceholder}</div><footer><button type="button" class="btn btn-primary btn-sm" data-action="ack-force-demo" disabled>我已知晓（5秒）</button></footer></section>`;
+    const publishedTime = row.time || '--';
+    const publisherOrg = row.publisherOrg || '唐山市教育局';
+    modal.innerHTML = `<section class="notice-modal supplier-notice-force-modal" aria-labelledby="supplierForceDemoTitle"><header><h3 id="supplierForceDemoTitle">公告</h3></header><div class="notice-modal-body"><article class="supplier-notice-force-content"><h4>${escapeHtml(row.title || '系统公告')}</h4><div class="supplier-notice-force-meta"><span>发布时间：${escapeHtml(publishedTime)}</span><span>发布单位：${escapeHtml(publisherOrg)}</span></div><div class="supplier-notice-force-rich-content">${renderForceDemoContent(row)}</div>${renderForceDemoAttachments(row)}</article>${forceAnnotationPlaceholder}</div><footer><button type="button" class="btn btn-primary btn-sm" data-action="ack-force-demo" disabled>我已知晓（5秒）</button></footer></section>`;
     root.appendChild(modal);
     state.forceDemoModal = modal;
     let seconds = 5;
@@ -307,7 +315,7 @@
     }
     if (action === 'download-attachment') {
       const detail = root.querySelector('#supplierNoticeDetailPage');
-      const row = getRow(detail?.dataset?.id || '') || state.rows.find((item) => item.readStatus === '已读');
+      const row = getRow(actionEl.dataset.noticeId || detail?.dataset?.id || '') || state.rows.find((item) => item.readStatus === '已读');
       if (row) downloadAttachment(row.attachments?.[Number(actionEl.dataset.index)] || {});
       return;
     }

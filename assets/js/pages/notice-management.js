@@ -201,7 +201,7 @@
     const panelOptions = options.length
       ? options.map((item) => `<label class="notice-recipient-target-option"><input type="checkbox" data-recipient-target="${esc(kind)}" data-target-name="${esc(item.name)}" ${selected.has(item.name) ? 'checked' : ''}><span>${esc(item.name)}</span></label>`).join('')
       : '<span class="notice-recipient-target-empty">暂无可选对象</span>';
-    return `<div class="notice-recipient-target-panel ${state.form.recipients.includes(kind) ? '' : 'is-hidden'}" data-recipient-target-panel="${esc(kind)}"><div class="notice-recipient-target-heading"><span>${esc(kind)}选择</span><label class="notice-recipient-target-select-all"><input type="checkbox" data-recipient-target-all="${esc(kind)}" ${allSelected ? 'checked' : ''}>全选</label></div><div class="notice-recipient-target-options">${panelOptions}</div></div>`;
+    return `<div class="notice-recipient-target-panel ${state.form.recipients.includes(kind) ? '' : 'is-hidden'}" data-recipient-target-panel="${esc(kind)}"><div class="notice-recipient-target-heading"><span>${esc(kind)}选择</span></div><div class="notice-recipient-target-options"><label class="notice-recipient-target-option notice-recipient-target-select-all"><input type="checkbox" data-recipient-target-all="${esc(kind)}" ${allSelected ? 'checked' : ''}>全选</label>${panelOptions}</div></div>`;
   }
 
   function syncRecipientTargetSelectAll(kind) {

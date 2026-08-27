@@ -516,17 +516,18 @@
         "scope": "page",
         "title": "标段分类唯一性与状态",
         "items": [
-          "标段名称必须唯一，",
-          "状态查询默认“全部”，可筛选禁用或启用。",
-          "添加/编辑标段时，商品分类为必填；已被其他标段占用的分类显示为勾选置灰，保存时再次校验，避免不同标段的商品分类重复。",
-          "新建标段默认启用。"
+          "添加/编辑标段时，商品分类为必填；已被其他标段占用的分类显示为勾选置灰，保存时再次校验，避免不同标段的商品分类重复。"
         ],
         "number": "1",
         "positionByScope": {
           "page": {
             "markerPosition": {
-              "x": 89,
-              "y": -181
+              "x": -205,
+              "y": -182
+            },
+            "popoverPosition": {
+              "x": 27,
+              "y": 28
             }
           }
         }
@@ -659,6 +660,30 @@
         ],
         "number": "2",
         "deleted": true
+      },
+      {
+        "id": "custom-1787790667530-1",
+        "target": "custom",
+        "targetSelector": "#noticeFormPage",
+        "placement": "right",
+        "scope": "page",
+        "title": "学校/供应商选择框",
+        "items": [
+          "选项最多显示五行，超过五行时滑动查看"
+        ],
+        "number": "3",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 845,
+              "y": 261
+            },
+            "popoverPosition": {
+              "x": 14,
+              "y": -83
+            }
+          }
+        }
       }
     ],
     "school-notice-management.html::supplierNoticePage": [
@@ -754,7 +779,7 @@
         "scope": "page",
         "title": "竞价新增/编辑字段与供应商联动",
         "items": [
-          "竞价新增/编辑表单先选择标段，再选择参与竞价供应商；供应商下拉项只展示已启用且已配置该标段的供应商，未选择标段时供应商选择框不可用。"
+          "竞价新增/编辑表单先选择标段，再选择参与竞价供应商；供应商下拉项只展示已启用且已配置该标段的供应商。"
         ],
         "number": "1",
         "positionByScope": {
@@ -839,7 +864,7 @@
         "scope": "page",
         "title": "生成采购单",
         "items": [
-          "需设置企业期望送达时间"
+          "生成采购单时需设置企业期望送达时间"
         ],
         "number": "2",
         "positionByScope": {
