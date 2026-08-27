@@ -295,7 +295,6 @@
                 <option value="已完成">已完成</option>
               </select>
             </div>
-            <div class="supplier-purchase-filter-placeholder" aria-hidden="true"></div>
             <div class="supplier-purchase-filter-actions">
               <button class="supplier-purchase-advanced-toggle" type="button" data-action="toggle-advanced" aria-expanded="false">高级筛选 <span aria-hidden="true">▾</span></button>
               <button class="btn btn-primary btn-sm" type="submit">查询</button>
