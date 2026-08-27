@@ -59,6 +59,28 @@
     return value === '' || value == null ? '--' : escapeHtml(value);
   }
 
+  function qualityReportFiles(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (value == null || value === '' || value === '0' || value === '--') return [];
+    return String(value).split(';')
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .map((name) => ({ name }));
+  }
+
+  function qualityReportKind(file) {
+    const name = String(file?.name || '').toLowerCase();
+    const type = String(file?.type || '').toLowerCase();
+    if (type.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(name)) return 'image';
+    if (type === 'application/pdf' || /\.pdf$/i.test(name)) return 'pdf';
+    return 'file';
+  }
+
+  function renderQualityReport(line) {
+    const count = qualityReportFiles(line.qualityReport).length;
+    return `<button class="supplier-purchase-report-link" type="button" data-action="quality-report" aria-label="查看或上传${escapeHtml(line.displayName)}质检报告">${count}</button>`;
+  }
+
   function statusClass(status) {
     if (status === '待收货' || status === '待确认') return 'pending';
     if (status === '已确认' || status === '已发货' || status === '已完成') return 'success';
@@ -119,7 +141,7 @@
                     <td>${numberLabel(line.shippedQty)}</td>
                     <td>${numberLabel(line.shippedSubtotal)}</td>
                     <td><input class="supplier-purchase-production-date" data-action="production-date" type="text" value="${escapeHtml(line.productionDate)}" placeholder="选择生产日期" aria-label="${escapeHtml(line.displayName)}生产日期"></td>
-                    <td>${numberLabel(line.qualityReport)}</td>
+                    <td>${renderQualityReport(line)}</td>
                     <td>${numberLabel(line.receivedQty)}</td>
                     <td>${numberLabel(line.unreceivedQty)}</td>
                     <td>${numberLabel(line.receivedSubtotal)}</td>
@@ -136,6 +158,126 @@
         </td>
       </tr>
     `;
+  }
+
+  function renderQualityReportPreview(page, file) {
+    const layer = page.querySelector('[data-report-preview]');
+    const preview = page.querySelector('[data-report-preview-content]');
+    if (!layer || !preview) return;
+    if (!file) {
+      layer.hidden = true;
+      preview.innerHTML = '';
+      return;
+    }
+
+    const kind = qualityReportKind(file);
+    const source = String(file.dataUrl || file.url || '');
+    const name = escapeHtml(file.name || '质检报告');
+    if (source && kind === 'image') {
+      preview.innerHTML = `<img class="supplier-purchase-report-preview-image" src="${escapeHtml(source)}" alt="${name}">`;
+    } else if (source && kind === 'pdf') {
+      preview.innerHTML = `<iframe class="supplier-purchase-report-preview-pdf" src="${escapeHtml(source)}" title="${name}"></iframe>`;
+    } else {
+      const typeLabel = kind === 'pdf' ? 'PDF' : kind === 'image' ? '图片' : '文件';
+      preview.innerHTML = `<div class="supplier-purchase-report-preview-placeholder"><span class="supplier-purchase-report-file-kind">${typeLabel}</span><strong>${name}</strong><p>已上传该质检报告，当前没有可直接展示的预览内容。</p></div>`;
+    }
+    layer.hidden = false;
+  }
+
+  function renderQualityReportDialog(page, rowId, itemId) {
+    const dialog = page.querySelector('#supplierPurchaseReportDialog');
+    const detail = service.getItem(rowId, itemId);
+    if (!dialog || !detail) return;
+    const files = Array.isArray(dialog.reportFiles) ? dialog.reportFiles : qualityReportFiles(detail.item.qualityReport);
+    dialog.dataset.rowId = rowId;
+    dialog.dataset.itemId = itemId;
+    const title = dialog.querySelector('[data-report-title]');
+    const list = dialog.querySelector('[data-report-list]');
+    if (title) title.textContent = '质检报告';
+    if (list) {
+      list.innerHTML = `<button class="supplier-purchase-report-add" type="button" data-action="trigger-report-upload" aria-label="添加质检报告"><span class="supplier-purchase-report-add-icon">＋</span><span>添加文件</span></button>${files.map((file, index) => {
+        const kind = qualityReportKind(file);
+        const kindLabel = kind === 'pdf' ? 'PDF' : kind === 'image' ? '图片' : '文件';
+        const source = String(file.dataUrl || file.url || '');
+        const preview = source && kind === 'image'
+          ? `<img class="supplier-purchase-report-file-image" src="${escapeHtml(source)}" alt="${escapeHtml(file.name || '质检报告')}">`
+          : `<span class="supplier-purchase-report-file-kind">${kindLabel}</span>`;
+        return `<button class="supplier-purchase-report-file" type="button" data-action="preview-report" data-report-index="${index}" aria-label="预览${escapeHtml(file.name || '质检报告')}"><span class="supplier-purchase-report-file-preview">${preview}</span><span class="supplier-purchase-report-file-name" title="${escapeHtml(file.name || '质检报告')}">${escapeHtml(file.name || '质检报告')}</span></button>`;
+      }).join('')}`;
+    }
+    closeQualityReportPreview(page);
+    dialog.hidden = false;
+    dialog.classList.add('is-open');
+  }
+
+  function openQualityReport(page, rowId, itemId) {
+    const dialog = page.querySelector('#supplierPurchaseReportDialog');
+    const detail = service.getItem(rowId, itemId);
+    if (dialog && detail) dialog.reportFiles = qualityReportFiles(detail.item.qualityReport).map((file) => ({ ...file }));
+    renderQualityReportDialog(page, rowId, itemId);
+  }
+
+  function closeQualityReportPreview(page) {
+    const layer = page.querySelector('[data-report-preview]');
+    const preview = page.querySelector('[data-report-preview-content]');
+    if (layer) layer.hidden = true;
+    if (preview) preview.innerHTML = '';
+  }
+
+  function closeQualityReport(page) {
+    const dialog = page.querySelector('#supplierPurchaseReportDialog');
+    if (!dialog) return;
+    closeQualityReportPreview(page);
+    dialog.hidden = true;
+    dialog.classList.remove('is-open');
+    delete dialog.dataset.rowId;
+    delete dialog.dataset.itemId;
+    delete dialog.reportFiles;
+    const input = dialog.querySelector('[data-report-file-input]');
+    if (input) input.value = '';
+  }
+
+  function readQualityReportFile(file) {
+    return new Promise((resolve) => {
+      const metadata = { name: file.name, size: file.size, type: file.type };
+      if (!window.FileReader) {
+        resolve(metadata);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve({ ...metadata, dataUrl: typeof reader.result === 'string' ? reader.result : '' });
+      reader.onerror = () => resolve(metadata);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleQualityReportUpload(page, event, state, syncRows, showToast) {
+    const input = event.target;
+    const files = Array.from(input.files || []);
+    const dialog = page.querySelector('#supplierPurchaseReportDialog');
+    const rowId = dialog?.dataset.rowId;
+    const itemId = dialog?.dataset.itemId;
+    if (!files.length || !rowId || !itemId) return;
+    const detail = service.getItem(rowId, itemId);
+    if (!detail) return;
+    const added = await Promise.all(files.map(readQualityReportFile));
+    const next = (Array.isArray(dialog.reportFiles) ? dialog.reportFiles : qualityReportFiles(detail.item.qualityReport)).concat(added);
+    dialog.reportFiles = next;
+    renderQualityReportDialog(page, rowId, itemId);
+    input.value = '';
+    showToast(`已添加 ${added.length} 份质检报告`);
+  }
+
+  function confirmQualityReport(page, state, syncRows, showToast) {
+    const dialog = page.querySelector('#supplierPurchaseReportDialog');
+    const rowId = dialog?.dataset.rowId;
+    const itemId = dialog?.dataset.itemId;
+    if (!dialog || !rowId || !itemId) return;
+    service.updateQualityReports(rowId, itemId, dialog.reportFiles || []);
+    syncRows();
+    renderRows(page, state);
+    closeQualityReport(page);
+    showToast('质检报告已保存');
   }
 
   function renderRows(page, state) {
@@ -380,6 +522,25 @@
             <div class="supplier-purchase-dialog-footer"><button class="btn btn-sm" type="button" data-action="close-dialog">关闭</button></div>
           </div>
         </div>
+        <div class="supplier-purchase-report-dialog" id="supplierPurchaseReportDialog" role="dialog" aria-modal="true" aria-labelledby="supplierPurchaseReportTitle" hidden>
+          <div class="supplier-purchase-report-panel">
+            <div class="supplier-purchase-dialog-header"><h2 id="supplierPurchaseReportTitle" data-report-title>质检报告</h2><button type="button" class="supplier-purchase-dialog-close" data-action="close-report-dialog" aria-label="关闭">×</button></div>
+            <div class="supplier-purchase-report-body">
+              <div class="supplier-purchase-report-list" data-report-list></div>
+              <input type="file" data-report-file-input multiple accept="image/*,.pdf,.doc,.docx" hidden>
+            </div>
+            <div class="supplier-purchase-report-footer">
+              <button class="btn btn-sm" type="button" data-action="close-report-dialog">取消</button>
+              <button class="btn btn-primary btn-sm" type="button" data-action="confirm-report-dialog">确定</button>
+            </div>
+          </div>
+          <div class="supplier-purchase-report-preview" data-report-preview hidden>
+            <div class="supplier-purchase-report-preview-panel">
+              <button type="button" class="supplier-purchase-report-preview-close" data-action="close-report-preview" aria-label="关闭预览">×</button>
+              <div data-report-preview-content></div>
+            </div>
+          </div>
+        </div>
         <div class="supplier-purchase-shipping-dialog" id="supplierShippingDialog" role="dialog" aria-modal="true" aria-labelledby="supplierShippingTitle" hidden>
           <div class="supplier-purchase-shipping-panel">
             <div class="supplier-purchase-dialog-header"><h2 id="supplierShippingTitle">发货</h2><button type="button" class="supplier-purchase-dialog-close" data-action="close-shipping-dialog" aria-label="关闭">×</button></div>
@@ -500,6 +661,10 @@
         renderRows(page, state);
         return;
       }
+      if (event.target.matches('[data-report-file-input]')) {
+        handleQualityReportUpload(page, event, state, syncRows, showToast);
+        return;
+      }
       if (event.target.matches('[data-action="production-date"]')) {
         const row = event.target.closest('[data-row-id]');
         service.updateProductionDate(row?.dataset.rowId, row?.dataset.itemId, event.target.value);
@@ -518,6 +683,44 @@
         actionElement.setAttribute('aria-expanded', String(state.advanced));
         actionElement.classList.toggle('is-active', state.advanced);
         if (panel) panel.hidden = !state.advanced;
+        return;
+      }
+
+      if (action === 'quality-report') {
+        const itemRow = actionElement.closest('tr[data-item-id]');
+        openQualityReport(page, itemRow?.dataset.rowId, itemRow?.dataset.itemId);
+        return;
+      }
+
+      if (action === 'preview-report') {
+        const dialog = page.querySelector('#supplierPurchaseReportDialog');
+        const index = Number(actionElement.dataset.reportIndex);
+        renderQualityReportPreview(page, dialog?.reportFiles?.[index]);
+        dialog?.querySelectorAll('[data-action="preview-report"]').forEach((fileButton, fileIndex) => {
+          const active = fileIndex === index;
+          fileButton.classList.toggle('is-active', active);
+          fileButton.setAttribute('aria-pressed', String(active));
+        });
+        return;
+      }
+
+      if (action === 'trigger-report-upload') {
+        page.querySelector('[data-report-file-input]')?.click();
+        return;
+      }
+
+      if (action === 'close-report-dialog') {
+        closeQualityReport(page);
+        return;
+      }
+
+      if (action === 'confirm-report-dialog') {
+        confirmQualityReport(page, state, syncRows, showToast);
+        return;
+      }
+
+      if (action === 'close-report-preview') {
+        closeQualityReportPreview(page);
         return;
       }
 
@@ -585,6 +788,7 @@
       if (event.key === 'Escape') {
         closeDetail(page);
         closeShipping(page);
+        closeQualityReport(page);
       }
     });
   }

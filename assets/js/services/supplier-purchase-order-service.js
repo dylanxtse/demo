@@ -1,6 +1,26 @@
 (function () {
   const storageKey = 'procurement-supplier-purchase-orders-v1';
   const clone = (value) => JSON.parse(JSON.stringify(value));
+  function normalizeQualityReports(value) {
+    if (Array.isArray(value)) {
+      return value.filter(Boolean).map((report) => {
+        if (typeof report === 'string') return { name: report };
+        return {
+          ...report,
+          name: String(report.name || '质检报告'),
+          dataUrl: report.dataUrl || report.url || ''
+        };
+      });
+    }
+    if (value && typeof value === 'object') return normalizeQualityReports([value]);
+    if (typeof value === 'string') {
+      return value.split(';')
+        .map((name) => name.trim())
+        .filter((name) => name && name !== '0' && name !== '--')
+        .map((name) => ({ name }));
+    }
+    return [];
+  }
   const productCodes = {
     姜肉1: 'SP00001',
     土豆: 'SP00002',
@@ -28,7 +48,7 @@
       shippedQty: plannedQty,
       shippedSubtotal: Number(plannedQty) * Number(purchasePrice),
       productionDate: '',
-      qualityReport: '0',
+      qualityReport: [],
       receivedQty: '0',
       unreceivedQty: '0',
       receivedSubtotal: '0',
@@ -199,7 +219,11 @@
     const rows = Array.isArray(stored) && stored.length ? stored : clone(seedRows);
     return rows.map((row) => ({
       ...row,
-      enterpriseExpectedAt: row.enterpriseExpectedAt || row.expectedDeliveryAt
+      enterpriseExpectedAt: row.enterpriseExpectedAt || row.expectedDeliveryAt,
+      items: (row.items || []).map((line) => ({
+        ...line,
+        qualityReport: normalizeQualityReports(line.qualityReport)
+      }))
     }));
   }
 
@@ -277,6 +301,15 @@
       const line = row?.items?.find((itemRow) => itemRow.id === itemId);
       if (!line) return null;
       line.productionDate = productionDate;
+      saveRows(rows);
+      return clone(line);
+    },
+    updateQualityReports(rowId, itemId, reports) {
+      const rows = readRows();
+      const row = findRow(rows, rowId);
+      const line = row?.items?.find((itemRow) => itemRow.id === itemId);
+      if (!line) return null;
+      line.qualityReport = normalizeQualityReports(reports);
       saveRows(rows);
       return clone(line);
     },
