@@ -43,11 +43,21 @@
   margin-right: 8px;
 }
 
-.purchase-order-page .purchase-school-date-field .filter-label,
-.purchase-order-page .purchase-enterprise-date-field .filter-label {
+.purchase-order-page .purchase-field {
+  gap: 0;
+}
+
+.purchase-order-page .purchase-field .filter-label {
   width: 120px;
   flex-basis: 120px;
   margin-right: 12px;
+  text-align: right;
+}
+
+.purchase-order-page .purchase-field > .filter-input,
+.purchase-order-page .purchase-field > .filter-select,
+.purchase-order-page .purchase-field > .purchase-date-range {
+  box-sizing: border-box;
 }
 
 .purchase-field > .filter-input,
@@ -57,6 +67,23 @@
   width: 0;
   min-width: 0;
   flex: 1 1 0;
+}
+
+.purchase-task-page .purchase-field {
+  gap: 0;
+}
+
+.purchase-task-page .purchase-field .filter-label {
+  width: 120px;
+  flex: 0 0 120px;
+  margin-right: 12px;
+  text-align: right;
+}
+
+.purchase-task-page .purchase-field > .filter-input,
+.purchase-task-page .purchase-field > .filter-select,
+.purchase-task-page .purchase-field > .purchase-date-range {
+  box-sizing: border-box;
 }
 
 .purchase-date-range {
