@@ -235,6 +235,17 @@
       return placeholder;
     };
 
+    // Inline placeholders may carry an instance suffix (for example, `-column`),
+    // while persisted custom definitions are keyed by their base annotation ID.
+    // Match the base ID as a fallback so sync() does not create a second marker
+    // for the same annotation target.
+    const findPlaceholderForDefinition = (id) => {
+      const exact = findPlaceholder(id);
+      if (exact) return exact;
+      return [...root.querySelectorAll('[data-annotation-placeholder]')]
+        .find((candidate) => candidate.dataset.annotationBase === id);
+    };
+
     const getDefinitionForAnchor = (anchor) => {
       const id = anchor?.dataset.annotationOverlayId;
       if (!id) return null;
@@ -1000,7 +1011,7 @@
       placeholderCache.clear();
       // 页面刷新后，项目代码中的自定义标注没有业务模板占位点，需要按持久化定位选择器补回占位点。
       definitionById.forEach((definition, id) => {
-        if (definition.target !== 'custom' || !definition.targetSelector || findPlaceholder(id)) return;
+        if (definition.target !== 'custom' || !definition.targetSelector || findPlaceholderForDefinition(id)) return;
         createCodePlaceholder({ ...definition, id });
       });
       renumberDefinitions();

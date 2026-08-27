@@ -282,18 +282,28 @@
     const content = `
       <div class="page-card supplier-purchase-order-page" id="supplierPurchaseOrderPage">
         <form class="supplier-purchase-filters" id="supplierPurchaseOrderFilters">
-          <div class="supplier-purchase-basic-fields">
-            <div class="supplier-purchase-filter-item supplier-purchase-filter-item-wide">
-              <label>企业期望送达时间</label>
-              ${renderAnnotationMarker(enterpriseTimeFilterAnnotation)}${renderDateRange('expectedStart', 'expectedEnd', defaults.expectedStart, defaults.expectedEnd, '企业期望送达时间')}
-            </div>
-            <div class="supplier-purchase-filter-item">
-              <label for="supplierPurchaseOrderStatus">单据状态</label>
-              <select id="supplierPurchaseOrderStatus" data-filter="orderStatus">
-                <option value="">全部</option>
-                <option value="待收货">待收货</option>
-                <option value="已完成">已完成</option>
-              </select>
+          <div class="supplier-purchase-filter-main">
+            <div class="supplier-purchase-basic-fields">
+              <div class="supplier-purchase-filter-item supplier-purchase-filter-item-wide">
+                <label>企业期望送达时间</label>
+                ${renderAnnotationMarker(enterpriseTimeFilterAnnotation)}${renderDateRange('expectedStart', 'expectedEnd', defaults.expectedStart, defaults.expectedEnd, '企业期望送达时间')}
+              </div>
+              <div class="supplier-purchase-filter-item">
+                <label for="supplierPurchaseOrderStatus">单据状态</label>
+                <select id="supplierPurchaseOrderStatus" data-filter="orderStatus">
+                  <option value="">全部</option>
+                  <option value="待收货">待收货</option>
+                  <option value="已完成">已完成</option>
+                </select>
+              </div>
+              <div class="supplier-purchase-filter-item">
+                <label for="supplierPurchaseOrderConfirmStatus">是否确认</label>
+                <select id="supplierPurchaseOrderConfirmStatus" data-filter="confirmStatus">
+                  <option value="">全部</option>
+                  <option value="已确认">已确认</option>
+                  <option value="已发货">已发货</option>
+                </select>
+              </div>
             </div>
             <div class="supplier-purchase-filter-actions">
               <button class="supplier-purchase-advanced-toggle" type="button" data-action="toggle-advanced" aria-expanded="false">高级筛选 <span aria-hidden="true">▾</span></button>
@@ -302,14 +312,6 @@
             </div>
           </div>
           <div class="supplier-purchase-advanced-fields" data-advanced-fields hidden>
-            <div class="supplier-purchase-filter-item">
-              <label for="supplierPurchaseOrderConfirmStatus">是否确认</label>
-              <select id="supplierPurchaseOrderConfirmStatus" data-filter="confirmStatus">
-                <option value="">全部</option>
-                <option value="已确认">已确认</option>
-                <option value="已发货">已发货</option>
-              </select>
-            </div>
             <div class="supplier-purchase-filter-item">
               <label for="supplierPurchaseOrderNo">采购单号</label>
               <input id="supplierPurchaseOrderNo" data-filter="orderNo" type="text" placeholder="请输入采购单号">
@@ -418,10 +420,13 @@
       [winningPriceAnnotation.id, winningPriceAnnotation]
     ]));
     const state = { rows, filtered: rows, visible: [], selected: new Set(), advanced: false, pager: null };
+    let initialSync = true;
 
     const readFilters = () => Object.fromEntries([...page.querySelectorAll('[data-filter]')].map((field) => [field.dataset.filter, field.value]));
     const syncRows = () => {
-      state.rows = service.getRows();
+      const currentRows = service.getRows();
+      state.rows = initialSync ? currentRows.map((row) => ({ ...row, expanded: false })) : currentRows;
+      initialSync = false;
       state.filtered = service.filterRows(state.rows, readFilters());
       const visibleIds = new Set(state.filtered.map((row) => row.id));
       state.selected = new Set([...state.selected].filter((id) => visibleIds.has(id)));

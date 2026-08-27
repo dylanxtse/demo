@@ -63,8 +63,8 @@
     ],
     toolbar: [
       { key: 'batchShip', label: '一键发货', primary: true, batchTransition: 'ship', message: '是否确定发货？' },
-      { key: 'print', label: '打印', toast: '已生成订单发货出库打印预览' },
-      { key: 'export', label: '导出' }
+      { key: 'print', label: '打印', icon: 'supplier-purchase-print', toast: '已生成订单发货出库打印预览' },
+      { key: 'export', label: '导出', icon: 'supplier-purchase-export' }
     ],
     statusMap: {
       PENDING: ['未发货', 'warning'],

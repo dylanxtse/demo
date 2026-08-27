@@ -55,7 +55,7 @@
       goodsCount: 1,
       supplierStatus: '已发货',
       remark: '',
-      expanded: true,
+      expanded: false,
       canConfirm: false,
       canShip: false,
       customerName: '南皮县职业技术教育中心',

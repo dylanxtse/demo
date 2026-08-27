@@ -397,7 +397,7 @@
   let annotationEnginePromise = null;
   const toolkitAssets = Object.freeze({
     theme: './assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260824-9',
-    annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260824-31',
+    annotation: './assets/js/prototype-tools/src/annotation-overlay.js?v=20260827-1',
     iteration: './assets/js/prototype-tools/src/project-iteration-panel.js?v=20260826-57',
     iterationStyles: './assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60',
     annotationData: './assets/js/config/annotation-data.js?v=20260822-2',

@@ -3,7 +3,8 @@
 
   var service = window.PurchaseService;
   var utils = window.PurchasePageUtils;
-  var downloadIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var exportIcon = '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M5 21h14"></path></svg>';
+  var printIcon = '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>';
   var renderAnnotationMarker = function () {
     return window.AnnotationOverlay?.renderPlaceholder?.apply(window.AnnotationOverlay, arguments) || '';
   };
@@ -64,7 +65,7 @@
       '</div>',
       '<div class="purchase-toolbar purchase-order-toolbar">',
         renderAnnotationMarker(manualAddAnnotation),
-        '<div class="purchase-toolbar-side"><button class="btn btn-sm purchase-export-button" type="button" data-action="export">' + downloadIcon + '导出</button><button class="btn btn-sm purchase-print-button" type="button" data-action="print" disabled>打印</button></div>',
+        '<div class="purchase-toolbar-side"><button class="btn btn-sm purchase-export-button" type="button" data-action="export">' + exportIcon + '导出</button><button class="btn btn-sm purchase-print-button" type="button" data-action="print" disabled>' + printIcon + '打印</button></div>',
       '</div>',
       '<div class="purchase-table-container">',
         '<div class="purchase-table-wrap">',

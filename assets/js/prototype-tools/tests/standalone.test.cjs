@@ -65,3 +65,22 @@ test('standalone bundle exposes the toolkit and reuses mounted instances', async
 
   assert.equal(await context.PrototypeTools.load(), context.PrototypeTools);
 });
+
+test('annotation placeholders preserve a base ID for instance-aware matching', () => {
+  const { context } = loadBundle();
+  const markup = context.AnnotationOverlay.renderPlaceholder(
+    { id: 'annotation-1', target: 'custom' },
+    'column',
+    true,
+  );
+
+  assert.match(markup, /data-annotation-placeholder="annotation-1-column"/);
+  assert.match(markup, /data-annotation-base="annotation-1"/);
+
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'annotation-overlay.js'),
+    'utf8',
+  );
+  assert.match(source, /findPlaceholderForDefinition/);
+  assert.match(source, /candidate\.dataset\.annotationBase === id/);
+});

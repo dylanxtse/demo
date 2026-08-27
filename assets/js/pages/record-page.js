@@ -1,6 +1,13 @@
 (function () {
   const service = window.OperationsService;
   const downloadIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  const supplierPurchasePrintIcon = '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>';
+  const supplierPurchaseExportIcon = '<svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M5 21h14"></path></svg>';
+  const toolbarIcons = {
+    download: downloadIcon,
+    'supplier-purchase-print': supplierPurchasePrintIcon,
+    'supplier-purchase-export': supplierPurchaseExportIcon
+  };
   const formatExportDateTime = (date) => {
     const pad = (value) => String(value).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
@@ -97,7 +104,7 @@
       const fullButtonClass = [buttonClass, action.primary ? 'btn-primary' : '', action.className || '']
         .filter(Boolean)
         .join(' ');
-      const icon = action.icon === 'download' ? downloadIcon : (action.icon || '');
+      const icon = toolbarIcons[action.icon] || action.icon || '';
       const tooltipAttrs = action.tooltip
         ? ` data-tooltip="${escapeHtml(action.tooltip)}"${action.ariaLabel ? ` aria-label="${escapeHtml(action.ariaLabel)}"` : ''}`
         : (action.ariaLabel ? ` aria-label="${escapeHtml(action.ariaLabel)}"` : '');

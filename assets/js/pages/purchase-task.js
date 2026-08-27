@@ -32,12 +32,12 @@
             '<div class="purchase-field"><label class="filter-label" for="taskDate">学校期望送达时间</label>' + renderAnnotationMarker(taskDateAnnotation) + '<input class="filter-input" id="taskDate" type="text" placeholder="请选择日期" readonly></div>',
           '</div>',
           '<div class="purchase-filter-actions">',
-            '<button class="purchase-advanced-toggle" type="button" data-action="toggle-advanced">高级筛选<span class="toggle-arrow">▾</span></button>',
+            '<button class="purchase-advanced-toggle" type="button" data-action="toggle-advanced" aria-expanded="false" aria-controls="purchaseTaskAdvancedFilter">高级筛选<span class="toggle-arrow">▾</span></button>',
             '<button class="btn btn-primary" type="button" data-action="query">查询</button>',
             '<button class="btn" type="button" data-action="reset">重置</button>',
           '</div>',
         '</div>',
-        '<div class="purchase-filter-advanced">',
+        '<div class="purchase-filter-advanced" id="purchaseTaskAdvancedFilter" hidden>',
           '<div class="purchase-filter-grid">',
             '<div class="purchase-field"><label class="filter-label" for="taskPurchaseType">采购类型</label><select class="filter-select" id="taskPurchaseType"><option value="">全部</option><option>联营供应商采购</option><option>市场自采</option><option>供应商送货</option></select></div>',
             '<div class="purchase-field"><label class="filter-label" for="taskCustomerName">客户名称</label><select class="filter-select" id="taskCustomerName"><option value="">全部</option><option>静安第1中学</option><option>第一实验学校</option><option>阳光幼儿园</option></select></div>',
@@ -155,7 +155,11 @@
     if (!target || !page.contains(target)) return;
     var action = target.dataset.action;
     if (action === 'toggle-advanced') {
-      $('#purchaseTaskFilter').classList.toggle('is-expanded');
+      var filter = $('#purchaseTaskFilter');
+      var expanded = filter.classList.toggle('is-expanded');
+      var advanced = $('#purchaseTaskAdvancedFilter');
+      if (advanced) advanced.hidden = !expanded;
+      target.setAttribute('aria-expanded', String(expanded));
       return;
     }
     if (action === 'query') {
