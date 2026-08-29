@@ -50,6 +50,10 @@
     }));
   }
 
+  function normalizeTemplateId(id) {
+    return String(id || '').replace(/^MB(?=\d)/, 'PP');
+  }
+
   function normalizeTemplate(template) {
     const relationType = template.relationType === 'many-to-one' ? 'many-to-one' : 'one-to-many';
     const { relations: _relations, ...templateData } = template;
@@ -63,6 +67,7 @@
     const outputWarehouse = normalizeWarehouseName(template.outputWarehouse || outputs.find((item) => item.warehouse)?.warehouse || materialWarehouse);
     return {
       ...templateData,
+      id: normalizeTemplateId(templateData.id),
       relationType,
       materialWarehouse,
       outputWarehouse,
@@ -73,13 +78,15 @@
 
   function mergeDemoTemplates(templates) {
     const merged = templates.slice();
-    const demoTemplateIds = new Set(['MB005']);
+    const demoTemplateIds = new Set(['PP005']);
+    const existingTemplateIds = new Set(merged.map((template) => normalizeTemplateId(template.id)));
     let changed = false;
     (window.MockProcessingTemplates || [])
       .filter((template) => demoTemplateIds.has(template.id))
       .forEach((seedTemplate) => {
-        if (merged.some((template) => template.id === seedTemplate.id)) return;
+        if (existingTemplateIds.has(seedTemplate.id)) return;
         merged.push(clone(seedTemplate));
+        existingTemplateIds.add(seedTemplate.id);
         changed = true;
       });
     return { templates: merged, changed };
@@ -103,10 +110,10 @@
   function generateId() {
     const templates = load();
     const maxNum = templates.reduce((max, t) => {
-      const num = parseInt(t.id.replace('MB', ''), 10);
+      const num = parseInt(String(t.id || '').replace(/^(?:PP|MB)/, ''), 10);
       return num > max ? num : max;
     }, 0);
-    return `MB${String(maxNum + 1).padStart(3, '0')}`;
+    return `PP${String(maxNum + 1).padStart(3, '0')}`;
   }
 
   window.ProcessingTemplateService = {

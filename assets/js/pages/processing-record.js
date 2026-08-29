@@ -61,8 +61,7 @@
               <tr>
                 <th class="checkbox-cell" rowspan="2"><span class="custom-checkbox" role="checkbox" aria-checked="false" data-action="toggle-all"></span></th>
                 <th rowspan="2">加工单号</th>
-                <th rowspan="2" class="processing-record-material-col">原料商品（计量单位/品牌/规格）</th>
-                <th rowspan="2">原料用量</th>
+                <th colspan="2">加工原料</th>
                 <th colspan="2">加工成品</th>
                 <th rowspan="2">原料出库单</th>
                 <th rowspan="2">成品入库单</th>
@@ -72,6 +71,8 @@
                 <th rowspan="2">操作</th>
               </tr>
               <tr>
+                <th class="processing-record-material-col">原料商品（计量单位/品牌/规格）</th>
+                <th>原料用量</th>
                 <th class="processing-record-product-col">成品商品（计量单位/品牌/规格）</th>
                 <th>实际获得量</th>
               </tr>
@@ -139,14 +140,122 @@
     </div>`;
   }
 
-  function renderOperationLogs(logs) {
-    if (!logs || !logs.length) return '<span class="detail-empty">--</span>';
-    return logs.map((log) => `
+  function getOperationNodeType(log) {
+    const action = String(log?.action || '');
+    const desc = String(log?.desc || '');
+    const text = `${action} ${desc}`;
+    if (/编辑后提交审核|重新提交审核|编辑|修改/.test(text)) return 'edit';
+    if (/提交审核/.test(action)) return '';
+    if (/审核通过|审核驳回|驳回|审核|作废/.test(text)) return 'audit';
+    if (/创建|添加/.test(text)) return 'create';
+    return '';
+  }
+
+  function getOperationTime(log) {
+    const source = log?.time || log?.createdAt || log?.timestamp || log?.desc || '';
+    const match = String(source).match(/(20\d{2}[-/]\d{1,2}[-/]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?)/);
+    return match ? match[1].replace(/\//g, '-').replace('T', ' ') : '';
+  }
+
+  function getOperationActor(log, type, fallback) {
+    if (log?.operator) return String(log.operator);
+    const desc = String(log?.desc || '');
+    const time = getOperationTime(log);
+    const beforeTime = time ? desc.slice(0, desc.indexOf(time)).trim() : desc.trim();
+    const actionPattern = {
+      create: /\s*(?:创建|添加)(?:加工单)?\s*$/,
+      audit: /\s*(?:审核通过|审核驳回|审核|驳回|作废)(?:加工单)?\s*$/,
+      edit: /\s*(?:编辑后提交审核|重新提交审核|编辑|修改)(?:加工单)?\s*$/
+    }[type];
+    const actor = actionPattern ? beforeTime.replace(actionPattern, '').trim() : '';
+    return actor || fallback || '管理员';
+  }
+
+  function isRejectedOperation(log) {
+    return /驳回|拒绝|不通过|作废/.test(`${log?.action || ''} ${log?.desc || ''} ${log?.result || ''} ${log?.status || ''}`);
+  }
+
+  function getOperationSortValue(time) {
+    const parsed = Date.parse(String(time || '').replace(/-/g, '/'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function getProcessingCreateTime(order) {
+    if (order.createTime) return order.createTime;
+    const date = String(order.processingDate || '').slice(0, 10);
+    return date ? `${date} 00:00:00` : '';
+  }
+
+  function buildProcessingOperationNodes(order) {
+    const logs = Array.isArray(order.operationLogs) ? order.operationLogs : [];
+    const fallbackActor = order.operator || '管理员';
+    const nodes = logs.map((log, index) => {
+      const type = getOperationNodeType(log);
+      if (!type) return null;
+      return {
+        type,
+        label: { create: '创建', audit: '审核', edit: '编辑' }[type],
+        operator: getOperationActor(log, type, fallbackActor),
+        time: getOperationTime(log),
+        rejected: type === 'audit' && isRejectedOperation(log),
+        sourceIndex: index
+      };
+    }).filter(Boolean);
+
+    const displayStatus = getDisplayStatus(order);
+    const hasAuditFlow = nodes.some((node) => node.type === 'audit' || node.type === 'edit')
+      || order.auditedAt
+      || order.auditResult
+      || displayStatus === '待审核'
+      || displayStatus === '已驳回';
+    if (!nodes.some((node) => node.type === 'create')) {
+      nodes.push({
+        type: 'create',
+        label: '创建',
+        operator: fallbackActor,
+        time: getProcessingCreateTime(order),
+        rejected: false,
+        sourceIndex: -1
+      });
+    }
+
+    const hasAuditNode = nodes.some((node) => node.type === 'audit');
+    if (!hasAuditNode && (order.auditedAt || order.auditResult || displayStatus === '已驳回')) {
+      const fallbackTime = [...nodes].reverse().map((node) => node.time).find(Boolean)
+        || order.submittedAt || getProcessingCreateTime(order);
+      nodes.push({
+        type: 'audit',
+        label: '审核',
+        operator: order.auditOperator || '管理员',
+        time: order.auditedAt || fallbackTime,
+        rejected: displayStatus === '已驳回' || /驳回|拒绝|不通过/.test(String(order.auditResult || '')),
+        sourceIndex: logs.length
+      });
+    }
+
+    return nodes.map((node) => ({
+      ...node,
+      result: node.type === 'audit' ? (node.rejected ? '审核驳回' : '审核通过') : '',
+      status: node.type === 'audit'
+        ? (node.rejected ? '已驳回' : '已完成')
+        : node.type === 'edit'
+          ? '待审核'
+          : (hasAuditFlow ? '待审核' : '已完成')
+    })).sort((first, second) => (
+      getOperationSortValue(second.time) - getOperationSortValue(first.time)
+      || second.sourceIndex - first.sourceIndex
+    ));
+  }
+
+  function renderOperationLogs(order) {
+    const nodes = buildProcessingOperationNodes(order);
+    if (!nodes.length) return '<span class="detail-empty">--</span>';
+    return nodes.map((node) => `
       <div class="detail-timeline-item">
         <div class="detail-timeline-node"></div>
         <div class="detail-timeline-content">
-          <span class="detail-timeline-action">${escapeHtml(log.action)}</span>
-          <span class="detail-timeline-desc">${escapeHtml(log.desc)}</span>
+          <span class="detail-timeline-action operation-status-tag status-tag ${getStatusClass(node.status)}">${escapeHtml(node.status)}</span>
+          <span class="detail-timeline-desc">${escapeHtml(`${node.operator} ${node.result || node.label} ${node.time || '--'}`)}</span>
         </div>
       </div>
     `).join('');
@@ -733,6 +842,9 @@
     if (!order) return;
     const displayStatus = getDisplayStatus(order);
     const statusClass = getStatusClass(displayStatus);
+    const processingTemplate = getProcessingTemplate(order);
+    const templateId = order.templateId || processingTemplate?.id || '';
+    const templateName = order.templateName || processingTemplate?.name || '';
     const materialRows = (order.materials || []).map((m) => `
       <tr>
         <td>${productNetTag(m.productCode)}${escapeHtml(m.productName)}</td>
@@ -752,7 +864,7 @@
         <td>${o.refQty ?? '--'}</td>
         <td>${o.actualQty ?? '--'}</td>
         <td>${o.allocatedCost || '--'}</td>
-        <td>${o.costPrice ? `${o.costPrice}/${escapeHtml(o.unit || '--')}` : '--'}</td>
+        <td>${o.costPrice || '--'}</td>
       </tr>
     `).join('');
 
@@ -761,6 +873,8 @@
         <h3>基本信息</h3>
         <div class="processing-detail-info">
           <div class="info-item"><span class="info-label">加工单号：</span><span class="info-value">${escapeHtml(order.id)}</span></div>
+          <div class="info-item"><span class="info-label">编号：</span><span class="info-value">${escapeHtml(templateId || '--')}</span></div>
+          <div class="info-item"><span class="info-label">加工方案名称：</span><span class="info-value">${escapeHtml(templateName || '--')}</span></div>
           <div class="info-item"><span class="info-label">加工日期：</span><span class="info-value">${escapeHtml(order.processingDate)}</span></div>
           <div class="info-item"><span class="info-label">状态：</span><span class="info-value"><span class="status-tag ${statusClass}">${escapeHtml(displayStatus)}</span></span></div>
           <div class="info-item"><span class="info-label">成本模式：</span><span class="info-value">${order.costMode === 'auto' ? '按原料成本及实际获得量计算' : '手动输入成品入库单价'}</span></div>
@@ -800,7 +914,7 @@
       </div>
       <div class="processing-detail-section">
         <h3>操作记录</h3>
-        <div class="detail-timeline">${renderOperationLogs(order.operationLogs)}</div>
+        <div class="detail-timeline">${renderOperationLogs(order)}</div>
       </div>
     `;
     document.getElementById('recDetailFooter').innerHTML = renderDetailFooter(order, displayStatus);

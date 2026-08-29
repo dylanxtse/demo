@@ -462,9 +462,12 @@
             <span class="flow-label">成品：</span>
             <span class="flow-content">${outputNames || '--'}</span>
           </div>
-          <div class="template-card-actions">
-            <button class="btn-text" type="button" data-action="edit-template" data-tpl-id="${escapeHtml(tpl.id)}">编辑</button>
-            <button class="btn-text danger" type="button" data-action="delete-template" data-tpl-id="${escapeHtml(tpl.id)}">删除</button>
+          <div class="template-card-bottom">
+            <span class="template-card-id">${escapeHtml(tpl.id || '--')}</span>
+            <div class="template-card-actions">
+              <button class="btn-text" type="button" data-action="edit-template" data-tpl-id="${escapeHtml(tpl.id)}">编辑</button>
+              <button class="btn-text danger" type="button" data-action="delete-template" data-tpl-id="${escapeHtml(tpl.id)}">删除</button>
+            </div>
           </div>
         </div>
       `;
@@ -1485,6 +1488,8 @@
     const data = state.templateEditData;
     const description = String(data.description || '').slice(0, 200);
     const page = document.getElementById('templateEditorPage');
+    page.classList.toggle('is-one-to-many', data.relationType !== 'many-to-one');
+    page.classList.toggle('is-many-to-one', data.relationType === 'many-to-one');
 
     page.innerHTML = `
       <div class="template-editor-header">
@@ -1497,6 +1502,7 @@
       <div class="template-editor-body" id="templateModalBody">
         <div class="template-editor-section">
           <div class="basic-info-grid">
+            ${isEdit ? `<div class="basic-info-field"><label class="field-label">方案编号：</label><div class="template-editor-readonly-id">${escapeHtml(data.id || '--')}</div></div>` : ''}
             <div class="basic-info-field">
               <label class="field-label required" for="tplName">方案名称</label>
               <input class="form-control" id="tplName" placeholder="请输入" value="${escapeHtml(data.name || '')}">
@@ -1516,7 +1522,6 @@
             <span class="section-title-mark">加工类型</span>
           </div>
           <div class="cost-mode-row template-relation-type-row">
-            <span class="cost-mode-label">关系类型</span>
             <label class="radio-option">
               <input type="radio" name="tplRelationType" value="one-to-many" ${data.relationType !== 'many-to-one' ? 'checked' : ''} ${isEdit ? 'disabled' : ''}>
               一种原料加工为多个成品
@@ -1541,10 +1546,10 @@
           <table class="processing-sub-table">
             <thead>
               <tr>
-                <th style="width:240px">原料商品</th>
-                <th style="width:80px">单位</th>
-                <th id="tplMaterialDemandHeader" style="width:130px;display:none">单位成品需求量</th>
-                <th id="tplMaterialActionHeader" style="width:60px;display:none"></th>
+                <th class="template-product-column">原料商品</th>
+                <th class="template-unit-column">单位</th>
+                <th class="template-detail-column" id="tplMaterialDemandHeader" style="display:none">单位成品需求量</th>
+                <th class="template-action-column" id="tplMaterialActionHeader" style="display:none">操作</th>
               </tr>
             </thead>
             <tbody id="tplMaterialBody"></tbody>
@@ -1564,10 +1569,10 @@
           <table class="processing-sub-table">
             <thead>
               <tr>
-                <th style="width:180px">成品商品</th>
-                <th style="width:70px">单位</th>
-                <th id="tplOutputCoefficientHeader" style="width:100px">转换系数</th>
-                <th id="tplOutputActionHeader" style="width:60px">操作</th>
+                <th class="template-product-column">成品商品</th>
+                <th class="template-unit-column">单位</th>
+                <th class="template-detail-column" id="tplOutputCoefficientHeader">转换系数</th>
+                <th class="template-action-column" id="tplOutputActionHeader">操作</th>
               </tr>
             </thead>
             <tbody id="tplOutputBody"></tbody>
@@ -1585,6 +1590,7 @@
     renderTplOutputTable();
     renderTplMaterialWarehouseField();
     renderTplOutputWarehouseField();
+    syncTemplateDescriptionWidth();
     bindTemplateEditorEvents();
   }
 
@@ -1592,10 +1598,11 @@
     const container = document.getElementById('tplMaterialWarehouseField');
     if (!container) return;
     const isEdit = state.templateEditMode === 'edit';
+    const isManyToOne = getTemplateRelationType() === 'many-to-one';
     const item = state.templateEditData.materials?.find((material) => material.warehouse)
       || state.templateEditData.materials?.[0]
       || {};
-    container.innerHTML = isEdit
+    container.innerHTML = isEdit && !isManyToOne
       ? `<span class="template-warehouse-readonly">${escapeHtml(state.templateEditData.materialWarehouse || item.warehouse || '--')}</span>`
       : renderWarehouseSelect(state.templateEditData.materialWarehouse || item.warehouse || '');
   }
@@ -1603,12 +1610,16 @@
   function renderTplOutputWarehouseField() {
     const container = document.getElementById('tplOutputWarehouseField');
     if (!container) return;
+    const isEdit = state.templateEditMode === 'edit';
+    const isManyToOne = getTemplateRelationType() === 'many-to-one';
     const outputs = Array.isArray(state.templateEditData.outputs) ? state.templateEditData.outputs : [];
     const selectedWarehouse = state.templateEditData.outputWarehouse
       || outputs.find((item) => item.warehouse)?.warehouse
       || state.templateEditData.materials?.[0]?.warehouse
       || '';
-    container.innerHTML = renderWarehouseSelect(selectedWarehouse, 'output');
+    container.innerHTML = isEdit && isManyToOne
+      ? `<span class="template-warehouse-readonly">${escapeHtml(selectedWarehouse || '--')}</span>`
+      : renderWarehouseSelect(selectedWarehouse, 'output');
   }
 
   function reorderTemplateRelationSections() {
@@ -1742,6 +1753,23 @@
     }).join('');
   }
 
+  function syncTemplateDescriptionWidth() {
+    const control = document.querySelector('.template-description-control');
+    const isManyToOne = getTemplateRelationType() === 'many-to-one';
+    const topTable = document.querySelector(isManyToOne
+      ? '#tplOutputSection .processing-sub-table'
+      : '#tplMaterialSection .processing-sub-table');
+    if (!control || !topTable) return;
+
+    const controlLeft = control.getBoundingClientRect().left;
+    const topTableRight = topTable.getBoundingClientRect().right;
+    const width = topTableRight - controlLeft;
+    if (width <= 0) return;
+    control.style.flex = '0 0 auto';
+    control.style.width = `${Math.round(width)}px`;
+    control.style.maxWidth = '100%';
+  }
+
   function bindTemplateEditorEvents() {
     const body = document.getElementById('templateModalBody');
     if (!body) return;
@@ -1863,17 +1891,20 @@
           renderTplOutputTable();
           renderTplOutputWarehouseField();
         } else {
-          // 原料仓库选择后清空原料商品，并重置成品仓库回显。
-          state.templateEditData.materials.forEach((material) => {
-            material.warehouse = warehouse;
-            material.productCode = '';
-            material.productName = '';
-            material.unit = '';
-          });
+          const isManyToOne = getTemplateRelationType() === 'many-to-one';
+          // 多对一的原料端可换仓库，但不能因为换仓库破坏已有原料配置。
+          state.templateEditData.materials.forEach((material) => { material.warehouse = warehouse; });
           state.templateEditData.materialWarehouse = warehouse;
-          // 清空所有成品的仓库，让它们回显原料仓库。
-          state.templateEditData.outputWarehouse = '';
-          state.templateEditData.outputs.forEach((o) => { o.warehouse = ''; });
+          if (!isManyToOne) {
+            // 一对多创建时更换原料仓库，需要重新选择原料，并重置成品仓库回显。
+            state.templateEditData.materials.forEach((material) => {
+              material.productCode = '';
+              material.productName = '';
+              material.unit = '';
+            });
+            state.templateEditData.outputWarehouse = '';
+            state.templateEditData.outputs.forEach((output) => { output.warehouse = ''; });
+          }
           renderTplMaterialTable();
           renderTplOutputTable();
           renderTplMaterialWarehouseField();
@@ -1919,10 +1950,14 @@
       const relationTypeInput = event.target.closest('input[name="tplRelationType"]');
       if (!relationTypeInput) return;
       state.templateEditData.relationType = relationTypeInput.value;
+      const editorPage = document.getElementById('templateEditorPage');
+      editorPage?.classList.toggle('is-one-to-many', relationTypeInput.value !== 'many-to-one');
+      editorPage?.classList.toggle('is-many-to-one', relationTypeInput.value === 'many-to-one');
       normalizeTemplateRows();
       reorderTemplateRelationSections();
       renderTplMaterialTable();
       renderTplOutputTable();
+      syncTemplateDescriptionWidth();
     });
   }
 
@@ -2174,6 +2209,7 @@
   bindGlobalEvents();
   bindTemplateEditorPageEvents();
   bindSubmitConfirmEvents();
+  window.addEventListener('resize', syncTemplateDescriptionWidth);
 
   document.addEventListener('click', () => {
     document.querySelectorAll('.custom-select.is-open').forEach((s) => {

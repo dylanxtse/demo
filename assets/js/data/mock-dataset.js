@@ -930,6 +930,8 @@
       operator: '管理员',
       remark: '日常净菜加工',
       costMode: 'auto',
+      templateId: 'PP005',
+      templateName: '复合配比加工方案',
       materials: [
         { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 40 },
         { productCode: 'SP0300014', productName: '苹果', unit: '斤', stock: 80, avgPrice: 23.00, consumeQty: 10 },
@@ -962,6 +964,8 @@
       operator: '杨师傅',
       remark: '演示待审核加工单',
       costMode: 'auto',
+      templateId: 'PP005',
+      templateName: '复合配比加工方案',
       materials: [
         { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 18 },
         { productCode: 'SP0300014', productName: '苹果', unit: '斤', stock: 80, avgPrice: 23.00, consumeQty: 12 }
@@ -987,6 +991,8 @@
       operator: '管理员',
       remark: '',
       costMode: 'manual',
+      templateId: 'PP004',
+      templateName: '大米分装',
       materials: [
         { productCode: 'SP0300025', productName: '大米', unit: 'KG', stock: 200, avgPrice: 19.00, consumeQty: 30 }
       ],
@@ -1012,6 +1018,8 @@
       operator: '管理员',
       remark: '待确认成品获得量',
       costMode: 'auto',
+      templateId: 'PP002',
+      templateName: '复合果蔬加工',
       materials: [
         { productCode: 'SP0300014', productName: '苹果', unit: '斤', stock: 80, avgPrice: 23.00, consumeQty: 20 }
       ],
@@ -1036,6 +1044,8 @@
       operator: '管理员',
       remark: '原料库存不足，作废重建',
       costMode: 'auto',
+      templateId: 'PP003',
+      templateName: '鲫鱼加工',
       materials: [
         { productCode: 'SP0300029', productName: '鲫鱼', unit: '斤', stock: 15, avgPrice: 15.00, consumeQty: 10 }
       ],
@@ -1059,6 +1069,8 @@
       operator: '管理员',
       remark: '',
       costMode: 'auto',
+      templateId: 'PP001',
+      templateName: '玉米加工方案',
       materials: [
         { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', stock: 50, avgPrice: 22.00, consumeQty: 15 }
       ],
@@ -1085,7 +1097,7 @@
 (function () {
   window.MockProcessingTemplates = [
     {
-      id: 'MB001',
+      id: 'PP001',
       name: '玉米加工方案',
       relationType: 'one-to-many',
       description: '大玉米棒子加工为多种净菜成品',
@@ -1099,7 +1111,7 @@
       createTime: '2026-07-31 09:00:00'
     },
     {
-      id: 'MB002',
+      id: 'PP002',
       name: '复合果蔬加工',
       relationType: 'one-to-many',
       description: '苹果原料复合加工',
@@ -1113,7 +1125,7 @@
       createTime: '2026-07-31 09:30:00'
     },
     {
-      id: 'MB003',
+      id: 'PP003',
       name: '鲫鱼加工',
       relationType: 'one-to-many',
       description: '鲫鱼清洗分拣',
@@ -1126,7 +1138,7 @@
       createTime: '2026-07-31 10:00:00'
     },
     {
-      id: 'MB004',
+      id: 'PP004',
       name: '大米分装',
       relationType: 'one-to-many',
       description: '大包装大米分装成小份',
@@ -1139,7 +1151,7 @@
       createTime: '2026-07-31 10:30:00'
     },
     {
-      id: 'MB005',
+      id: 'PP005',
       name: '复合配比加工方案',
       relationType: 'many-to-one',
       description: '多种原料按单位成品需求配比加工',
