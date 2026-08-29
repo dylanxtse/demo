@@ -13,22 +13,22 @@
   }
 
   window.AppHeader = {
-    render({ variant = 'enterprise' } = {}) {
+    render({ variant = 'enterprise', companyName: companyNameOverride = '' } = {}) {
       const isEducation = variant === 'education';
       const isSupplier = variant === 'supplier';
       const isOperations = variant === 'operations';
       const isSchool = variant === 'school';
       const session = window.DemoStore?.getSession?.() || { displayName: '管理员', companyId: '' };
       const company = window.DemoStore?.get?.('companies')?.find((item) => item.id === session.companyId);
-      const companyName = isEducation
+      const companyName = companyNameOverride || (isEducation
         ? '南皮县教育局'
         : isSupplier
           ? '南皮供应商01'
-          : isOperations
-            ? '学校食材集采平台'
+            : isOperations
+              ? '学校食材集采平台'
             : isSchool
-              ? '黄骅市智美学校'
-              : (company?.name || '产品部学校食材集采供应链有限公司');
+              ? '静安第一中学'
+          : (company?.name || '产品部学校食材集采供应链有限公司'));
       const userName = isOperations ? 'admin' : (session.displayName || session.username || '管理员');
       const platformSwitcher = `
         <div class="education-platform-switcher" aria-label="平台切换">
@@ -38,11 +38,10 @@
         </div>
       `;
       const headerRight = isEducation ? platformSwitcher : isOperations ? '' : isSchool ? `
-        <button type="button" class="school-platform-switch" data-school-platform-switch>切换平台</button>
         <div class="header-msg">
           ${bellIcon}
           <span>消息中心</span>
-          <span class="msg-badge">5</span>
+          <span class="msg-badge">77</span>
         </div>
       ` : `
         <div class="header-msg">
@@ -116,15 +115,6 @@
             if (window.AppNavigationGuard?.switchTo) window.AppNavigationGuard.switchTo(switchButton.dataset.shellSwitch);
             else window.location.href = target;
           }
-          return;
-        }
-        const schoolPlatformButton = event.target.closest('[data-school-platform-switch]');
-        if (schoolPlatformButton) {
-          const toast = document.createElement('div');
-          toast.className = 'operations-toast';
-          toast.textContent = '平台切换演示操作已触发';
-          root.appendChild(toast);
-          window.setTimeout(() => toast.remove(), 1800);
           return;
         }
         const user = event.target.closest('.header-user');

@@ -12,11 +12,6 @@
   min-height: 0;
 }
 
-/* 学校公告页不展示顶部平台切换入口，其他学校页面保持原有能力。 */
-body[data-hide-platform-switch="true"] .school-platform-switch {
-  display: none !important;
-}
-
 .supplier-notice-page {
   display: flex;
   min-width: 0;

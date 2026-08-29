@@ -42,7 +42,14 @@
       'operations-enterprise-management.html',
       'operations-school-management.html'
     ]),
-    school: new Set(['school-product-management.html', 'school-notice-management.html'])
+    school: new Set([
+      'school-product-management.html',
+      'school-order-management.html',
+      'school-order-form.html',
+      'school-order-detail.html',
+      'school-order-acceptance.html',
+      'school-notice-management.html'
+    ])
   };
   const switchRoutes = {
     enterprise: './index.html',
@@ -51,7 +58,7 @@
     operations: './operations.html',
     school: './school-product-management.html'
   };
-  const switchSelectors = '[data-shell-switch], [data-user-end-switch], [data-platform-switch], [data-school-platform-switch]';
+  const switchSelectors = '[data-shell-switch], [data-user-end-switch], [data-platform-switch]';
   let mountedVariant = '';
 
   function fileNameFromPath(pathname) {
@@ -169,6 +176,7 @@
     '.supplier-quotation-filters',
     '.operations-admin-filters',
     '.school-product-filters',
+    '.school-order-filter',
     '.order-processing-query'
   ].join(',');
   const fieldHostSelector = [
@@ -181,6 +189,7 @@
     '.lower-units-filter-main',
     '.supplier-filter-fields',
     '.sorting-customer-filter-grid',
+    '.school-order-filter-grid',
     '.order-processing-context'
   ].join(',');
   const fieldSelector = [
@@ -438,10 +447,10 @@
   }
 
   window.AppShell = {
-    mount({ title, content, emptyText = '当前没有打开的页面', variant = 'enterprise', showPageTitle = true }) {
+    mount({ title, content, emptyText = '当前没有打开的页面', variant = 'enterprise', showPageTitle = true, companyName = '' }) {
       const root = document.getElementById('app');
       if (!root) throw new Error('缺少 #app 页面挂载节点');
-      const shellOptions = { variant };
+      const shellOptions = { variant, companyName };
       window.AppNavigationGuard?.setCurrentVariant(variant);
 
       const shellClass = variant === 'education'

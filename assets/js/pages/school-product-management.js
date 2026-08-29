@@ -107,7 +107,7 @@
         </section>
       </div>
     </section>`;
-    const root = window.AppShell.mount({ title: '商品管理', content, variant: 'school', emptyText: '商品管理' });
+    const root = window.AppShell.mount({ title: '商品管理', content, variant: 'school', companyName: '静安第一中学', emptyText: '商品管理' });
     const page = root.querySelector('#schoolProductPage');
     const state = { rows: service.getRows(), filtered: [], category: '', treeKeyword: '', pager: null };
     const applyFilters = (resetPage = true) => {

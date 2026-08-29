@@ -1,4 +1,5 @@
 (function () {
+  const materialLimit = 20;
   const outputLimit = 200;
 
   function clone(value) {
@@ -50,12 +51,19 @@
   }
 
   function normalizeTemplate(template) {
-    const materials = normalizeWarehouseRows(Array.isArray(template.materials) ? template.materials.slice(0, 1) : []);
-    const outputs = normalizeWarehouseRows(Array.isArray(template.outputs) ? template.outputs.slice(0, outputLimit) : []);
+    const relationType = template.relationType === 'many-to-one' ? 'many-to-one' : 'one-to-many';
+    const { relations: _relations, ...templateData } = template;
+    const materials = normalizeWarehouseRows(Array.isArray(template.materials)
+      ? template.materials.slice(0, relationType === 'many-to-one' ? materialLimit : 1)
+      : []);
+    const outputs = normalizeWarehouseRows(Array.isArray(template.outputs)
+      ? template.outputs.slice(0, relationType === 'many-to-one' ? 1 : outputLimit)
+      : []);
     const materialWarehouse = normalizeWarehouseName(template.materialWarehouse || materials[0]?.warehouse || '');
     const outputWarehouse = normalizeWarehouseName(template.outputWarehouse || outputs.find((item) => item.warehouse)?.warehouse || materialWarehouse);
     return {
-      ...template,
+      ...templateData,
+      relationType,
       materialWarehouse,
       outputWarehouse,
       materials: materials.map((item) => ({ ...item, warehouse: materialWarehouse })),
@@ -63,11 +71,26 @@
     };
   }
 
+  function mergeDemoTemplates(templates) {
+    const merged = templates.slice();
+    const demoTemplateIds = new Set(['MB005']);
+    let changed = false;
+    (window.MockProcessingTemplates || [])
+      .filter((template) => demoTemplateIds.has(template.id))
+      .forEach((seedTemplate) => {
+        if (merged.some((template) => template.id === seedTemplate.id)) return;
+        merged.push(clone(seedTemplate));
+        changed = true;
+      });
+    return { templates: merged, changed };
+  }
+
   function load() {
     if (!window.DemoStore) throw new Error('统一数据仓库未加载');
-    const templates = window.DemoStore.get('processingTemplates') || [];
-    const normalizedTemplates = clone(templates).map(normalizeTemplate);
-    if (JSON.stringify(normalizedTemplates) !== JSON.stringify(templates)) {
+    const sourceTemplates = window.DemoStore.get('processingTemplates') || [];
+    const mergedResult = mergeDemoTemplates(sourceTemplates);
+    const normalizedTemplates = clone(mergedResult.templates).map(normalizeTemplate);
+    if (mergedResult.changed || JSON.stringify(normalizedTemplates) !== JSON.stringify(sourceTemplates)) {
       window.DemoStore.replace('processingTemplates', normalizedTemplates);
     }
     return sortTemplates(normalizedTemplates);

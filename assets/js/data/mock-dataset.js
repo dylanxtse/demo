@@ -300,10 +300,10 @@
     { id: 'DET-003', goodsCode: 'SP0300025', goodsName: '大米(KG/--/--)', category: '主食-粮食类', warehouse: '北区仓', documentType: '期初库存', relationNo: 'QC202607010001', occurredAt: '2026-07-01 00:00', unit: 'KG', occurredQty: 500, occurredAmount: 2100, partner: '--', productionDate: '2026-06-20', shelfLife: '12个月', expiryDate: '2027-06-20', balance: 500, qualification: '已上传', remark: '' }
   ];
 
-  // 用于验证订单加工方案缺失提示的模拟订单：鸡蛋液没有对应加工方案。
+  // 7 月 31 日订单加工演示：鸡蛋液没有对应加工方案。
   const simulatedOrder = {
-    id: 'ORD-SIM-20260804-001',
-    orderNo: 'DD202608040100099',
+    id: 'ORD-SIM-20260731-001',
+    orderNo: 'DD202607310100099',
     customerName: '模拟测试学校',
     canteen: '模拟食堂',
     customerType: '学校',
@@ -312,7 +312,7 @@
     shippingAmount: 0,
     returnAmount: 0,
     reconciliationAmount: 0,
-    expectedAt: '2026-08-05 07:30',
+    expectedAt: '2026-07-31 10:00',
     status: 'CONFIRMED',
     receiptStatus: '待收货',
     productCount: 1,
@@ -333,13 +333,13 @@
       unitPrice: 12,
       quantity: 20,
       subtotal: 240,
-      shippedQty: 0,
-      actualQty: 0,
+      shippedQty: 20,
+      actualQty: 20,
       remark: ''
     }]
   };
   const simulatedSortingItem = {
-    id: 'SORT-SIM-20260804-001',
+    id: 'SORT-SIM-20260731-001',
     orderId: simulatedOrder.id,
     goodsCode: 'SP0300043',
     isNetVegetable: true,
@@ -347,18 +347,18 @@
     customerName: simulatedOrder.customerName,
     canteen: simulatedOrder.canteen,
     orderQty: 20,
-    actualQty: 0,
+    actualQty: 20,
     unit: 'KG',
     route: simulatedOrder.route,
     orderNo: simulatedOrder.orderNo,
     orderTag: simulatedOrder.orderTag,
     shipped: '否',
-    progress: '0%',
+    progress: '100%',
     remark: simulatedOrder.remark,
     stock: 0,
-    status: 'PENDING',
-    sorter: '待分配',
-    sortingAt: '待分拣',
+    status: 'SORTED',
+    sorter: '陈分拣',
+    sortingAt: '2026-07-31 08:30',
     warehouse: simulatedOrder.warehouse,
     category: '净菜加工',
     shortage: '否',
@@ -366,8 +366,66 @@
     expectedAt: simulatedOrder.expectedAt
   };
 
-  orders.unshift(simulatedOrder);
-  sortingItems.unshift(simulatedSortingItem);
+  // 7 月 31 日订单加工演示：同时覆盖一对多、多对一方案的成品需求。
+  const processingDemoOrder = {
+    id: 'ORD-PROCESS-20260731-001',
+    orderNo: 'DD202607310300001',
+    customerName: '加工演示学校',
+    canteen: '加工演示食堂',
+    customerType: '学校',
+    orderTag: '营养餐',
+    orderAmount: 0,
+    shippingAmount: 0,
+    returnAmount: 0,
+    reconciliationAmount: 0,
+    expectedAt: '2026-07-31 10:30',
+    status: 'CONFIRMED',
+    receiptStatus: '待收货',
+    productCount: 4,
+    warehouse: '中心仓',
+    supplement: '否',
+    remark: '模拟数据：用于验证订单加工方案匹配与缺失提示',
+    route: '加工演示线路',
+    driver: '',
+    source: '模拟数据',
+    creator: '管理员',
+    createdAt: '2026-07-30 09:30:00',
+    items: [
+      { goodsName: '土豆丝', isNetVegetable: true, goodsCode: 'SP0300039', unit: '斤', quantity: 40, shippedQty: 40, actualQty: 40, unitPrice: 1, subtotal: 40, remark: '' },
+      { goodsName: '西红柿', isNetVegetable: true, goodsCode: 'SP0300020', unit: 'KG', quantity: 30, shippedQty: 30, actualQty: 30, unitPrice: 20, subtotal: 600, remark: '' },
+      { goodsName: '黑大米', isNetVegetable: true, goodsCode: 'SP0300034', unit: '斤', quantity: 60, shippedQty: 60, actualQty: 60, unitPrice: 10, subtotal: 600, remark: '' },
+      { goodsName: '大白菜', isNetVegetable: true, goodsCode: 'SP0300019', unit: '斤', quantity: 25, shippedQty: 25, actualQty: 25, unitPrice: 8, subtotal: 200, remark: '' }
+    ]
+  };
+  const processingDemoSortingItems = [
+    { id: 'SORT-PROCESS-20260731-001', goodsCode: 'SP0300039', goodsName: '土豆丝(斤/--/--)', unit: '斤', orderQty: 40, actualQty: 40, category: '果蔬' },
+    { id: 'SORT-PROCESS-20260731-002', goodsCode: 'SP0300020', goodsName: '西红柿(KG/--/--)', unit: 'KG', orderQty: 30, actualQty: 30, category: '果蔬' },
+    { id: 'SORT-PROCESS-20260731-003', goodsCode: 'SP0300034', goodsName: '黑大米(斤/--/--)', unit: '斤', orderQty: 60, actualQty: 60, category: '主食' },
+    { id: 'SORT-PROCESS-20260731-004', goodsCode: 'SP0300019', goodsName: '大白菜(斤/--/散装)', unit: '斤', orderQty: 25, actualQty: 25, category: '果蔬' }
+  ].map((item, index) => ({
+    ...item,
+    orderId: processingDemoOrder.id,
+    isNetVegetable: true,
+    customerName: processingDemoOrder.customerName,
+    canteen: processingDemoOrder.canteen,
+    route: processingDemoOrder.route,
+    orderNo: processingDemoOrder.orderNo,
+    orderTag: processingDemoOrder.orderTag,
+    shipped: '否',
+    progress: '100%',
+    remark: processingDemoOrder.remark,
+    stock: item.actualQty,
+    status: 'SORTED',
+    sorter: '陈分拣',
+    sortingAt: `2026-07-31 08:${String(40 + index * 3).padStart(2, '0')}`,
+    warehouse: processingDemoOrder.warehouse,
+    shortage: '否',
+    supplier: '净菜加工演示供应商',
+    expectedAt: processingDemoOrder.expectedAt
+  }));
+
+  orders.unshift(processingDemoOrder, simulatedOrder);
+  sortingItems.unshift(...processingDemoSortingItems, simulatedSortingItem);
 
   window.MockOperations = {
     orders,
@@ -1027,18 +1085,21 @@
     {
       id: 'MB001',
       name: '玉米加工方案',
-      description: '大玉米棒子加工为净菜成品',
+      relationType: 'one-to-many',
+      description: '大玉米棒子加工为多种净菜成品',
       materials: [
         { warehouse: '中心仓', productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG' }
       ],
       outputs: [
-        { warehouse: '中心仓', productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.2 }
+        { warehouse: '中心仓', productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.2 },
+        { warehouse: '中心仓', productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.9 }
       ],
-      createTime: '2026-07-20 10:00:00'
+      createTime: '2026-07-31 09:00:00'
     },
     {
       id: 'MB002',
       name: '复合果蔬加工',
+      relationType: 'one-to-many',
       description: '苹果原料复合加工',
       materials: [
         { warehouse: '北区仓', productCode: 'SP0300014', productName: '苹果', unit: '斤' }
@@ -1047,11 +1108,12 @@
         { warehouse: '北区仓', productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.5 },
         { warehouse: '北区仓', productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.9 }
       ],
-      createTime: '2026-07-22 14:30:00'
+      createTime: '2026-07-31 09:30:00'
     },
     {
       id: 'MB003',
       name: '鲫鱼加工',
+      relationType: 'one-to-many',
       description: '鲫鱼清洗分拣',
       materials: [
         { warehouse: '临时仓', productCode: 'SP0300029', productName: '鲫鱼', unit: '斤' }
@@ -1059,11 +1121,12 @@
       outputs: [
         { warehouse: '临时仓', productCode: 'SP0300031', productName: '鲫鱼', unit: 'L', refCoefficient: 0.85 }
       ],
-      createTime: '2026-07-25 09:15:00'
+      createTime: '2026-07-31 10:00:00'
     },
     {
       id: 'MB004',
       name: '大米分装',
+      relationType: 'one-to-many',
       description: '大包装大米分装成小份',
       materials: [
         { warehouse: '中心仓', productCode: 'SP0300025', productName: '大米', unit: 'KG' }
@@ -1071,7 +1134,21 @@
       outputs: [
         { warehouse: '中心仓', productCode: 'SP0300034', productName: '黑大米', unit: '斤', refCoefficient: 1.0 }
       ],
-      createTime: '2026-07-26 16:00:00'
+      createTime: '2026-07-31 10:30:00'
+    },
+    {
+      id: 'MB005',
+      name: '复合配比加工方案',
+      relationType: 'many-to-one',
+      description: '多种原料按单位成品需求配比加工',
+      materials: [
+        { warehouse: '中心仓', productCode: 'SP0300040', productName: '土豆', unit: '斤', refConsumeQty: 0.8 },
+        { warehouse: '中心仓', productCode: 'SP0300014', productName: '苹果', unit: '斤', refConsumeQty: 0.2 }
+      ],
+      outputs: [
+        { warehouse: '中心仓', productCode: 'SP0300034', productName: '黑大米', unit: '斤' }
+      ],
+      createTime: '2026-07-31 11:00:00'
     }
   ];
 })();

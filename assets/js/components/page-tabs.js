@@ -58,6 +58,13 @@
     return { tabs, href };
   }
 
+  function ensureSchoolHomeTab(tabs, href) {
+    const homeHref = './school-product-management.html';
+    if (href === homeHref || tabs.some((tab) => tab.href === homeHref)) return tabs;
+    tabs.unshift({ title: '首页', href: homeHref });
+    return tabs;
+  }
+
   function renderTab(tab, active) {
     return `
       <div class="page-tab ${active ? 'active' : ''}" data-tab-href="${escapeHtml(tab.href)}" draggable="true">
@@ -69,11 +76,15 @@
 
   window.AppPageTabs = {
     render(title, { variant = 'enterprise' } = {}) {
-      const { tabs, href } = register(title, variant);
+      const registered = register(title, variant);
+      const tabs = variant === 'school'
+        ? ensureSchoolHomeTab(registered.tabs, registered.href)
+        : registered.tabs;
+      if (variant === 'school') writeTabs(tabs, variant);
       return `
         <div class="breadcrumb-bar" aria-label="已打开页面">
           <div class="page-tabs">
-            ${tabs.map((tab) => renderTab(tab, tab.href === href)).join('')}
+            ${tabs.map((tab) => renderTab(tab, tab.href === registered.href)).join('')}
           </div>
         </div>
       `;

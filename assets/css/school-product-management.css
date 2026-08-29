@@ -1,12 +1,20 @@
 .school-shell .school-header .header-company { font-size: 18px !important; }
 .school-shell .supplier-user-name-hidden { display: none; }
-.school-shell .school-platform-switch { border: 0; background: transparent; color: #333; font: inherit; font-size: 14px; cursor: pointer; }
-.school-shell .school-platform-switch:hover { color: var(--primary); }
 .school-shell .school-user-avatar { width: 32px; height: 32px; }
 .school-shell .school-user-avatar { background: #f0f2f6; color: #9aa4b3; }
 .school-shell .school-user-avatar .icon-svg { width: 17px; height: 17px; }
+.school-shell .menu-item { margin: 0 8px; }
+.school-shell .menu-item-header { gap: 16px; padding: 0 20px 0 24px; border-radius: 2px; font-size: 16px; }
+.school-shell .menu-item-header .menu-icon,
+.school-shell .menu-item-header .menu-icon svg { width: 20px; height: 20px; }
+.school-shell .menu-arrow { transform: rotate(90deg); }
 .school-shell .menu-item.menu-leaf.active > .menu-item-header { background: var(--primary); color: #fff; }
 .school-shell .menu-item.menu-leaf.active > .menu-item-header:hover { background: #035ee0; color: #fff; }
+.school-shell .page-tab { min-width: 112px; }
+.school-shell .page-tab:first-child { min-width: 62px; }
+.school-shell .page-tab:first-child .page-tab-close { display: none; }
+.school-shell .page-tab.active { background: #fff; }
+.school-shell .breadcrumb-bar { padding: 0; }
 .school-shell .content-area { padding: 16px; }
 
 .school-product-page { min-width: 0; padding: 16px; overflow: hidden; border-radius: 0; }

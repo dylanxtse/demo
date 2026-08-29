@@ -867,6 +867,42 @@
     return true;
   }
 
+  function ensureProcessingDemoData(state) {
+    const seedOrder = (window.MockOperations?.orders || []).find((order) => order.id === 'ORD-PROCESS-20260731-001');
+    if (!seedOrder) return false;
+
+    let changed = false;
+    let demoOrder = (state.orders || []).find((order) => order.id === seedOrder.id);
+    if (!demoOrder) {
+      demoOrder = normalizeOrder(seedOrder, (state.orders || []).length);
+      state.orders = Array.isArray(state.orders) ? state.orders : [];
+      state.orders.push(demoOrder);
+      changed = true;
+    }
+
+    state.orderLines = Array.isArray(state.orderLines) ? state.orderLines : [];
+    if (!state.orderLines.some((line) => line.orderId === demoOrder.id)) {
+      state.orderLines.push(...clone(demoOrder.items || []));
+      changed = true;
+    }
+
+    const demoTasks = makeSortingTasks([demoOrder]);
+    state.sortingTasks = Array.isArray(state.sortingTasks) ? state.sortingTasks : [];
+    const existingTaskIds = new Set(state.sortingTasks.map((task) => task.id));
+    demoTasks.forEach((task) => {
+      if (existingTaskIds.has(task.id)) return;
+      state.sortingTasks.push(task);
+      changed = true;
+    });
+
+    if (Array.isArray(state.shippingOrders)
+      && !state.shippingOrders.some((order) => order.orderId === demoOrder.id)) {
+      state.shippingOrders.push(...makeShippingOrders([demoOrder], demoTasks));
+      changed = true;
+    }
+    return changed;
+  }
+
   function normalizeProcessingIds(state) {
     let changed = false;
     (state.processingOrders || []).forEach((record) => {
@@ -890,6 +926,7 @@
   function normalizeStateContracts(state) {
     const rules = window.BusinessRules;
     let changed = seedProcessingAuditDemo(state);
+    changed = ensureProcessingDemoData(state) || changed;
     const fixes = [];
     const mark = (resource, field, from, to) => {
       if (String(from ?? '') === String(to ?? '')) return;

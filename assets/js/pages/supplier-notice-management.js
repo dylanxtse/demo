@@ -13,7 +13,7 @@
   const isSchool = document.body?.dataset.userEnd === 'school';
   const recipientKind = isSchool ? '学校' : '供应商';
   const recipientId = isSchool ? (document.body?.dataset.schoolId || 'SCH-001') : (document.body?.dataset.supplierId || 'SUP-004');
-  const recipientName = isSchool ? (document.body?.dataset.schoolName || '第一实验学校') : (document.body?.dataset.supplierName || '南皮供应商01');
+  const recipientName = isSchool ? (document.body?.dataset.schoolName || '静安第一中学') : (document.body?.dataset.supplierName || '南皮供应商01');
   const demoNoticeRows = [
     {
       id: 'NOTICE-DEMO-WIN-001', title: '中标供应商公示—果蔬标段',

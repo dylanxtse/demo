@@ -3,25 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>公告管理 - 集采企业版学校端</title>
+  <title>订单验收 - 集采企业版学校端</title>
   <link rel="stylesheet" href="./assets/css/variables.css">
   <link rel="stylesheet" href="./assets/css/layout.css">
   <link rel="stylesheet" href="./assets/js/prototype-tools/src/components.css?v=20260824-9">
+  <link rel="stylesheet" href="./assets/css/operations.css?v=20260824-7">
   <link rel="stylesheet" href="./assets/css/school-product-management.css?v=20260828-6">
-  <link rel="stylesheet" href="./assets/css/supplier-notice-management.css?v=20260827-4">
+  <link rel="stylesheet" href="./assets/css/school-order-detail.css?v=20260828-5">
+  <link rel="stylesheet" href="./assets/css/school-order-acceptance.css?v=20260828-4">
 </head>
-<body data-user-end="school" data-school-id="SCH-001" data-school-name="静安第一中学">
+<body>
   <div id="app"></div>
-
   <script src="./assets/js/config/menu-data.js"></script>
   <script src="./assets/js/config/school-menu-data.js"></script>
   <script src="./assets/js/components/header.js?v=20260828-2"></script>
   <script src="./assets/js/components/page-tabs.js?v=20260828-2"></script>
   <script src="./assets/js/components/sidebar.js"></script>
   <script src="./assets/js/components/app-shell.js?v=20260828-4"></script>
-  <script src="./assets/js/components/date-range-picker.js?v=20260826-1"></script>
-  <script src="./assets/js/services/notice-service.js?v=20260826-1"></script>
-  <script src="./assets/js/config/annotation-data-loader.js?v=20260826-1"></script>
-  <script src="./assets/js/pages/supplier-notice-management.js?v=20260828-3"></script>
+  <script src="./assets/js/utils/business-rules.js"></script>
+  <script src="./assets/js/utils/storage.js"></script>
+  <script src="./assets/js/services/repository.js"></script>
+  <script src="./assets/js/data/mock-dataset.js"></script>
+  <script src="./assets/js/services/school-order-service.js?v=20260828-3"></script>
+  <script src="./assets/js/pages/school-order-acceptance.js?v=20260828-3"></script>
 </body>
 </html>
