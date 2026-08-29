@@ -948,11 +948,14 @@
 .processing-record-page .data-table tbody tr { height: 100px; }
 .processing-record-page .data-table tbody td { height: 100px; vertical-align: middle; }
 .processing-record-page .data-table tbody tr.is-multi-output,
-.processing-record-page .data-table tbody tr.is-multi-output td {
+.processing-record-page .data-table tbody tr.is-multi-output td,
+.processing-record-page .data-table tbody tr.is-multi-material,
+.processing-record-page .data-table tbody tr.is-multi-material td {
   height: 50px;
   box-sizing: border-box;
 }
-.processing-record-page .data-table tbody tr.is-multi-output td {
+.processing-record-page .data-table tbody tr.is-multi-output td,
+.processing-record-page .data-table tbody tr.is-multi-material td {
   padding-top: 6px;
   padding-bottom: 6px;
 }
@@ -994,8 +997,10 @@
 .record-output-product-cell .processing-record-product-name .name-sub {
   text-align: center;
 }
-.record-output-more {
+.record-output-more,
+.record-material-more {
   flex-shrink: 0;
+  margin-left: 6px;
   padding: 0;
   font-size: 13px;
 }

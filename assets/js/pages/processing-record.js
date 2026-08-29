@@ -225,24 +225,60 @@
     return materials.map((m) => `${m.consumeQty}${escapeHtml(m.unit)}`).join('，');
   }
 
-  function renderOrderRows(order) {
-    const outputs = (order.outputs || []).slice(0, 2);
-    const outputCount = (order.outputs || []).length;
-    const visibleOutputs = outputs.length > 0 ? outputs : [{ productName: '--', actualQty: '--', unit: '' }];
-    const rowSpan = visibleOutputs.length;
-    const sharedCells = (index) => index === 0 ? `
-      <td class="checkbox-cell" rowspan="${rowSpan}"><span class="custom-checkbox ${state.selectedIds.has(order.id) ? 'checked' : ''}" role="checkbox" aria-checked="${state.selectedIds.has(order.id)}" data-action="toggle-row" data-id="${escapeHtml(order.id)}"></span></td>
+  function renderRecordIdentityCells(order, rowSpan, index) {
+    if (index !== 0) return '';
+    const selected = state.selectedIds.has(order.id);
+    return `
+      <td class="checkbox-cell" rowspan="${rowSpan}"><span class="custom-checkbox ${selected ? 'checked' : ''}" role="checkbox" aria-checked="${selected}" data-action="toggle-row" data-id="${escapeHtml(order.id)}"></span></td>
       <td rowspan="${rowSpan}"><button class="btn-text code-link" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">${escapeHtml(order.id)}</button></td>
-      <td rowspan="${rowSpan}" class="processing-record-material-col">${summarizeMaterials(order.materials)}</td>
-      <td rowspan="${rowSpan}">${summarizeConsumeQty(order.materials)}</td>
-    ` : '';
-    const tailCells = (index) => index === 0 ? `
+    `;
+  }
+
+  function renderRecordTailCells(order, rowSpan, index) {
+    if (index !== 0) return '';
+    return `
       <td rowspan="${rowSpan}">${renderRelatedOrderLink(order, 'outbound')}</td>
       <td rowspan="${rowSpan}">${renderRelatedOrderLink(order, 'inbound')}</td>
       <td rowspan="${rowSpan}">${escapeHtml(order.processingDate)}</td>
       <td rowspan="${rowSpan}"><span class="status-tag ${getStatusClass(getDisplayStatus(order))}">${escapeHtml(getDisplayStatus(order))}</span></td>
       <td rowspan="${rowSpan}">${escapeHtml(order.operator)}</td>
       <td class="action-cell" rowspan="${rowSpan}"><div class="operation-actions">${renderRowActions(order)}</div></td>
+    `;
+  }
+
+  function renderMultiMaterialRows(order, output) {
+    const allMaterials = order.materials || [];
+    const materials = allMaterials.slice(0, 2);
+    const materialCount = allMaterials.length;
+    const rowSpan = materials.length;
+    return materials.map((material, index) => `
+      <tr class="processing-record-sub-row is-multi-material" data-order-id="${escapeHtml(order.id)}">
+        ${renderRecordIdentityCells(order, rowSpan, index)}
+        <td class="processing-record-material-col">${renderProductName(material.productCode, material.productName, material.unit, materialCount > materials.length && index === materials.length - 1 ? `<button class="btn-text record-material-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : '')}</td>
+        <td>${escapeHtml(material.consumeQty !== '' && material.consumeQty != null ? `${material.consumeQty}${material.unit || ''}` : '--')}</td>
+        ${index === 0 ? `
+          <td class="record-output-product-cell processing-record-product-col" rowspan="${rowSpan}">
+            <div class="record-output-product">${renderProductName(output.productCode, output.productName, output.unit)}</div>
+          </td>
+          <td class="record-output-qty-cell" rowspan="${rowSpan}">${escapeHtml(output.actualQty !== '' && output.actualQty != null ? `${output.actualQty}${output.unit || ''}` : '--')}</td>
+        ` : ''}
+        ${renderRecordTailCells(order, rowSpan, index)}
+      </tr>
+    `).join('');
+  }
+
+  function renderOrderRows(order) {
+    const outputs = (order.outputs || []).slice(0, 2);
+    const outputCount = (order.outputs || []).length;
+    const visibleOutputs = outputs.length > 0 ? outputs : [{ productName: '--', actualQty: '--', unit: '' }];
+    if ((order.materials || []).length > 1 && outputs.length === 1) {
+      return renderMultiMaterialRows(order, outputs[0]);
+    }
+    const rowSpan = visibleOutputs.length;
+    const sharedCells = (index) => index === 0 ? `
+      ${renderRecordIdentityCells(order, rowSpan, index)}
+      <td rowspan="${rowSpan}" class="processing-record-material-col">${summarizeMaterials(order.materials)}</td>
+      <td rowspan="${rowSpan}">${summarizeConsumeQty(order.materials)}</td>
     ` : '';
 
     const rowClass = visibleOutputs.length > 1 ? 'is-multi-output' : 'is-single-output';
@@ -253,7 +289,7 @@
           <div class="record-output-product">${renderProductName(output.productCode, output.productName, output.unit, outputCount > 2 && index === 1 ? `<button class="btn-text record-output-more" type="button" data-row-action="detail" data-id="${escapeHtml(order.id)}">更多</button>` : '')}</div>
         </td>
         <td class="record-output-qty-cell">${escapeHtml(output.actualQty !== '' && output.actualQty != null ? `${output.actualQty}${output.unit || ''}` : '--')}</td>
-        ${tailCells(index)}
+        ${renderRecordTailCells(order, rowSpan, index)}
       </tr>
     `).join('');
   }

@@ -923,6 +923,26 @@
     return changed;
   }
 
+  function normalizeProcessingRelations(state) {
+    const revision = 'processing-relations-v2';
+    if (state.processingRelationSeedRevision === revision) return false;
+    const seedOrders = window.MockProcessingOrders || [];
+    let changed = false;
+    (state.processingOrders || []).forEach((record) => {
+      const source = seedOrders.find((seed) => (
+        seed.id === record.id
+        || canonicalProcessingId(seed.id, record.customerCode || seed.customerCode || '03') === record.id
+      ));
+      if (!source || !Array.isArray(source.materials) || source.materials.length < 2 || source.outputs?.length !== 1) return;
+      record.materials = clone(source.materials);
+      record.outputs = clone(source.outputs);
+      changed = true;
+    });
+    state.processingRelationSeedRevision = revision;
+    changed = true;
+    return changed;
+  }
+
   function normalizeStateContracts(state) {
     const rules = window.BusinessRules;
     let changed = seedProcessingAuditDemo(state);
@@ -1626,12 +1646,13 @@
       const productMetadataNormalized = normalizeProductMetadata(state);
       const orderNumbersNormalized = normalizeOrderNumbers(state);
       const processingIdsNormalized = normalizeProcessingIds(state);
+      const processingRelationsNormalized = normalizeProcessingRelations(state);
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
       const contractsNormalized = normalizeStateContracts(state);
       const warehouseCodesNormalized = normalizeWarehouseCodes(state);
       const settingsNormalized = normalizeSettings(state);
       const decimalsNormalized = normalizeStateDecimals(state);
-      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized) persist();
+      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized) persist();
     }
     else {
       state = buildSeed();
@@ -1642,6 +1663,7 @@
       normalizeProductMetadata(state);
       normalizeOrderNumbers(state);
       normalizeProcessingIds(state);
+      normalizeProcessingRelations(state);
       normalizeProcessingOutputs(state);
       normalizeStateContracts(state);
       normalizeWarehouseCodes(state);

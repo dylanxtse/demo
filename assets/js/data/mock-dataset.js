@@ -931,11 +931,13 @@
       remark: '日常净菜加工',
       costMode: 'auto',
       materials: [
-        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 50 }
+        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 40 },
+        { productCode: 'SP0300014', productName: '苹果', unit: '斤', stock: 80, avgPrice: 23.00, consumeQty: 10 },
+        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', stock: 60, avgPrice: 20.00, consumeQty: 8 },
+        { productCode: 'SP0300018', productName: '鸡蛋', unit: '斤', stock: 50, avgPrice: 22.00, consumeQty: 6 }
       ],
       outputs: [
-        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.2, refQty: 60, actualQty: 58, allocatedCost: '15.18', costPrice: '0.26' },
-        { productCode: 'SP0300014', productName: '苹果', unit: '斤', refCoefficient: 0.8, refQty: 40, actualQty: 39, allocatedCost: '234.82', costPrice: '6.02' }
+        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.1, refQty: 55, actualQty: 52, allocatedCost: '722.00', costPrice: '13.88' }
       ],
       createTime: '2026-07-28 09:30:00',
       attachments: [
@@ -961,11 +963,11 @@
       remark: '演示待审核加工单',
       costMode: 'auto',
       materials: [
-        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 30 }
+        { productCode: 'SP0300036', productName: '大玉米棒子', unit: 'KG', stock: 120, avgPrice: 5.00, consumeQty: 18 },
+        { productCode: 'SP0300014', productName: '苹果', unit: '斤', stock: 80, avgPrice: 23.00, consumeQty: 12 }
       ],
       outputs: [
-        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 1.2, refQty: 36, actualQty: 35, allocatedCost: '14.00', costPrice: '0.40' },
-        { productCode: 'SP0300020', productName: '西红柿', unit: 'KG', refCoefficient: 0.6, refQty: 18, actualQty: 17, allocatedCost: '136.00', costPrice: '8.00' }
+        { productCode: 'SP0300039', productName: '土豆丝', unit: '斤', refCoefficient: 0.8, refQty: 24, actualQty: 23, allocatedCost: '366.00', costPrice: '15.91' }
       ],
       createTime: '2026-08-12 09:20:00',
       submittedAt: '2026-08-12 09:25:00',

@@ -530,7 +530,7 @@
     form.classList.toggle('is-order-mode', state.operationMode === 'order');
     hideOrderDatePicker();
     const isManyToOne = tpl.relationType === 'many-to-one';
-    const showOrderDemandColumns = state.operationMode === 'order' && hasExpectedDeliveryRange();
+    const showOrderDemandColumns = state.operationMode === 'order';
     form.innerHTML = `
       ${renderOperationModeTabs()}
       ${state.operationMode === 'order' ? renderOrderProcessingContext() : ''}
@@ -748,7 +748,7 @@
     if (!tbody) return;
     const selectedTemplate = state.templates.find((template) => template.id === state.selectedTemplateId);
     const isManyToOne = selectedTemplate?.relationType === 'many-to-one';
-    const showOrderDemandColumns = state.operationMode === 'order' && hasExpectedDeliveryRange();
+    const showOrderDemandColumns = state.operationMode === 'order';
     tbody.innerHTML = state.outputs.map((item, index) => {
       const product = findProduct(item.productCode);
       const unit = product ? product.unit : (item.unit || '--');
@@ -785,13 +785,14 @@
     const sortingQty = getSortingQty(item);
     if (item.actualQty === '' || item.actualQty == null) return '--';
     if (!Number.isFinite(actualQty)) return '--';
+    if (sortingQty === '--') return '--';
     return (actualQty - sortingQty).toFixed(2);
   }
 
   function getSortingQty(item) {
     const startDate = state.expectedDeliveryStart;
     const endDate = state.expectedDeliveryEnd;
-    if (state.operationMode !== 'order' || !startDate || !endDate) return 0;
+    if (state.operationMode !== 'order' || !startDate || !endDate) return '--';
     const actualSortingQty = getSortingRecords()
       .filter((record) => {
         const deliveryDate = String(record.expectedAt || record.expectedDeliveryDate || record.deliveryDate || '').slice(0, 10);
@@ -932,14 +933,17 @@
     const tpl = state.templates.find((t) => t.id === templateId);
     if (!tpl) return;
 
+    const preserveOrderDemandContext = state.operationMode === 'order' && hasExpectedDeliveryRange();
     state.selectedTemplateId = templateId;
     state.costMode = tpl.costMode || 'auto';
     state.processingDate = getLocalDateString();
-    state.expectedDeliveryStart = getDefaultExpectedDeliveryDate();
-    state.expectedDeliveryEnd = getDefaultExpectedDeliveryDate();
-    if (!hasExpectedDeliveryRange()) clearOrderDemandFilter();
-    state.customer = '全部';
-    state.canteen = '全部';
+    if (!preserveOrderDemandContext) {
+      state.expectedDeliveryStart = getDefaultExpectedDeliveryDate();
+      state.expectedDeliveryEnd = getDefaultExpectedDeliveryDate();
+      clearOrderDemandFilter();
+      state.customer = '全部';
+      state.canteen = '全部';
+    }
     state.materialWarehouse = tpl.materialWarehouse || tpl.materials?.[0]?.warehouse || '';
     state.outputWarehouse = tpl.outputWarehouse || tpl.outputs?.[0]?.warehouse || state.materialWarehouse;
     state.remark = '';
