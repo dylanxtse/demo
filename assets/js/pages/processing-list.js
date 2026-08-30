@@ -1544,7 +1544,7 @@
       <div class="template-editor-body" id="templateModalBody">
         <div class="template-editor-section">
           <div class="basic-info-grid">
-            ${isEdit ? `<div class="basic-info-field"><label class="field-label">方案编号：</label><div class="template-editor-readonly-id">${escapeHtml(data.id || '--')}</div></div>` : ''}
+            ${isEdit ? `<div class="basic-info-field" style="grid-column: 1 / -1"><label class="field-label">方案编号</label><div class="template-editor-readonly-id">${escapeHtml(data.id || '--')}</div></div>` : ''}
             <div class="basic-info-field">
               <label class="field-label required" for="tplName">方案名称</label>
               <input class="form-control" id="tplName" placeholder="请输入" value="${escapeHtml(data.name || '')}">
