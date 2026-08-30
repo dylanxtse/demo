@@ -328,7 +328,8 @@
   function renderProductSelect(fieldType, selectedCode, isTemplateProduct = false, outputIndex = null) {
     const selectedProduct = selectedCode ? findProduct(selectedCode) : null;
     const netTag = selectedProduct?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
-    const displayText = selectedProduct ? escapeHtml(formatProductDisplay(selectedProduct)) : '请选择';
+    const displayText = selectedProduct ? escapeHtml(formatProductDisplay(selectedProduct)) : '';
+    const closedDisplayText = selectedProduct ? displayText : '请选择';
     const isManyToOneMaterial = fieldType === 'material'
       && state.templateEditData?.relationType === 'many-to-one';
     const selectedOutputCodes = fieldType === 'output'
@@ -340,25 +341,26 @@
     return `
       <div class="custom-select ${isTemplateProduct ? 'template-product-select' : ''}" data-select-type="${fieldType}">
         <div class="custom-select-trigger" data-action="toggle-select">
-          <span class="template-product-label">${netTag}<span class="custom-select-text ${!selectedProduct ? 'is-placeholder' : ''}">${displayText}</span></span>
+          <span class="template-product-label">
+            ${netTag}
+            <span class="custom-select-text ${!selectedProduct ? 'is-placeholder' : ''}">${closedDisplayText}</span>
+            <input class="product-combobox-input" type="text" value="${displayText}" data-display-value="${displayText}" placeholder="搜索商品名称/编码" autocomplete="off" aria-label="搜索并选择商品" aria-autocomplete="list" aria-expanded="false" data-action="product-combobox-input">
+          </span>
           <svg class="custom-select-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="custom-select-dropdown">
-          ${isTemplateProduct ? `
-            <div class="product-select-search-wrap" data-action="search-product">
-              <input class="product-select-search" type="search" placeholder="搜索商品名称/编码" autocomplete="off" aria-label="搜索商品" data-action="search-product">
-            </div>
-          ` : ''}
-          ${state.products.map((p) => {
-            const tag = p.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
-            const isDuplicate = fieldType === 'output'
-              ? p.code !== selectedCode && selectedOutputCodes.includes(p.code)
-              : isManyToOneMaterial
-                ? p.code !== selectedCode && selectedMaterialCodes.includes(p.code)
-                : false;
-            return `<div class="custom-select-option ${p.code === selectedCode ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(p.code)}" data-search-text="${escapeHtml(getProductSearchText(p))}" data-disabled="${isDuplicate}" data-action="select-product">${tag}${escapeHtml(formatProductDisplay(p))}</div>`;
-          }).join('')}
-          ${isTemplateProduct ? '<div class="product-select-empty">暂无商品</div>' : ''}
+          <div class="product-select-options">
+            ${state.products.map((p) => {
+              const tag = p.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+              const isDuplicate = fieldType === 'output'
+                ? p.code !== selectedCode && selectedOutputCodes.includes(p.code)
+                : isManyToOneMaterial
+                  ? p.code !== selectedCode && selectedMaterialCodes.includes(p.code)
+                  : false;
+              return `<div class="custom-select-option ${p.code === selectedCode ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(p.code)}" data-search-text="${escapeHtml(getProductSearchText(p))}" data-disabled="${isDuplicate}" data-action="select-product">${tag}${escapeHtml(formatProductDisplay(p))}</div>`;
+            }).join('')}
+            ${isTemplateProduct ? '<div class="product-select-empty">暂无商品</div>' : ''}
+          </div>
         </div>
       </div>
     `;
@@ -1812,6 +1814,81 @@
     control.style.maxWidth = '100%';
   }
 
+  function closeCustomSelect(select) {
+    if (!select) return;
+    select.classList.remove('is-open', 'is-drop-up', 'is-searching');
+    const dropdown = select.querySelector('.custom-select-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+    const input = select.querySelector('.product-combobox-input');
+    if (input) {
+      input.value = input.dataset.displayValue || '';
+      input.placeholder = '请选择';
+      input.setAttribute('aria-expanded', 'false');
+      filterProductSelectOptions(select);
+    }
+  }
+
+  function positionCustomSelectDropdown(select) {
+    const dropdown = select?.querySelector('.custom-select-dropdown');
+    const trigger = select?.querySelector('.custom-select-trigger');
+    if (!dropdown || !trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.display = 'block';
+    dropdown.style.position = 'fixed';
+    dropdown.style.left = rect.left + 'px';
+    dropdown.style.width = rect.width + 'px';
+    dropdown.style.zIndex = '100';
+
+    const viewportH = window.innerHeight;
+    const viewportPadding = 12;
+    const dropdownMaxHeight = 280;
+    const footer = document.querySelector('#templateEditorPage > .processing-form-footer');
+    const footerRect = footer?.getBoundingClientRect();
+    const viewportBottom = viewportH - viewportPadding;
+    const footerBoundary = footerRect
+      && footerRect.top > rect.bottom
+      && footerRect.top < viewportH
+      ? footerRect.top - 8
+      : viewportBottom;
+    const lowerBoundary = Math.min(viewportBottom, footerBoundary);
+    const spaceBelow = Math.max(0, lowerBoundary - rect.bottom);
+    const spaceAbove = Math.max(0, rect.top - viewportPadding);
+    dropdown.style.maxHeight = '';
+    const desiredHeight = Math.min(dropdownMaxHeight, dropdown.scrollHeight || dropdownMaxHeight);
+    const openUpward = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+    const availableHeight = openUpward ? spaceAbove : spaceBelow;
+    select.classList.toggle('is-drop-up', openUpward);
+    dropdown.style.maxHeight = Math.min(desiredHeight, availableHeight) + 'px';
+    if (openUpward) {
+      dropdown.style.top = 'auto';
+      dropdown.style.bottom = (viewportH - rect.top) + 'px';
+    } else {
+      dropdown.style.top = rect.bottom + 'px';
+      dropdown.style.bottom = 'auto';
+    }
+    dropdown.scrollTop = 0;
+  }
+
+  function openCustomSelect(select, { selectInput = true } = {}) {
+    if (!select) return;
+    document.querySelectorAll('.custom-select.is-open').forEach((current) => {
+      if (current !== select) closeCustomSelect(current);
+    });
+    select.classList.add('is-open');
+    const input = select.querySelector('.product-combobox-input');
+    if (input) {
+      input.placeholder = '搜索商品名称/编码';
+      input.setAttribute('aria-expanded', 'true');
+      filterProductSelectOptions(select);
+    }
+    positionCustomSelectDropdown(select);
+    if (input && selectInput) {
+      input.focus({ preventScroll: true });
+      input.select();
+    }
+  }
+
   function bindTemplateEditorEvents() {
     const body = document.getElementById('templateModalBody');
     if (!body) return;
@@ -1846,50 +1923,18 @@
         renderTplOutputTable();
         return;
       }
-      if (action === 'search-product') {
+      if (action === 'product-combobox-input') {
+        const select = event.target.closest('.custom-select');
+        if (!select.classList.contains('is-open')) openCustomSelect(select);
         event.stopPropagation();
         return;
       }
       if (action === 'toggle-select') {
         const select = event.target.closest('.custom-select');
-        document.querySelectorAll('.custom-select.is-open').forEach((s) => {
-          if (s !== select) {
-            s.classList.remove('is-open');
-            const dd = s.querySelector('.custom-select-dropdown');
-            if (dd) dd.style.display = 'none';
-          }
-        });
-        const dropdown = select.querySelector('.custom-select-dropdown');
         if (select.classList.contains('is-open')) {
-          select.classList.remove('is-open');
-          dropdown.style.display = 'none';
+          closeCustomSelect(select);
         } else {
-          select.classList.add('is-open');
-          const searchInput = dropdown.querySelector('.product-select-search');
-          if (searchInput) {
-            searchInput.value = '';
-            filterProductSelectOptions(select);
-          }
-          // 用 fixed 定位脱离弹窗 overflow 裁剪
-          const trigger = select.querySelector('.custom-select-trigger');
-          const rect = trigger.getBoundingClientRect();
-          dropdown.style.display = 'block';
-          dropdown.style.position = 'fixed';
-          dropdown.style.left = rect.left + 'px';
-          dropdown.style.width = rect.width + 'px';
-          dropdown.style.zIndex = '100';
-          // 优先在下方显示，空间不足时在上方
-          const viewportH = window.innerHeight;
-          const spaceBelow = viewportH - rect.bottom - 10;
-          const spaceAbove = rect.top - 10;
-          if (spaceBelow >= 120) {
-            dropdown.style.top = rect.bottom + 'px';
-            dropdown.style.maxHeight = Math.min(240, spaceBelow) + 'px';
-          } else {
-            dropdown.style.top = (rect.top - Math.min(240, spaceAbove)) + 'px';
-            dropdown.style.maxHeight = Math.min(240, spaceAbove) + 'px';
-          }
-          if (searchInput) searchInput.focus();
+          openCustomSelect(select);
         }
         event.stopPropagation();
         return;
@@ -1903,9 +1948,7 @@
         const select = option.closest('.custom-select');
         const fieldType = select.dataset.selectType;
         const product = findProduct(option.dataset.value);
-        select.classList.remove('is-open');
-        const dd = select.querySelector('.custom-select-dropdown');
-        if (dd) dd.style.display = 'none';
+        closeCustomSelect(select);
         if (fieldType === 'material') {
           const row = option.closest('[data-tpl-material-index]');
           const index = Number(row?.dataset.tplMaterialIndex);
@@ -1934,9 +1977,7 @@
         const select = option.closest('.custom-select');
         const warehouse = option.dataset.value;
         const warehouseScope = option.closest('.custom-select')?.dataset.warehouseScope || '';
-        select.classList.remove('is-open');
-        const dd = select.querySelector('.custom-select-dropdown');
-        if (dd) dd.style.display = 'none';
+        closeCustomSelect(select);
         if (warehouseScope === 'output') {
           state.templateEditData.outputWarehouse = warehouse;
           state.templateEditData.outputs.forEach((output) => { output.warehouse = warehouse; });
@@ -1968,9 +2009,14 @@
     });
 
     body.addEventListener('input', (event) => {
-      const productSearchInput = event.target.closest('.product-select-search');
-      if (productSearchInput) {
-        filterProductSelectOptions(productSearchInput.closest('.custom-select'), productSearchInput.value);
+      const productInput = event.target.closest('.product-combobox-input');
+      if (productInput) {
+        const select = productInput.closest('.custom-select');
+        if (!select.classList.contains('is-open')) {
+          openCustomSelect(select, { selectInput: false });
+        }
+        select.classList.add('is-searching');
+        filterProductSelectOptions(select, productInput.value);
         return;
       }
       if (event.target.id === 'tplDesc') {
@@ -2269,10 +2315,6 @@
   window.addEventListener('resize', syncTemplateDescriptionWidth);
 
   document.addEventListener('click', () => {
-    document.querySelectorAll('.custom-select.is-open').forEach((s) => {
-      s.classList.remove('is-open');
-      const dd = s.querySelector('.custom-select-dropdown');
-      if (dd) dd.style.display = 'none';
-    });
+    document.querySelectorAll('.custom-select.is-open').forEach(closeCustomSelect);
   });
 })();

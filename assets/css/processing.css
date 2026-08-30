@@ -1424,27 +1424,30 @@
   flex: 0 1 auto;
   min-width: 0;
 }
-.product-select-search-wrap {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 6px;
-  background: #fff;
-  border-bottom: 1px solid var(--border-light);
+.product-select-options {
+  overflow-y: auto;
 }
-.product-select-search {
+.product-combobox-input {
+  display: none;
+  flex: 1 1 auto;
   width: 100%;
-  height: 30px;
-  box-sizing: border-box;
-  padding: 0 8px;
-  border: 1px solid #cfd5df;
-  border-radius: 3px;
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  border: 0;
   outline: none;
-  background: #fff;
+  background: transparent;
   color: var(--text-primary);
   font-size: 13px;
+  font-family: inherit;
+  text-align: center;
+  cursor: text;
 }
-.product-select-search:focus { border-color: var(--primary); }
+.product-combobox-input::placeholder { color: var(--text-tertiary); }
+.template-product-select.is-open .template-product-label { width: 100%; }
+.template-product-select.is-open .template-product-label > .net-vegetable-tag,
+.template-product-select.is-open .template-product-label > .custom-select-text { display: none; }
+.template-product-select.is-open .product-combobox-input { display: block; }
 .product-select-empty {
   display: none;
   padding: 12px 8px;
