@@ -42,7 +42,7 @@
   function text(value) { return utils.escapeHtml(value == null ? '' : value); }
   function fixed(value) { return Number(value || 0).toFixed(2); }
   function productDisplay(line) {
-    return line.productCode ? (line.productName || '') + '(' + (line.unit || '--') + '/' + (line.brand || '--') + '/' + (line.spec || '--') + ')' : '';
+    return line.productCode ? window.DomUtils.formatProductDisplay(line) : '';
   }
   function productForInput(value) {
     var sourceValue = String(value || '').trim();

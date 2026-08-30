@@ -1812,6 +1812,9 @@
   margin-top: auto;
   z-index: 10;
 }
+.template-editor-page > .template-editor-footer {
+  justify-content: center;
+}
 
 .template-operation-toast,
 .processing-record-toast {

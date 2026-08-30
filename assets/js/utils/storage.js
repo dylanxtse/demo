@@ -1597,8 +1597,21 @@
       qualityReports: padRecords(window.MockOperations?.qualityReports || [], 20, (index) => { const product = products[index % products.length]; return { id: `QUALITY-${String(index + 1).padStart(3, '0')}`, inboundNo: `RKD2026080503${String(index + 1).padStart(5, '0')}`, goodsName: product.name, warehouse: index % 2 ? '中心仓' : '北区仓', status: index % 4 ? 'PASSED' : 'NOT_UPLOADED' }; }),
       inventoryCounts: padRecords(window.MockOperations?.inventoryCounts || [], 20, (index) => ({ id: `COUNT-DEMO-${String(index + 1).padStart(3, '0')}`, warehouse: '中心仓', countAt: '2026-08-04', status: 'COMPLETED' })),
       inventoryLosses: padRecords(window.MockOperations?.inventoryLosses || [], 20, (index) => { const product = products[index % products.length]; return { id: `LOSS-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', status: 'PENDING_AUDIT', goodsName: product.name, productCode: product.code, quantity: 1, amount: number(product.marketPrice) }; }),
-      openingInventory: padRecords(window.MockOperations?.openingInventory || [], 20, (index) => { const product = products[index % products.length]; return { id: `OPENING-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', goodsName: product.name, goodsCode: product.code, openingQty: 100, openingPrice: number(product.marketPrice), openingAmount: 100 * number(product.marketPrice), status: 'COMPLETED' }; })
+      openingInventory: padRecords(window.MockOperations?.openingInventory || [], 20, (index) => { const product = products[index % products.length]; return { id: `OPENING-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', goodsName: product.name, goodsCode: product.code, openingQty: 100, openingPrice: number(product.marketPrice), openingAmount: 100 * number(product.marketPrice), status: 'COMPLETED' }; }),
+      productSales: clone(window.MockOperations?.productSales || []),
+      goodsProfitStatistics: clone(window.MockOperations?.goodsProfitStatistics || [])
     };
+  }
+
+  function ensureStatisticsResources(current) {
+    let changed = false;
+    ['productSales', 'goodsProfitStatistics'].forEach((resource) => {
+      if (!Array.isArray(current[resource])) {
+        current[resource] = clone(window.MockOperations?.[resource] || []);
+        changed = true;
+      }
+    });
+    return changed;
   }
 
   function ensure() {
@@ -1637,7 +1650,8 @@
       const warehouseCodesNormalized = normalizeWarehouseCodes(state);
       const settingsNormalized = normalizeSettings(state);
       const decimalsNormalized = normalizeStateDecimals(state);
-      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized) persist();
+      const statisticsResourcesNormalized = ensureStatisticsResources(state);
+      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
     }
     else {
       state = buildSeed();

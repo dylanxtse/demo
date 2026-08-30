@@ -76,7 +76,7 @@
 
   function displayName(item) {
     if (!item) return '--';
-    return String(item.name || item.productName || '') + '(' + String(item.unit || '--') + '/' + String(item.brand || '--') + '/' + String(item.spec || '--') + ')';
+    return window.DomUtils.formatProductDisplay(item);
   }
 
   function makeTask(spec) {

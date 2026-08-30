@@ -128,16 +128,8 @@
   }
 
   function renderProductName(productCode, productName, unit, nameSuffix = '') {
-    const products = window.ProductService?.getList?.() || window.MockProducts || [];
-    const product = products.find((item) => item.code === productCode) || {};
-    const name = product.name || productName || '--';
-    const displayUnit = product.unit || unit || '--';
-    const brand = product.brand || '--';
-    const spec = product.spec || '--';
-    return `<div class="name-cell processing-record-product-name">
-      <div class="name-main">${productNetTag(productCode)}${escapeHtml(name)}${nameSuffix}</div>
-      <div class="name-sub">${escapeHtml(displayUnit)}/${escapeHtml(brand)}/${escapeHtml(spec)}</div>
-    </div>`;
+    const display = window.DomUtils.formatProductDisplay({ productCode, productName, unit });
+    return `<span class="name-cell processing-record-product-name product-display-text">${productNetTag(productCode)}${escapeHtml(display)}${nameSuffix}</span>`;
   }
 
   function getOperationNodeType(log) {
@@ -847,7 +839,7 @@
     const templateName = order.templateName || processingTemplate?.name || '';
     const materialRows = (order.materials || []).map((m) => `
       <tr>
-        <td>${productNetTag(m.productCode)}${escapeHtml(m.productName)}</td>
+        <td><span class="product-display-text">${productNetTag(m.productCode)}${escapeHtml(window.DomUtils.formatProductDisplay(m))}</span></td>
         <td>${escapeHtml(m.unit)}</td>
         <td>${m.stock ?? '--'}</td>
         <td>${m.avgPrice ?? '--'}</td>
@@ -858,7 +850,7 @@
 
     const outputRows = (order.outputs || []).map((o) => `
       <tr>
-        <td>${productNetTag(o.productCode)}${escapeHtml(o.productName)}</td>
+        <td><span class="product-display-text">${productNetTag(o.productCode)}${escapeHtml(window.DomUtils.formatProductDisplay(o))}</span></td>
         <td>${escapeHtml(o.unit)}</td>
         <td>${o.refCoefficient ?? '--'}</td>
         <td>${o.refQty ?? '--'}</td>

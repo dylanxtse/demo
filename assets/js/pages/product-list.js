@@ -217,6 +217,7 @@
       const netVegetableTag = !isSupplierProductPage && product.isNetVegetable
         ? '<span class="net-vegetable-tag">净菜</span>'
         : '';
+      const productDisplay = window.DomUtils.formatProductDisplay(product);
       const editDisabled = isEnabled;
       return `
         <tr>
@@ -224,7 +225,7 @@
           <td class="seq-cell">${safe.seq}</td>
           <td class="img-cell"><div class="product-img">图片</div></td>
           <td class="code-cell"><button class="btn-text code-link" type="button" data-row-action="detail" data-code="${safe.code}">${safe.code}</button></td>
-          <td class="name-cell"><div class="name-main">${netVegetableTag}${safe.name}</div><div class="name-sub">${safe.unit}/${safe.brand}/${safe.spec}</div></td>
+          <td class="name-cell"><span class="product-display-text" title="${window.DomUtils.escapeHtml(productDisplay)}">${netVegetableTag}${window.DomUtils.escapeHtml(productDisplay)}</span></td>
           <td>${safe.category}</td>
           <td>${safe.unit}</td>
           <td>${safe.marketPrice}</td>

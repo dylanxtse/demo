@@ -52,7 +52,11 @@
   const isSorted = (item) => item.status === 'SORTED' || Number(item.actualQty || 0) >= Number(item.orderQty || 0);
   const statusText = (item) => isSorted(item) ? '已分拣' : '未分拣';
   const statusClass = (item) => isSorted(item) ? 'success' : 'danger';
-  const renderGoodsName = (item) => `${item.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}${escapeHtml(item.goodsName || '--')}`;
+  const renderGoodsName = (item) => {
+    const display = window.DomUtils?.formatProductDisplay?.(item) || item.goodsName || '--';
+    const marker = item.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+    return `<span class="product-display-text">${marker}${escapeHtml(display)}</span>`;
+  };
 
   function toast(message, type = '') {
     root.querySelector('.operations-toast')?.remove();

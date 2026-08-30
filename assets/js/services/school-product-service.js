@@ -22,9 +22,16 @@
     { seq: 20, code: 'SSP03939', name: '绿豆(斤/--/1×25kg)', category: '主食（米面粉点心类）-米（二级）', unit: '斤', supplier: '交发集团', addTime: '2026-06-01 09:05:10' }
   ];
 
+  const netVegetableSeedRows = [
+    { seq: 1, code: 'SSP03960', name: '土豆丝(斤/--/散装)', category: '果蔬-净菜类', unit: '斤', supplier: '交发集团', addTime: '2026-07-02 09:12:00', isNetVegetable: true },
+    { seq: 2, code: 'SSP03959', name: '白菜段(斤/--/散装)', category: '果蔬-净菜类', unit: '斤', supplier: '交发集团', addTime: '2026-07-02 09:10:00', isNetVegetable: true },
+    { seq: 3, code: 'SSP03961', name: '胡萝卜片(斤/--/散装)', category: '果蔬-净菜类', unit: '斤', supplier: '交发集团', addTime: '2026-07-02 09:15:00', isNetVegetable: true }
+  ];
+  const allSeedRows = [...netVegetableSeedRows, ...seedRows];
+
   const extraCategories = ['果蔬-水果（二级）', '肉（豆）制品-豆制品（二级）', '水产品-水产品（二级）', '蛋奶类-奶制品（二级）', '其他材料-其他材料（二级）'];
   const rows = Array.from({ length: 3870 }, (_, index) => {
-    if (index < seedRows.length) return seedRows[index];
+    if (index < allSeedRows.length) return { ...allSeedRows[index], seq: index + 1 };
     const number = 3870 - index;
     return {
       seq: index + 1,
@@ -33,7 +40,8 @@
       category: extraCategories[index % extraCategories.length],
       unit: index % 3 === 0 ? '斤' : index % 3 === 1 ? '袋' : '箱',
       supplier: '交发集团',
-      addTime: '2026-05-31 09:00:00'
+      addTime: '2026-05-31 09:00:00',
+      isNetVegetable: false
     };
   });
 
@@ -42,14 +50,15 @@
 
   window.SchoolProductService = {
     getRows() {
-      return clone(rows);
+      return clone(rows).map((row) => ({ ...row, isNetVegetable: row.isNetVegetable === true }));
     },
-    filterRows(source, { keyword = '', category = '' } = {}) {
+    filterRows(source, { keyword = '', category = '', netVegetable = '' } = {}) {
       const query = normalize(keyword);
       return source.filter((row) => {
         const textMatch = !query || `${row.code} ${row.name}`.toLocaleLowerCase().includes(query);
         const categoryMatch = !category || row.category === category || row.category.startsWith(`${category}-`) || row.category.includes(category);
-        return textMatch && categoryMatch;
+        const netVegetableMatch = !netVegetable || (netVegetable === 'net' ? row.isNetVegetable === true : row.isNetVegetable !== true);
+        return textMatch && categoryMatch && netVegetableMatch;
       });
     }
   };

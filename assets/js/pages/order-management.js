@@ -73,6 +73,7 @@
           <div class="operations-field"><label class="filter-label" for="source">单据来源</label><select class="filter-select" id="source"><option value="">全部</option><option>客户下单</option><option>平台添加</option></select></div>
           <div class="operations-field"><label class="filter-label" for="receiptStatus">收货状态</label><select class="filter-select" id="receiptStatus"><option value="">全部</option><option>待收货</option><option>部分收货</option><option>已收货</option><option>未收货</option></select></div>
           <div class="operations-field"><label class="filter-label" for="orderType">订单类型</label><select class="filter-select" id="orderType"><option value="">全部</option><option>销售订单</option><option>临时订单</option></select></div>
+          <div class="operations-field"><label class="filter-label" for="netVegetable">是否净菜</label><select class="filter-select" id="netVegetable"><option value="">全部</option><option value="net">净菜</option><option value="non-net">非净菜</option></select></div>
           </div>
         </div>
       </div>
@@ -135,7 +136,7 @@
 
   function collectCondition() {
     const condition = {};
-    ['orderNo', 'customerName', 'customerType', 'status', 'orderTag', 'warehouse', 'source', 'expectedAt', 'receiptStatus', 'orderType']
+    ['orderNo', 'customerName', 'customerType', 'status', 'orderTag', 'warehouse', 'source', 'expectedAt', 'receiptStatus', 'orderType', 'netVegetable']
       .forEach((key) => {
         const value = $(`#${key}`).value.trim();
         if (value) condition[key] = value;

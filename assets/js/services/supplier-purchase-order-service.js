@@ -40,7 +40,7 @@
       id,
       productCode: productCodes[goodsName] || '',
       goodsName,
-      displayName: `${goodsName}(${unit} / -- / --)`,
+      displayName: window.DomUtils.formatProductDisplay({ name: goodsName, unit, brand: '--', spec: '--' }),
       remark: '',
       unit,
       plannedQty,

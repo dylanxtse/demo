@@ -278,6 +278,15 @@
   text-align: center;
 }
 .data-table .name-cell .name-sub { font-size: 13px; color: var(--text-tertiary); }
+.product-display-text {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .data-table .action-cell { white-space: nowrap; }
 .data-table .action-cell .btn-text { padding: 0 6px; }
 .unshelf-modal {

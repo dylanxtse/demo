@@ -376,6 +376,14 @@
 .supplier-purchase-nested-table .nested-col-report { width: 100px; }
 .supplier-purchase-nested-table .nested-col-action { width: 110px; }
 .supplier-purchase-product-cell { text-align: left !important; }
+.supplier-purchase-product-cell .product-display-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 
 .supplier-purchase-report-link {
   display: inline-flex;

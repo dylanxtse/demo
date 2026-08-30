@@ -73,11 +73,13 @@
     const start = (pager.page - 1) * pager.pageSize;
     const rows = state.filtered.slice(start, start + pager.pageSize);
     body.innerHTML = rows.length
-      ? rows.map((row, index) => `<tr>
+      ? rows.map((row, index) => {
+        const productDisplay = window.DomUtils.formatProductDisplay(row);
+        return `<tr>
           <td>${start + index + 1}</td>
           <td><span class="school-product-image" aria-label="商品图片"></span></td>
           <td><button type="button" class="school-product-code" data-action="detail" data-code="${escapeHtml(row.code)}">${escapeHtml(row.code)}</button></td>
-          <td class="school-product-name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
+          <td class="school-product-name" title="${escapeHtml(productDisplay)}"><span class="school-product-name-main">${row.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}${escapeHtml(productDisplay)}</span></td>
           <td class="school-product-category" title="${escapeHtml(row.category)}">${escapeHtml(row.category)}</td>
           <td>${escapeHtml(row.unit)}</td>
           <td>${escapeHtml(row.supplier)}</td>
@@ -85,7 +87,8 @@
           <td>${escapeHtml(row.origin || '')}</td>
           <td>${escapeHtml(row.shelfLife || '')}</td>
           <td>${escapeHtml(row.addTime)}</td>
-        </tr>`).join('')
+        </tr>`;
+      }).join('')
       : '<tr><td class="school-product-empty" colspan="11">暂无符合条件的数据</td></tr>';
   }
 
@@ -98,9 +101,14 @@
           <div class="school-category-tree" id="schoolCategoryTree"></div>
         </aside>
         <section class="school-product-table-panel">
-          <form class="school-product-filters" id="schoolProductFilters">
-            <label>商品名称<input id="schoolProductKeyword" data-filter="keyword" type="text" placeholder="请输入名称/编号"></label>
-            <div class="school-product-filter-actions"><button type="submit" class="btn btn-primary btn-sm">查询</button><button type="button" class="btn btn-sm" data-action="reset">重置</button></div>
+          <form class="school-product-filters filter-section" id="schoolProductFilters">
+            <div class="filter-panel">
+              <div class="filter-fields">
+                <div class="filter-group"><label class="filter-label" for="schoolProductKeyword">商品名称</label><input class="filter-input" id="schoolProductKeyword" data-filter="keyword" type="text" placeholder="请输入名称/编号"></div>
+                <div class="filter-group"><label class="filter-label" for="schoolProductNetVegetable">是否净菜</label><select class="filter-select" id="schoolProductNetVegetable" data-filter="netVegetable"><option value="">全部</option><option value="net">净菜</option><option value="non-net">非净菜</option></select></div>
+              </div>
+              <div class="action-controls"><button type="submit" class="btn btn-primary btn-sm btn-fixed">查询</button><button type="button" class="btn btn-sm btn-fixed" data-action="reset">重置</button></div>
+            </div>
           </form>
           <div class="school-product-table-wrap"><table class="school-product-table"><colgroup><col class="col-seq"><col class="col-image"><col class="col-code"><col class="col-name"><col class="col-category"><col class="col-unit"><col class="col-supplier"><col class="col-alias"><col class="col-origin"><col class="col-shelf"><col class="col-time"></colgroup><thead><tr><th>序号</th><th>图片</th><th>商品编号</th><th>商品名称（计量单位/品牌/规格）</th><th>分类</th><th>计量单位</th><th>供货企业</th><th>别名</th><th>产地</th><th>保质期</th><th>添加时间</th></tr></thead><tbody id="schoolProductBody"></tbody></table></div>
           <div class="pagination school-product-pagination" id="schoolProductPagination"></div>
@@ -112,7 +120,8 @@
     const state = { rows: service.getRows(), filtered: [], category: '', treeKeyword: '', pager: null };
     const applyFilters = (resetPage = true) => {
       const keyword = page.querySelector('[data-filter="keyword"]').value;
-      state.filtered = service.filterRows(state.rows, { keyword, category: state.category });
+      const netVegetable = page.querySelector('[data-filter="netVegetable"]').value;
+      state.filtered = service.filterRows(state.rows, { keyword, category: state.category, netVegetable });
       state.pager?.update({ total: state.filtered.length, ...(resetPage ? { page: 1 } : {}) });
       renderRows(page, state);
     };
@@ -148,6 +157,7 @@
       const action = event.target.closest('[data-action]')?.dataset.action;
       if (action === 'reset') {
         page.querySelector('[data-filter="keyword"]').value = '';
+        page.querySelector('[data-filter="netVegetable"]').value = '';
         page.querySelector('#schoolCategoryKeyword').value = '';
         state.category = '';
         state.treeKeyword = '';

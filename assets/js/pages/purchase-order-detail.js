@@ -22,7 +22,7 @@
     return source ? source.slice(0, 10) : '--';
   }
   function displayProduct(item) {
-    return text(item.productName || '') + '(' + text(item.unit || '--') + '/' + text(item.brand || '--') + '/' + text(item.spec || '--') + ')';
+    return text(window.DomUtils.formatProductDisplay(item));
   }
   function infoItem(label, value) {
     return '<div class="purchase-order-info-item"><span class="purchase-order-info-label">' + label + '：</span><span class="purchase-order-info-value">' + text(value || '--') + '</span></div>';
@@ -73,7 +73,7 @@
     return '<tr>' +
       '<td>' + (index + 1) + '</td>' +
       '<td>' + imageCell(item) + '</td>' +
-      '<td class="purchase-order-detail-product">' + displayProduct(item) + '</td>' +
+      '<td class="purchase-order-detail-product"><span class="product-display-text" title="' + displayProduct(item) + '">' + displayProduct(item) + '</span></td>' +
       '<td>' + text(item.productCode || '--') + '</td>' +
       '<td>' + text(item.unit || '--') + '</td>' +
       '<td>' + fixed(item.quantity) + '</td>' +

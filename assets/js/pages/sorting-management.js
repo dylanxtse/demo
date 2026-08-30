@@ -16,10 +16,9 @@
   const defaultDate = todayStr();
 
   function renderGoodsName(item) {
-    const name = escapeHtml(item.goodsName || '--');
-    return item.isNetVegetable
-      ? `<span class="net-vegetable-tag">净菜</span>${name}`
-      : name;
+    const name = escapeHtml(window.DomUtils?.formatProductDisplay?.(item) || item.goodsName || '--');
+    const marker = item.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+    return `<span class="product-display-text">${marker}${name}</span>`;
   }
 
   function renderProgress(item) {

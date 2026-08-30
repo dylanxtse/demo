@@ -18,18 +18,15 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   };
   const money = (value) => number(value).toFixed(2);
-  const nowText = () => {
-    const date = new Date();
-    const pad = (value) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-  };
-  const productLabel = (product) => `${product.name}(${product.unit || '--'}/${product.brand || '--'}/${product.spec || '--'})`;
+  const productLabel = (product) => window.DomUtils.formatProductDisplay(product);
   const titleMap = { add: '添加订单', edit: '编辑订单', copy: '复制订单', audit: '审核订单' };
   const title = titleMap[mode];
   const readOnly = mode === 'audit';
+  const showHeaderBack = mode !== 'edit';
+  const showFooterBack = !['add', 'edit'].includes(mode);
   const catalog = service.getProductCatalog();
   const defaultItems = mode === 'add'
-    ? Array.from({ length: 10 }, () => ({ id: '', productCode: '', productName: '', unit: '', brand: '--', spec: '--', orderQty: 0, orderPrice: 0, agreementPrice: '', recentSalePrice: '', marketPrice: '', remark: '' }))
+    ? Array.from({ length: 10 }, (_, index) => ({ id: `SOL-ROW-${index + 1}`, productCode: '', productName: '', unit: '', brand: '--', spec: '--', orderQty: 0, orderPrice: 0, agreementPrice: '', recentSalePrice: '', marketPrice: '', remark: '' }))
     : clone(sourceOrder?.items || []);
   const state = { items: defaultItems, total: 0 };
 
@@ -46,50 +43,69 @@
     return line?.[key] == null ? fallback : line[key];
   }
 
-  function productOptions(selected = '') {
-    return [`<option value="">请选择商品</option>`, ...catalog.map((product) => `<option value="${escapeHtml(product.code)}" ${String(product.code) === String(selected) ? 'selected' : ''}>${escapeHtml(productLabel(product))}</option>`)].join('');
+  function renderProductSelect(selectedCode, lineId) {
+    const selectedProduct = selectedCode ? currentProduct(selectedCode) : null;
+    const selectedCodes = state.items
+      .filter((item) => item.id !== lineId && item.productCode)
+      .map((item) => item.productCode);
+    const netTag = selectedProduct?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+    const displayText = selectedProduct ? escapeHtml(productLabel(selectedProduct)) : '请选择';
+    const disabled = readOnly ? ' is-disabled' : '';
+    return `<div class="custom-select order-goods-select${disabled}" data-select-type="goods" data-line-id="${escapeHtml(lineId)}" data-value="${escapeHtml(selectedCode || '')}"${readOnly ? ' aria-disabled="true"' : ''}>
+      <div class="custom-select-trigger" data-action="toggle-goods-select">
+        <span class="template-product-label">${netTag}<span class="custom-select-text ${selectedProduct ? '' : 'is-placeholder'}">${displayText}</span></span>
+        <svg class="custom-select-arrow" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="custom-select-dropdown">
+        ${catalog.map((optionProduct) => {
+          const isDuplicate = selectedCodes.includes(optionProduct.code);
+          const tag = optionProduct.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
+          return `<div class="custom-select-option ${String(optionProduct.code) === String(selectedCode) ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(optionProduct.code)}" data-disabled="${isDuplicate}" data-action="select-goods">${tag}${escapeHtml(productLabel(optionProduct))}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
   }
 
   function renderLine(line, index) {
     const product = currentProduct(line.productCode);
-    const name = line.productName || product?.name || '';
+    const lineId = line.id || `SOL-ROW-${index + 1}`;
     const unit = line.unit || product?.unit || '';
     const recent = line.recentSalePrice === '' || line.recentSalePrice == null ? (product?.marketPrice ?? '') : line.recentSalePrice;
     const market = line.marketPrice === '' || line.marketPrice == null ? (product?.marketPrice ?? '') : line.marketPrice;
     const qty = number(line.orderQty);
     const price = number(line.orderPrice);
-    const lockedProduct = readOnly || mode === 'edit';
-    const lockedPrice = readOnly || mode === 'edit' || (mode === 'copy' && Boolean(line.productCode));
     const lockedInputs = readOnly;
     const remark = lineValue(line, 'remark', '') === '--' ? '' : lineValue(line, 'remark', '');
-    return `<tr data-line-index="${index}">
+    return `<tr data-line-id="${escapeHtml(lineId)}">
       <td>${index + 1}</td>
-      <td><span class="school-order-image-placeholder" aria-label="商品图片">图片</span></td>
-      <td><select class="form-table-select" data-field="productCode" aria-label="第${index + 1}行商品" ${lockedProduct ? 'disabled' : ''}>${productOptions(line.productCode)}</select></td>
+      <td><span class="goods-thumb" aria-label="商品图片">暂无图片</span></td>
+      <td class="goods-name-cell">${renderProductSelect(line.productCode, lineId)}</td>
       <td data-cell="unit">${escapeHtml(unit || '--')}</td>
-      <td><input class="table-number-input" data-field="orderQty" type="number" min="0" step="0.01" value="${escapeHtml(qty)}" aria-label="第${index + 1}行下单数量" ${lockedInputs ? 'disabled' : ''}></td>
-      <td><input class="table-number-input" data-field="orderPrice" type="number" min="0" step="0.01" value="${escapeHtml(price)}" aria-label="第${index + 1}行下单单价" ${lockedPrice ? 'disabled' : ''}></td>
-      <td data-cell="subtotal">${money(qty * price)}</td>
+      <td><input class="table-input" data-field="orderQty" type="number" min="0.01" step="0.01" value="${qty ? escapeHtml(qty) : ''}" placeholder="请输入" aria-label="第${index + 1}行下单数量" ${lockedInputs ? 'disabled' : ''}></td>
+      <td><input class="table-input" data-field="orderPrice" type="number" min="0" step="0.01" value="${price ? escapeHtml(money(price)) : ''}" placeholder="请输入" aria-label="第${index + 1}行下单单价" ${lockedInputs ? 'disabled' : ''}></td>
+      <td class="line-subtotal" data-cell="subtotal">${money(qty * price)}</td>
       <td data-cell="agreement">${lineValue(line, 'agreementPrice', '') === '' ? '--' : money(lineValue(line, 'agreementPrice'))}</td>
       <td data-cell="recent">${recent === '' ? '--' : money(recent)}</td>
       <td data-cell="market">${market === '' ? '--' : money(market)}</td>
-      <td><input class="table-remark-input" data-field="remark" type="text" value="${escapeHtml(remark)}" aria-label="第${index + 1}行备注" ${lockedInputs ? 'disabled' : ''}></td>
+      <td><input class="table-input remark-input" data-field="remark" type="text" value="${escapeHtml(remark)}" placeholder="请输入备注" aria-label="第${index + 1}行备注" ${lockedInputs ? 'disabled' : ''}></td>
+      <td>${readOnly ? '--' : '<button class="btn-text danger" type="button" data-remove-line>删除</button>'}</td>
     </tr>`;
   }
 
   function collectItems(page) {
-    return [...page.querySelectorAll('#schoolOrderGoodsBody tr[data-line-index]')].map((row, index) => {
-      const old = state.items[index] || {};
-      const code = row.querySelector('[data-field="productCode"]')?.value || old.productCode || '';
+    return [...page.querySelectorAll('#goodsTableBody tr[data-line-id]')].map((row, index) => {
+      const old = state.items.find((item) => String(item.id) === String(row.dataset.lineId)) || {};
+      const code = row.querySelector('.order-goods-select')?.dataset.value || old.productCode || '';
       const product = currentProduct(code);
       const price = Math.max(0, number(row.querySelector('[data-field="orderPrice"]')?.value ?? old.orderPrice));
       return {
-        id: old.id || `SOL-NEW-${Date.now()}-${index}`,
+        id: old.id || row.dataset.lineId || `SOL-NEW-${Date.now()}-${index}`,
         productCode: code,
         productName: product?.name || old.productName || '',
         unit: product?.unit || old.unit || '',
         brand: product?.brand || old.brand || '--',
         spec: product?.spec || old.spec || '--',
+        isNetVegetable: product?.isNetVegetable ?? old.isNetVegetable ?? false,
         orderQty: Math.max(0, number(row.querySelector('[data-field="orderQty"]')?.value ?? old.orderQty)),
         orderPrice: price,
         agreementPrice: old.agreementPrice ?? '',
@@ -101,19 +117,83 @@
   }
 
   function updateLine(row, page) {
-    const index = Number(row.dataset.lineIndex);
     const items = collectItems(page);
-    const line = items[index] || {};
-    state.items[index] = { ...(state.items[index] || {}), ...line };
+    const line = items.find((item) => String(item.id) === String(row.dataset.lineId)) || {};
+    const index = state.items.findIndex((item) => String(item.id) === String(row.dataset.lineId));
+    if (index >= 0) state.items[index] = { ...(state.items[index] || {}), ...line };
     row.querySelector('[data-cell="subtotal"]').textContent = money(number(line.orderQty) * number(line.orderPrice));
     state.total = items.reduce((sum, item) => sum + number(item.orderQty) * number(item.orderPrice), 0);
-    page.querySelector('#schoolOrderTotal').textContent = money(state.total);
+    page.querySelector('#goodsTotal').textContent = money(state.total);
   }
 
   function renderItems(page) {
-    page.querySelector('#schoolOrderGoodsBody').innerHTML = state.items.map(renderLine).join('');
+    state.items.forEach((item, index) => {
+      if (!item.id) item.id = `SOL-ROW-${index + 1}`;
+    });
+    page.querySelector('#goodsTableBody').innerHTML = state.items.map(renderLine).join('');
     state.total = state.items.reduce((sum, item) => sum + number(item.orderQty) * number(item.orderPrice), 0);
-    page.querySelector('#schoolOrderTotal').textContent = money(state.total);
+    page.querySelector('#goodsTotal').textContent = money(state.total);
+  }
+
+  function closeAllProductSelects(page, except) {
+    page.querySelectorAll('.order-goods-select.is-open').forEach((select) => {
+      if (select !== except) {
+        select.classList.remove('is-open');
+        const dropdown = select.querySelector('.custom-select-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+      }
+    });
+  }
+
+  function toggleProductSelect(page, select) {
+    if (!select || select.classList.contains('is-disabled')) return;
+    closeAllProductSelects(page, select);
+    const dropdown = select.querySelector('.custom-select-dropdown');
+    if (!dropdown) return;
+    if (select.classList.contains('is-open')) {
+      select.classList.remove('is-open');
+      dropdown.style.display = 'none';
+      return;
+    }
+    select.classList.add('is-open');
+    const trigger = select.querySelector('.custom-select-trigger');
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.display = 'block';
+    dropdown.style.position = 'fixed';
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.width = `${rect.width}px`;
+    dropdown.style.zIndex = '100';
+    const spaceBelow = window.innerHeight - rect.bottom - 10;
+    const spaceAbove = rect.top - 10;
+    if (spaceBelow >= 120) {
+      dropdown.style.top = `${rect.bottom}px`;
+      dropdown.style.maxHeight = `${Math.min(240, spaceBelow)}px`;
+    } else {
+      dropdown.style.top = `${rect.top - Math.min(240, spaceAbove)}px`;
+      dropdown.style.maxHeight = `${Math.min(240, spaceAbove)}px`;
+    }
+  }
+
+  function selectProduct(page, select, option) {
+    if (readOnly || option.dataset.disabled === 'true') return;
+    const lineId = select?.dataset.lineId;
+    const product = currentProduct(option?.dataset.value);
+    const item = state.items.find((entry) => String(entry.id) === String(lineId));
+    if (!product || !item) return;
+    item.productCode = product.code;
+    item.productName = product.name;
+    item.unit = product.unit;
+    item.brand = product.brand;
+    item.spec = product.spec;
+    item.isNetVegetable = product.isNetVegetable === true;
+    item.recentSalePrice = product.marketPrice;
+    item.marketPrice = product.marketPrice;
+    if (!number(item.orderPrice)) item.orderPrice = product.marketPrice;
+    closeAllProductSelects(page);
+    if (state.items[state.items.length - 1] === item) {
+      state.items.push({ id: `SOL-ROW-${Date.now()}`, productCode: '', productName: '', unit: '', brand: '--', spec: '--', orderQty: 0, orderPrice: 0, agreementPrice: '', recentSalePrice: '', marketPrice: '', remark: '' });
+    }
+    renderItems(page);
   }
 
   function setError(page, message = '') {
@@ -139,22 +219,65 @@
   function openProductPicker(page) {
     state.items = collectItems(page);
     const selectedCodes = new Set(state.items.map((item) => item.productCode).filter(Boolean));
+    const existingItems = new Map(state.items.filter((item) => item.productCode).map((item) => [item.productCode, item]));
+    const pickerValues = new Map();
+    const categories = [...new Set(catalog.map((product) => product.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN'));
     const modal = openModal({
       title: '批量添加商品',
       className: 'school-order-picker-modal',
-      body: `<div class="school-order-picker-list"><div class="school-order-picker-row header"><span></span><span>商品名称（计量单位/品牌/规格）</span><span>商品编号</span><span>参考价</span></div>${catalog.map((product) => `<label class="school-order-picker-row"><input type="checkbox" value="${escapeHtml(product.code)}" ${selectedCodes.has(product.code) ? 'checked' : ''}><span>${escapeHtml(productLabel(product))}</span><span>${escapeHtml(product.code)}</span><span>${money(product.marketPrice)}</span></label>`).join('')}</div>`,
-      footer: `<button type="button" class="btn" data-modal-cancel>取消</button><button type="button" class="btn btn-primary" data-modal-confirm>添加选中商品</button>`
+      body: `<div class="school-order-picker-filter"><div class="school-order-picker-filter-field"><label for="schoolOrderPickerCategory">商品分类</label><select id="schoolOrderPickerCategory"><option value="">请选择商品分类</option>${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('')}</select></div><div class="school-order-picker-filter-actions"><button type="button" class="btn btn-primary btn-sm" data-picker-query>查询</button><button type="button" class="btn btn-sm" data-picker-reset>重置</button></div></div><div class="school-order-picker-list" id="schoolOrderPickerList"></div>`,
+      footer: `<button type="button" class="btn" data-modal-cancel>关闭</button><button type="button" class="btn btn-primary" data-modal-confirm>添加</button>`
+    });
+
+    const list = modal.backdrop.querySelector('#schoolOrderPickerList');
+    const categorySelect = modal.backdrop.querySelector('#schoolOrderPickerCategory');
+    const capturePickerValues = () => {
+      list.querySelectorAll('[data-picker-code]').forEach((row) => {
+        const code = row.dataset.pickerCode;
+        pickerValues.set(code, {
+          checked: Boolean(row.querySelector('.picker-product-check')?.checked),
+          quantity: row.querySelector('.picker-qty-input')?.value || '',
+          remark: row.querySelector('.picker-remark-input')?.value || ''
+        });
+      });
+    };
+    const renderPickerRows = () => {
+      capturePickerValues();
+      const category = categorySelect.value;
+      const visibleProducts = category ? catalog.filter((product) => product.category === category) : catalog;
+      list.innerHTML = `<div class="school-order-picker-row header"><span></span><span>图片</span><span>商品名称（计量单位/品牌/规格）</span><span>计量单位</span><span>下单数量</span><span>备注</span></div>${visibleProducts.map((product) => {
+        const existing = existingItems.get(product.code);
+        const saved = pickerValues.get(product.code);
+        const checked = saved ? saved.checked : selectedCodes.has(product.code);
+        const quantity = saved ? saved.quantity : (existing && number(existing.orderQty) > 0 ? existing.orderQty : '');
+        const remark = saved ? saved.remark : (existing?.remark && existing.remark !== '--' ? existing.remark : '');
+        return `<div class="school-order-picker-row" data-picker-code="${escapeHtml(product.code)}"><span><input class="picker-product-check" type="checkbox" value="${escapeHtml(product.code)}" ${checked ? 'checked' : ''} aria-label="选择${escapeHtml(productLabel(product))}"></span><span><span class="school-order-picker-image">图片</span></span><span class="school-order-picker-product" title="${escapeHtml(productLabel(product))}">${product.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}${escapeHtml(productLabel(product))}</span><span>${escapeHtml(product.unit || '--')}</span><span><input class="picker-qty-input" type="number" min="0.01" step="0.01" value="${escapeHtml(quantity)}" placeholder="请输入数量" aria-label="${escapeHtml(product.name)}下单数量"></span><span><input class="picker-remark-input" type="text" value="${escapeHtml(remark)}" placeholder="请输入备注" aria-label="${escapeHtml(product.name)}备注"></span></div>`;
+      }).join('')}`;
+    };
+
+    renderPickerRows();
+    modal.backdrop.querySelector('[data-picker-query]').addEventListener('click', renderPickerRows);
+    modal.backdrop.querySelector('[data-picker-reset]').addEventListener('click', () => {
+      categorySelect.value = '';
+      renderPickerRows();
     });
     modal.backdrop.querySelector('[data-modal-confirm]').addEventListener('click', () => {
-      const codes = [...modal.backdrop.querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
+      capturePickerValues();
+      const codes = [...list.querySelectorAll('.picker-product-check:checked')].map((input) => input.value);
       const chosen = codes.map(currentProduct).filter(Boolean);
       const next = state.items.slice();
       chosen.forEach((product) => {
-        if (next.some((item) => item.productCode === product.code)) return;
-        const blankIndex = next.findIndex((item) => !item.productCode);
-        const item = { id: `SOL-NEW-${Date.now()}-${product.code}`, productCode: product.code, productName: product.name, unit: product.unit, brand: product.brand, spec: product.spec, orderQty: 0, orderPrice: product.marketPrice, agreementPrice: '', recentSalePrice: product.marketPrice, marketPrice: product.marketPrice, remark: '' };
-        if (blankIndex >= 0) next[blankIndex] = item;
-        else next.push(item);
+        const pickerValue = pickerValues.get(product.code) || {};
+        const existingIndex = next.findIndex((item) => item.productCode === product.code);
+        const item = { id: `SOL-NEW-${Date.now()}-${product.code}`, productCode: product.code, productName: product.name, unit: product.unit, brand: product.brand, spec: product.spec, isNetVegetable: product.isNetVegetable === true, orderQty: 0, orderPrice: product.marketPrice, agreementPrice: '', recentSalePrice: product.marketPrice, marketPrice: product.marketPrice, remark: '' };
+        item.orderQty = number(pickerValue.quantity);
+        item.remark = pickerValue.remark || '';
+        if (existingIndex >= 0) next[existingIndex] = { ...next[existingIndex], orderQty: item.orderQty, remark: item.remark };
+        else {
+          const blankIndex = next.findIndex((entry) => !entry.productCode);
+          if (blankIndex >= 0) next[blankIndex] = item;
+          else next.push(item);
+        }
       });
       state.items = next;
       renderItems(page);
@@ -197,7 +320,7 @@
     }
     const order = sourceOrder || {};
     const supplier = order.supplierName || '';
-    const expectedAt = order.expectedAt || nowText();
+    const expectedAt = order.expectedAt || '';
     const canteen = order.canteen || '';
     const tag = order.orderTag || '';
     const remark = order.remark === '--' ? '' : (order.remark || '');
@@ -205,52 +328,67 @@
     const expectedDisabled = readOnly || mode === 'edit';
     const basicDisabled = readOnly;
     const content = `<section class="school-order-form-page" id="schoolOrderFormPage" aria-label="${escapeHtml(title)}">
-      <header class="school-order-form-header"><button type="button" class="school-order-form-back" data-action="back" aria-label="返回订单管理">‹ <span>返回</span></button><h1>${escapeHtml(title)}</h1></header>
+      <header class="school-order-form-header ${showHeaderBack ? '' : 'is-standalone'}">${showHeaderBack ? '<button type="button" class="school-order-form-back" data-action="back" aria-label="返回订单列表">‹ <span>返回</span></button>' : ''}<h1>${escapeHtml(title)}</h1></header>
       <div class="school-order-form-body">
         ${mode === 'audit' ? '<p class="school-order-form-readonly-note">当前为审核视图，请核对订单基础信息与商品明细后完成审核。</p>' : ''}
         ${mode === 'copy' ? `<p class="school-order-form-context">复制订单：${escapeHtml(order.orderNo || '')}。保存后将生成新的订单号。</p>` : mode === 'edit' ? `<p class="school-order-form-context">订单号：${escapeHtml(order.orderNo || '')}</p>` : ''}
         <section class="school-order-form-section">
-          <div class="school-order-form-section-title"><h2>基础信息</h2></div>
           <div class="school-order-basic-grid">
-            <div class="school-order-basic-field required"><label for="schoolOrderSupplier">供货企业</label><select id="schoolOrderSupplier" ${supplierDisabled ? 'disabled' : ''}><option value="">请选择供货企业</option>${(service.suppliers || [service.SUPPLIER_NAME]).map((item) => `<option value="${escapeHtml(item)}" ${supplier === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
-            <div class="school-order-basic-field required"><label for="schoolOrderExpectedAt">期望送达时间</label><input id="schoolOrderExpectedAt" class="form-control" type="text" value="${escapeHtml(expectedAt)}" ${expectedDisabled ? 'disabled' : ''}></div>
-            <div class="school-order-basic-field required"><label for="schoolOrderCanteen">食堂</label><select id="schoolOrderCanteen" ${basicDisabled ? 'disabled' : ''}><option value="">请选择食堂</option>${(service.canteens || []).map((item) => `<option value="${escapeHtml(item)}" ${canteen === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
-            <div class="school-order-basic-field required"><label for="schoolOrderTag">订单标签</label><select id="schoolOrderTag" ${basicDisabled ? 'disabled' : ''}><option value="">请选择订单标签</option>${(service.tags || []).map((item) => `<option value="${escapeHtml(item)}" ${tag === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
+            <div class="school-order-basic-field required"><label for="schoolOrderSupplier">供货企业</label><select id="schoolOrderSupplier" class="${supplier ? '' : 'is-placeholder'}" ${supplierDisabled ? 'disabled' : ''}><option value="">请选择供货企业</option>${(service.suppliers || [service.SUPPLIER_NAME]).map((item) => `<option value="${escapeHtml(item)}" ${supplier === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
+            <div class="school-order-basic-field required"><label for="schoolOrderExpectedAt">期望送达时间</label><input id="schoolOrderExpectedAt" class="form-control ${expectedAt ? '' : 'is-placeholder'}" type="text" value="${escapeHtml(expectedAt)}" placeholder="请选择期望送达时间" ${expectedDisabled ? 'disabled' : ''}></div>
+            <div class="school-order-basic-field required"><label for="schoolOrderCanteen">食堂</label><select id="schoolOrderCanteen" class="${canteen ? '' : 'is-placeholder'}" ${basicDisabled ? 'disabled' : ''}><option value="">请选择食堂</option>${(service.canteens || []).map((item) => `<option value="${escapeHtml(item)}" ${canteen === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
+            <div class="school-order-basic-field required"><label for="schoolOrderTag">订单标签</label><select id="schoolOrderTag" class="${tag ? '' : 'is-placeholder'}" ${basicDisabled ? 'disabled' : ''}><option value="">请选择订单标签</option>${(service.tags || []).map((item) => `<option value="${escapeHtml(item)}" ${tag === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
           </div>
         </section>
         <section class="school-order-form-section">
-          <div class="school-order-form-section-title school-order-goods-heading"><h2>商品信息</h2>${!readOnly ? '<button type="button" class="btn btn-primary btn-sm" data-action="batch-add">批量添加商品</button>' : ''}</div>
-          <div class="school-order-form-table-wrap"><table class="school-order-form-table"><colgroup><col class="col-seq"><col class="col-image"><col class="col-name"><col class="col-unit"><col class="col-qty"><col class="col-price"><col class="col-subtotal"><col class="col-agreement"><col class="col-recent"><col class="col-market"><col class="col-remark"></colgroup><thead><tr><th>序号</th><th>图片</th><th>商品名称（计量单位/品牌/规格）</th><th>计量单位</th><th class="required-head">下单数量</th><th class="required-head">下单单价</th><th>下单小计</th><th>协议价</th><th>最近一次销售价</th><th>市场价</th><th>备注</th></tr></thead><tbody id="schoolOrderGoodsBody"></tbody><tfoot><tr><td colspan="6">金额合计（元）</td><td id="schoolOrderTotal">0.00</td><td colspan="4"></td></tr></tfoot></table></div>
-          <div class="school-order-form-error" id="schoolOrderFormError" role="alert"></div>
+          ${!readOnly ? '<div class="school-order-goods-toolbar"><button type="button" class="btn btn-primary btn-sm" data-action="batch-add">批量添加商品</button></div>' : ''}
+          <div class="order-goods-table-wrap"><table class="order-goods-table"><thead><tr><th>序号</th><th>图片</th><th>商品名称（计量单位/品牌/规格）</th><th>计量单位</th><th class="required-head">下单数量</th><th class="required-head">下单单价</th><th>下单小计</th><th>协议价</th><th>近一次销售价</th><th>市场价</th><th>备注</th><th>操作</th></tr></thead><tbody id="goodsTableBody"></tbody><tfoot><tr><td colspan="6">合计</td><td id="goodsTotal">0.00</td><td colspan="5"></td></tr></tfoot></table></div>
+          <div class="goods-table-error" id="schoolOrderFormError" role="alert"></div>
         </section>
         <section class="school-order-remark"><label class="school-order-remark-label" for="schoolOrderRemark">订单备注</label><div class="school-order-remark-wrap"><textarea id="schoolOrderRemark" maxlength="100" ${readOnly ? 'disabled' : ''}>${escapeHtml(remark)}</textarea><span class="school-order-remark-count"><span id="schoolOrderRemarkCount">${escapeHtml(remark.length)}</span>/100</span></div></section>
       </div>
-      <footer class="school-order-form-actions"><button type="button" class="btn" data-action="back">返回</button>${readOnly ? '<button type="button" class="btn btn-danger" data-action="reject">驳回</button><button type="button" class="btn btn-primary" data-action="approve">审核通过</button>' : '<button type="button" class="btn" data-action="draft">暂存</button><button type="button" class="btn btn-primary" data-action="save">保存订单</button>'}</footer>
+      <footer class="school-order-form-actions">${showFooterBack ? '<button type="button" class="btn" data-action="back">返回</button>' : ''}${readOnly ? '<button type="button" class="btn btn-danger" data-action="reject">驳回</button><button type="button" class="btn btn-primary" data-action="approve">审核通过</button>' : '<button type="button" class="btn" data-action="draft">暂存</button><button type="button" class="btn btn-primary" data-action="save">保存订单</button>'}</footer>
     </section>`;
     const root = window.AppShell.mount({ title, content, variant: 'school', companyName: service.SCHOOL_NAME, emptyText: title });
     const page = root.querySelector('#schoolOrderFormPage');
     renderItems(page);
 
     page.addEventListener('input', (event) => {
-      const row = event.target.closest('tr[data-line-index]');
+      const row = event.target.closest('tr[data-line-id]');
       if (row) updateLine(row, page);
       if (event.target.id === 'schoolOrderRemark') page.querySelector('#schoolOrderRemarkCount').textContent = event.target.value.length;
+      if (event.target.id === 'schoolOrderExpectedAt') event.target.classList.toggle('is-placeholder', !event.target.value.trim());
     });
     page.addEventListener('change', (event) => {
-      const row = event.target.closest('tr[data-line-index]');
-      if (!row) return;
-      if (event.target.dataset.field === 'productCode') {
-        const product = currentProduct(event.target.value);
-        const index = Number(row.dataset.lineIndex);
-        state.items[index] = { ...(state.items[index] || {}), productCode: product?.code || '', productName: product?.name || '', unit: product?.unit || '', brand: product?.brand || '--', spec: product?.spec || '--', orderPrice: product?.marketPrice || 0, recentSalePrice: product?.marketPrice ?? '', marketPrice: product?.marketPrice ?? '' };
-        row.querySelector('[data-cell="unit"]').textContent = product?.unit || '--';
-        row.querySelector('[data-field="orderPrice"]').value = product?.marketPrice ?? 0;
-        row.querySelector('[data-cell="recent"]').textContent = product ? money(product.marketPrice) : '--';
-        row.querySelector('[data-cell="market"]').textContent = product ? money(product.marketPrice) : '--';
+      if (event.target.matches('#schoolOrderSupplier, #schoolOrderCanteen, #schoolOrderTag')) {
+        event.target.classList.toggle('is-placeholder', !event.target.value);
+        return;
       }
+      const row = event.target.closest('tr[data-line-id]');
+      if (!row) return;
       updateLine(row, page);
     });
     page.addEventListener('click', (event) => {
+      const selectTrigger = event.target.closest('[data-action="toggle-goods-select"]');
+      if (selectTrigger) {
+        event.stopPropagation();
+        toggleProductSelect(page, selectTrigger.closest('.order-goods-select'));
+        return;
+      }
+      const selectOption = event.target.closest('[data-action="select-goods"]');
+      if (selectOption) {
+        event.stopPropagation();
+        selectProduct(page, selectOption.closest('.order-goods-select'), selectOption);
+        return;
+      }
+      const remove = event.target.closest('[data-remove-line]');
+      if (remove) {
+        const lineId = remove.closest('tr[data-line-id]')?.dataset.lineId;
+        if (state.items.length <= 1) return;
+        state.items = state.items.filter((item) => String(item.id) !== String(lineId));
+        renderItems(page);
+        return;
+      }
       const button = event.target.closest('[data-action]');
       if (!button) return;
       const action = button.dataset.action;
@@ -261,6 +399,15 @@
       else if (action === 'approve') { service.approve(orderId); navigate('./school-order-management.html'); }
       else if (action === 'reject') { service.reject(orderId, window.prompt('请输入驳回原因', '订单信息需补充') || '订单信息需补充'); navigate('./school-order-management.html'); }
     });
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.order-goods-select')) closeAllProductSelects(page);
+    });
+    document.addEventListener('scroll', (event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('.custom-select-dropdown')) return;
+      closeAllProductSelects(page);
+    }, true);
+    window.addEventListener('resize', () => closeAllProductSelects(page));
   }
 
   render();

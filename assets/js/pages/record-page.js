@@ -351,12 +351,17 @@
 
     function formatCell(item, column) {
       if (column.render) return column.render(item);
+      if (column.productDisplay) {
+        const display = window.DomUtils?.formatProductDisplay?.(item) || item[column.key] || '--';
+        return `<span class="product-display-text" title="${escapeHtml(display)}">${escapeHtml(display)}</span>`;
+      }
       const value = item[column.key];
       if (column.editableNumber) {
         const inputValue = column.blankZero && Number(value || 0) === 0 ? '' : (value ?? '');
         return `<input class="quantity-input record-inline-input" data-inline-field="${column.key}" type="number" min="0" value="${escapeHtml(inputValue)}" placeholder="${escapeHtml(column.placeholder || '请输入')}" aria-label="${escapeHtml(column.label)}">`;
       }
       if (column.format === 'money') return Number(value || 0).toFixed(2);
+      if (column.format === 'decimal') return Number(value || 0).toFixed(2);
       if (column.format === 'status') {
         const status = statusMap[value]
           || [window.BusinessRules?.statusLabel(currentResource(), value) || value || '--', ''];
@@ -367,20 +372,46 @@
     }
 
     function renderHead() {
+      const showSequence = config.hideSequence !== true;
+      const showActions = config.hideRowActions !== true;
       const selectionHeader = config.selectable === false
         ? ''
         : config.customSelection
           ? '<th class="custom-selection-column"><span class="custom-checkbox record-select-all-custom" role="checkbox" id="recordSelectAll" aria-checked="false" aria-label="选择全部" tabindex="0"></span></th>'
           : '<th><input type="checkbox" id="recordSelectAll" aria-label="选择全部"></th>';
+      if (Array.isArray(config.headerRows) && config.headerRows.length) {
+        const rows = config.headerRows;
+        const headerSelection = selectionHeader
+          ? selectionHeader.replace('<th', '<th rowspan="' + rows.length + '"')
+          : '';
+        const headerRows = rows.map((row, rowIndex) => {
+          const cells = row.map((header) => {
+            const annotation = header.key ? columnHeaderAnnotations.get(header.key) : null;
+            const marker = annotation
+              ? renderAnnotationMarker(annotation, header.key + '-header', true)
+              : '';
+            const rowspan = header.rowspan ? ' rowspan="' + header.rowspan + '"' : '';
+            const colspan = header.colspan ? ' colspan="' + header.colspan + '"' : '';
+            return '<th' + rowspan + colspan + '><span class="record-annotation-header-label">' + escapeHtml(header.label) + '</span>' + marker + '</th>';
+          }).join('');
+          const leading = rowIndex === 0
+            ? headerSelection + (showSequence ? '<th rowspan="' + rows.length + '">序号</th>' : '')
+            : '';
+          const trailing = rowIndex === 0 && showActions ? '<th rowspan="' + rows.length + '">操作</th>' : '';
+          return '<tr>' + leading + cells + trailing + '</tr>';
+        }).join('');
+        $('#recordHead').innerHTML = headerRows;
+        return;
+      }
       $('#recordHead').innerHTML = `<tr>
         ${selectionHeader}
-        <th>序号</th>${currentColumns().map((column) => {
+        ${showSequence ? '<th>序号</th>' : ''}${currentColumns().map((column) => {
           const annotation = columnHeaderAnnotations.get(column.key);
           const marker = annotation
             ? renderAnnotationMarker(annotation, `${column.key}-header`, true)
             : '';
           return `<th><span class="record-annotation-header-label">${column.label}</span>${marker}</th>`;
-        }).join('')}<th>操作</th>
+        }).join('')}${showActions ? '<th>操作</th>' : ''}
       </tr>`;
     }
 
@@ -396,8 +427,11 @@
 
     function renderBody() {
       const columns = currentColumns();
+      const extraColumns = (config.selectable === false ? 0 : 1)
+        + (config.hideSequence === true ? 0 : 1)
+        + (config.hideRowActions === true ? 0 : 1);
       if (!state.items.length) {
-        $('#recordBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + (config.selectable === false ? 2 : 3)}">暂无数据</td></tr>`;
+        $('#recordBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + extraColumns}">暂无数据</td></tr>`;
         syncAnnotationOverlay();
         return;
       }
@@ -412,7 +446,7 @@
             : `<td><input type="checkbox" class="record-row-select" aria-label="选择数据" ${checked ? 'checked' : ''} ${selectable ? '' : 'disabled'}></td>`;
         return `<tr data-id="${escapeHtml(item.id)}">
           ${selectionCell}
-          <td>${(state.page - 1) * state.pageSize + index + 1}</td>
+          ${config.hideSequence === true ? '' : `<td>${(state.page - 1) * state.pageSize + index + 1}</td>`}
           ${columns.map((column) => {
             const cell = formatCell(item, column);
             if (column.href) {
@@ -425,10 +459,10 @@
               : '';
             return `<td><span class="record-annotation-entry"><button class="cell-link" data-row-action="view">${cell}</button>${entryAnnotation}</span></td>`;
           }).join('')}
-          <td><div class="cell-actions operation-actions">${actions.map((action) => {
+          ${config.hideRowActions === true ? '' : `<td><div class="cell-actions operation-actions">${actions.map((action) => {
             const isDisabled = action.disabled && action.disabled(item);
             return `<button class="btn-text ${action.danger ? 'danger' : ''}" data-row-action="${action.key}"${isDisabled ? ' disabled' : ''}>${action.label}</button>`;
-          }).join('') || '--'}</div></td>
+          }).join('') || '--'}</div></td>`}
         </tr>`;
       }).join('');
       syncAnnotationOverlay();
@@ -714,7 +748,7 @@
         const selectedItems = sourceItems.filter((item) => state.selected.has(item.id));
         if (!selectedItems.length) return toast('请选择要导出的数据', 'error');
         const columns = currentColumns();
-        const exportColumns = [{ key: '__sequence', label: '序号' }, ...columns];
+        const exportColumns = config.hideSequence === true ? columns : [{ key: '__sequence', label: '序号' }, ...columns];
         const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
         const titleRow = new Array(exportColumns.length).fill('');
         titleRow[Math.floor(titleRow.length / 2)] = `${config.exportTitle || config.title}-${formatExportDateTime(new Date())}`;

@@ -84,6 +84,14 @@
               <label class="filter-label" for="obWarehouse">仓库</label>
               <select class="filter-select" id="obWarehouse">${buildOptions(['全部', ...warehouses])}</select>
             </div>
+            <div class="filter-group">
+              <label class="filter-label" for="obNetVegetable">是否净菜</label>
+              <select class="filter-select" id="obNetVegetable">
+                <option value="全部">全部</option>
+                <option value="净菜">净菜</option>
+                <option value="非净菜">非净菜</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -153,14 +161,15 @@
 
   function renderProductSelect(selectedCode) {
     const selectedProduct = selectedCode ? findProduct(selectedCode) : null;
+    const selectedDisplay = selectedProduct ? window.DomUtils.formatProductDisplay(selectedProduct, state.products) : '';
     const selectedLabel = selectedProduct
-      ? `${selectedProduct.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}<span class="custom-select-text">${escapeHtml(selectedProduct.name)} (${escapeHtml(selectedProduct.code)})</span>`
+      ? `${selectedProduct.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}<span class="custom-select-text">${escapeHtml(selectedDisplay)}</span>`
       : '<span class="custom-select-text is-placeholder">请选择</span>';
     const options = state.products.map((product) => `
       <div class="custom-select-option ${product.code === selectedCode ? 'selected' : ''}"
         data-action="select-product" data-value="${escapeHtml(product.code)}">
         ${product.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : ''}
-        <span>${escapeHtml(product.name)} (${escapeHtml(product.code)})</span>
+        <span>${escapeHtml(window.DomUtils.formatProductDisplay(product, state.products))}</span>
       </div>
     `).join('');
     return `
@@ -283,6 +292,7 @@
     const status = val('obStatus');
     const orderNo = val('obOrderNo').toLowerCase();
     const warehouse = val('obWarehouse');
+    const netVegetable = val('obNetVegetable');
 
     const result = state.orders.filter((order) => {
       // 出库日期
@@ -318,6 +328,16 @@
       if (orderNo && !(order.id || '').toLowerCase().includes(orderNo)) return false;
       // 仓库
       if (warehouse !== '全部' && order.warehouseName !== warehouse) return false;
+      // 是否净菜：单据明细中存在匹配商品即可命中
+      if (netVegetable !== '全部') {
+        const expected = netVegetable === '净菜';
+        const hasMatch = (order.items || []).some((item) => {
+          const product = findProduct(item.productCode || item.goodsCode || item.productId);
+          const actual = product ? product.isNetVegetable === true : item.isNetVegetable === true;
+          return actual === expected;
+        });
+        if (!hasMatch) return false;
+      }
       return true;
     });
 
@@ -332,7 +352,7 @@
     });
     const display = document.getElementById('obDateDisplay');
     if (display) display.value = '';
-    ['obCategory', 'obType', 'obStatus', 'obWarehouse'].forEach((id) => {
+    ['obCategory', 'obType', 'obStatus', 'obWarehouse', 'obNetVegetable'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = '全部';
     });
@@ -642,10 +662,12 @@
     const order = window.OutboundService.getDetail(id) || state.orders.find((o) => o.id === id);
     if (!order) return;
     const statusClass = getStatusClass(order.status);
-    const itemRows = (order.items || []).map((item, index) => `
+    const itemRows = (order.items || []).map((item, index) => {
+      const productDisplay = window.DomUtils.formatProductDisplay(item, state.products);
+      return `
       <tr>
         <td class="center">${index + 1}</td>
-        <td>${escapeHtml(item.productName)}</td>
+        <td><span class="product-display-text" title="${escapeHtml(productDisplay)}">${escapeHtml(productDisplay)}</span></td>
         <td class="center">${escapeHtml(item.unit)}</td>
         <td class="center">${item.conversionRate ?? '--'}</td>
         <td class="center">${item.currentStock ?? '--'}</td>
@@ -654,7 +676,8 @@
         <td class="center">${escapeHtml(item.amount)}</td>
         <td>${escapeHtml(item.remark || '--')}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     document.getElementById('obDetailBody').innerHTML = `
       <div class="processing-detail-section">
@@ -819,7 +842,7 @@
                 <tr>
                   <th style="width:61px">序号</th>
                   <th style="width:73px">图片</th>
-                  <th style="width:230px">商品名称(计量单位/品牌/规格)</th>
+                  <th style="width:230px">商品名称（计量单位/品牌/规格）</th>
                   <th style="width:98px">计量单位</th>
                   <th style="width:98px">换算率</th>
                   <th style="width:110px">现有库存</th>

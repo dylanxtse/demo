@@ -206,7 +206,8 @@
   }
 
   function renderProductName(row) {
-    return `<div class="price-product-name"><div class="price-product-main">${escapeHtml(row.name)}</div><div class="price-product-sub">${escapeHtml(row.unit)}/${escapeHtml(row.brand)}/${escapeHtml(row.spec)}</div></div>`;
+    const display = window.DomUtils.formatProductDisplay(row);
+    return `<span class="price-product-name product-display-text" title="${escapeHtml(display)}">${escapeHtml(display)}</span>`;
   }
 
   function renderManualCell(row) {

@@ -48,7 +48,7 @@
         resource: 'shippingDifferences',
         columns: [
           { key: 'orderNo', label: '订单号', link: true },
-          { key: 'goodsName', label: '商品名称（计量单位/品牌/规格）' },
+          { key: 'goodsName', label: '商品名称（计量单位/品牌/规格）', productDisplay: true },
           { key: 'warehouse', label: '仓库' },
           { key: 'stockQty', label: '库存数量' },
           { key: 'sortingQty', label: '分拣数量' },

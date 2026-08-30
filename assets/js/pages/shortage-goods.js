@@ -1,4 +1,18 @@
 (function () {
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  const renderGoodsName = (item) => {
+    const marker = window.OperationsService?.isNetVegetable?.(item)
+      ? '<span class="net-vegetable-tag">净菜</span>'
+      : '';
+    const display = window.DomUtils?.formatProductDisplay?.(item) || item.goodsName || '--';
+    return `<span class="product-display-text">${marker}${escapeHtml(display)}</span>`;
+  };
+
   window.RecordPageConfig = {
     title: '缺货商品',
     pageClass: 'sorting-module-page shortage-goods-page',
@@ -17,7 +31,7 @@
       { key: 'supplier', label: '供应商/采购员', placeholder: '请输入' }
     ],
     columns: [
-      { key: 'goodsName', label: '商品名' },
+      { key: 'goodsName', label: '商品名称（计量单位/品牌/规格）', render: renderGoodsName },
       { key: 'category', label: '分类' },
       { key: 'supplier', label: '供应商/采购员' },
       { key: 'customerName', label: '客户' },

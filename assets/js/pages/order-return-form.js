@@ -68,15 +68,15 @@
     if (!lines.length) {
       body.innerHTML = '<tr><td class="empty-goods" colspan="13">请选择关联订单</td></tr>';
     } else {
-      body.innerHTML = lines.map((line, index) => `<tr data-line-id="${escapeHtml(line.id)}">
-        <td>${index + 1}</td><td><span class="goods-thumb">暂无图片</span></td><td class="goods-name-cell">${escapeHtml(line.goodsName)}</td><td>${escapeHtml(line.unit)}</td>
+      body.innerHTML = lines.map((line, index) => { const productDisplay = window.DomUtils.formatProductDisplay(line); return `<tr data-line-id="${escapeHtml(line.id)}">
+        <td>${index + 1}</td><td><span class="goods-thumb">暂无图片</span></td><td class="goods-name-cell"><span class="product-display-text" title="${escapeHtml(productDisplay)}">${escapeHtml(productDisplay)}</span></td><td>${escapeHtml(line.unit)}</td>
         <td>${money(line.orderPrice)}</td><td>${line.shippedQty}</td><td>${line.returnedQty}</td>
         <td><input class="table-input" type="number" min="0" step="0.01" data-field="applyQty" value="${line.applyQty}" ${readonly ? 'disabled' : ''}></td>
         <td><input class="table-input" type="number" min="0" step="0.01" data-field="applyPrice" value="${money(line.applyPrice)}" ${readonly ? 'disabled' : ''}></td>
         <td class="return-line-total">${money(line.applyQty * line.applyPrice)}</td>
         <td><input class="table-input" type="number" min="0" step="0.01" data-field="damageQty" value="${line.damageQty}" ${readonly ? 'disabled' : ''}></td>
         <td>${escapeHtml(line.purchaseOrder)}</td><td><input class="table-input remark-input" data-field="remark" value="${escapeHtml(line.remark)}" ${readonly ? 'disabled' : ''}></td>
-      </tr>`).join('');
+      </tr>`; }).join('');
     }
     document.getElementById('refundTotal').textContent = money(lines.reduce((sum, line) => sum + line.applyQty * line.applyPrice, 0));
   }

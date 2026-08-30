@@ -81,7 +81,7 @@
   function text(value) { return utils.escapeHtml(value == null ? '' : value); }
   function fixed(value) { return Number(value || 0).toFixed(2); }
   function displayProduct(task) {
-    return text((task.productName || '') + '(' + (task.unit || '--') + '/' + (task.brand || '--') + '/' + (task.spec || '--') + ')');
+    return text(window.DomUtils.formatProductDisplay(task));
   }
 
   utils.mountDate($('#taskDate'), '2026-08-26', false);
@@ -115,7 +115,7 @@
       var checked = state.selected.has(task.id) ? ' checked' : '';
       return '<tr data-id="' + text(task.id) + '">' +
         '<td class="purchase-sticky-select"><input type="checkbox" class="task-row-select" aria-label="选择商品"' + checked + '></td>' +
-        '<td>' + displayProduct(task) + '</td>' +
+        '<td><span class="product-display-text" title="' + displayProduct(task) + '">' + displayProduct(task) + '</span></td>' +
         '<td title="' + text(task.category) + '">' + text(task.category) + '</td>' +
         '<td>' + text(task.unit) + '</td>' +
         '<td>' + task.orderCount + '</td>' +

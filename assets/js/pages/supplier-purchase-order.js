@@ -133,7 +133,7 @@
               <tbody>
                 ${row.items.map((line) => `
                   <tr data-row-id="${escapeHtml(row.id)}" data-item-id="${escapeHtml(line.id)}">
-                    <td class="supplier-purchase-product-cell" title="${escapeHtml(line.displayName)}">${escapeHtml(line.displayName)}</td>
+                    <td class="supplier-purchase-product-cell" title="${escapeHtml(window.DomUtils.formatProductDisplay(line))}"><span class="product-display-text">${escapeHtml(window.DomUtils.formatProductDisplay(line))}</span></td>
                     <td>${numberLabel(line.remark)}</td>
                     <td>${escapeHtml(line.unit)}</td>
                     <td>${numberLabel(line.plannedQty)}</td>
@@ -329,7 +329,7 @@
     const dialog = page.querySelector('#supplierPurchaseDetailDialog');
     if (!dialog || !detail) return;
     const values = {
-      goods: detail.item.displayName,
+      goods: window.DomUtils.formatProductDisplay(detail.item),
       customer: detail.row.customerName,
       customerCode: detail.row.customerCode || '--',
       quantity: detail.item.plannedQty,
@@ -374,7 +374,7 @@
       body.innerHTML = row.items.map((line) => `
         <tr data-row-id="${escapeHtml(row.id)}" data-item-id="${escapeHtml(line.id)}">
           <td>${escapeHtml(line.productCode || '--')}</td>
-          <td class="supplier-purchase-product-cell" title="${escapeHtml(line.displayName)}">${escapeHtml(line.displayName)}</td>
+          <td class="supplier-purchase-product-cell" title="${escapeHtml(window.DomUtils.formatProductDisplay(line))}"><span class="product-display-text">${escapeHtml(window.DomUtils.formatProductDisplay(line))}</span></td>
           <td>${escapeHtml(line.unit)}</td>
           <td>${numberLabel(line.purchasePrice)}</td>
           <td><input class="supplier-purchase-shipping-quantity" data-shipping-quantity type="text" value="${escapeHtml(line.shippedQty)}" aria-label="${escapeHtml(line.displayName)}发货数量"></td>

@@ -120,6 +120,7 @@ body > #schoolOrderDateRangePanel {
 .school-order-filter-order-no { grid-column: 3; grid-row: 2; }
 .school-order-filter-source { grid-column: 1; grid-row: 3; }
 .school-order-filter-receipt { grid-column: 2; grid-row: 3; }
+.school-order-filter-net-vegetable { grid-column: 3; grid-row: 3; }
 
 .school-order-filter-actions .btn {
   min-width: 52px;
@@ -464,7 +465,8 @@ body > #schoolOrderDateRangePanel {
   .school-order-filter-status,
   .school-order-filter-order-no,
   .school-order-filter-source,
-  .school-order-filter-receipt {
+  .school-order-filter-receipt,
+  .school-order-filter-net-vegetable {
     grid-column: auto;
     grid-row: auto;
   }

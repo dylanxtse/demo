@@ -18,10 +18,10 @@
     || new Date().toISOString().slice(0, 19).replace('T', ' ');
   const currentOperator = () => window.DemoStore?.getSession?.()?.displayName || '杨';
   const datePart = (value) => String(value || timestamp()).slice(0, 10).replace(/-/g, '');
-  const displayName = (name, unit, brand = '--', spec = '--') => `${name}(${unit || '--'}/${brand || '--'}/${spec || '--'})`;
+  const displayName = (name, unit, brand = '--', spec = '--') => `${name}（${unit || '--'}/${brand || '--'}/${spec || '--'}）`;
 
   function makeLine({
-    id, name, unit, brand = '--', spec = '--', productCode = '', orderPrice = 0,
+    id, name, unit, brand = '--', spec = '--', productCode = '', isNetVegetable = false, orderPrice = 0,
     orderQty = 0, shippedQty = 0, acceptedQty = null, returnQty = null,
     reconciledQty = null, traceCode = '', qualityReport = '1', remark = '--',
     productionDate = '', agreementPrice = '', recentSalePrice = orderPrice,
@@ -36,6 +36,7 @@
     return {
       id: id || `SOL-${Math.random().toString(36).slice(2, 9)}`,
       productCode,
+      isNetVegetable: Boolean(isNetVegetable),
       productName: name,
       goodsName: name,
       unit: unit || '--',
@@ -248,6 +249,7 @@
       brand: line.brand || '--',
       spec: line.spec || '--',
       productCode: line.productCode || line.goodsCode || '',
+      isNetVegetable: line.isNetVegetable === true,
       orderPrice: price,
       orderQty: qty,
       shippedQty: number(line.shippedQty),
@@ -305,16 +307,16 @@
   function getProductCatalog() {
     const products = window.DemoStore?.get?.('products') || [];
     const fallback = [
-      { code: 'SP0300040', name: '黑面', unit: 'L', brand: '--', spec: '--', marketPrice: 5 },
-      { code: 'SP0300036', name: '大玉米棒子', unit: 'KG', brand: '--', spec: '--', marketPrice: 5 },
-      { code: 'SP0300034', name: '黑大米', unit: '斤', brand: '--', spec: '--', marketPrice: 10 },
-      { code: 'SP0300039', name: '土豆丝', unit: '斤', brand: '--', spec: '--', marketPrice: 1 },
-      { code: 'SP0300038', name: '牛奶', unit: '瓶', brand: '--', spec: '--', marketPrice: 5 },
-      { code: 'SP0300031', name: '鲫鱼', unit: 'L', brand: '--', spec: '--', marketPrice: 20 },
-      { code: 'SP0300030', name: '金龙鱼5L桶装油', unit: '瓶', brand: '金龙鱼', spec: '5L/瓶', marketPrice: 55 }
+      { code: 'SP0300040', name: '黑面', unit: 'L', brand: '--', spec: '--', category: '主食（米面粉点心类）-粮食类', marketPrice: 5 },
+      { code: 'SP0300036', name: '大玉米棒子', unit: 'KG', brand: '--', spec: '--', category: '主食（米面粉点心类）-粮食类', marketPrice: 5 },
+      { code: 'SP0300034', name: '黑大米', unit: '斤', brand: '--', spec: '--', category: '主食（米面粉点心类）-粮食类', marketPrice: 10 },
+      { code: 'SP0300039', name: '土豆丝', unit: '斤', brand: '--', spec: '--', category: '果蔬-净菜类', isNetVegetable: true, marketPrice: 1 },
+      { code: 'SP0300038', name: '牛奶', unit: '瓶', brand: '--', spec: '--', category: '蛋奶类-蛋奶类二级', marketPrice: 5 },
+      { code: 'SP0300031', name: '鲫鱼', unit: 'L', brand: '--', spec: '--', category: '水产品-淡水鱼类', marketPrice: 20 },
+      { code: 'SP0300030', name: '金龙鱼5L桶装油', unit: '瓶', brand: '金龙鱼', spec: '5L/瓶', category: '食油-食油二级', marketPrice: 55 }
     ];
     const source = products.length ? products : fallback;
-    const merged = [...fallback, ...source];
+    const merged = [...source, ...fallback];
     const seen = new Set();
     return merged.filter((product) => {
       const code = product.code || product.id;
@@ -327,6 +329,8 @@
       unit: product.unit || '--',
       brand: product.brand || '--',
       spec: product.spec || '--',
+      category: product.category || product.categoryName || '',
+      isNetVegetable: product.isNetVegetable === true,
       marketPrice: money(product.marketPrice)
     }));
   }
@@ -353,6 +357,9 @@
     },
     list(filters = {}) {
       const normalized = Object.fromEntries(Object.entries(filters).map(([key, value]) => [key, String(value || '').trim()]));
+      const catalogByCode = normalized.netVegetable
+        ? new Map(getProductCatalog().map((product) => [String(product.code), product]))
+        : null;
       return this.getAll().filter((order) => {
         const expectedDate = String(order.expectedAt || '').slice(0, 10);
         if (normalized.startDate && expectedDate < normalized.startDate) return false;
@@ -364,6 +371,12 @@
         if (normalized.orderNo && !String(order.orderNo || '').includes(normalized.orderNo)) return false;
         if (normalized.source && order.source !== normalized.source) return false;
         if (normalized.receiptStatus && order.receiptStatus !== normalized.receiptStatus) return false;
+        if (normalized.netVegetable) {
+          const containsNetVegetable = (order.items || []).some((line) => line.isNetVegetable === true
+            || catalogByCode.get(String(line.productCode || line.goodsCode || line.goodsId))?.isNetVegetable === true);
+          if (normalized.netVegetable === 'net' && !containsNetVegetable) return false;
+          if (normalized.netVegetable === 'non-net' && containsNetVegetable) return false;
+        }
         return true;
       });
     },

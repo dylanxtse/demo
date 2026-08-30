@@ -244,7 +244,7 @@
     body.innerHTML = state.items.map((item, index) => {
       const pending = item.auditStatus === 'PENDING';
       const sequence = (state.page - 1) * state.pageSize + index + 1;
-      const compositeName = `${item.name}(${item.unit || '--'}/${item.brand || '--'}/${item.spec || '--'})`;
+      const compositeName = window.DomUtils.formatProductDisplay(item);
       return `
         <tr>
           <td class="seq-cell">${sequence}</td>

@@ -23,7 +23,7 @@
   function text(value) { return utils.escapeHtml(value == null ? '' : value); }
   function fixed(value) { return Number(value || 0).toFixed(2); }
   function displayProduct(item) {
-    return (item.productName || '') + '(' + (item.unit || '--') + '/' + (item.brand || '--') + '/' + (item.spec || '--') + ')';
+    return window.DomUtils.formatProductDisplay(item);
   }
 
   var content = [
@@ -60,7 +60,7 @@
       return '<tr data-line-id="' + text(item.id) + '">' +
         '<td>' + (index + 1) + '</td>' +
         '<td><span class="purchase-product-image">' + (item.image ? '<img src="' + text(item.image) + '" alt="' + text(item.productName) + '">' : '暂无') + '</span></td>' +
-        '<td>' + text(displayProduct(item)) + '</td>' +
+        '<td><span class="product-display-text" title="' + text(displayProduct(item)) + '">' + text(displayProduct(item)) + '</span></td>' +
         '<td>' + text(item.unit) + '</td>' +
         '<td>' + fixed(item.quantity) + '</td>' +
         '<td>' + fixed(item.purchasePrice) + '</td>' +

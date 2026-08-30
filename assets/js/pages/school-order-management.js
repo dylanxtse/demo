@@ -150,6 +150,7 @@
           <label class="operations-field school-order-filter-order-no"><span class="filter-label">订单号</span><input id="schoolOrderNo" class="filter-input" type="text" placeholder="输入采购单号" aria-label="订单号"></label>
           <label class="operations-field school-order-filter-source"><span class="filter-label">单据来源</span><select id="schoolOrderSource" class="filter-select" aria-label="单据来源">${selectOptions(service.sources, '', '全部')}</select></label>
           <label class="operations-field school-order-filter-receipt"><span class="filter-label">收货状态</span><select id="schoolOrderReceiptStatus" class="filter-select" aria-label="收货状态">${selectOptions(service.receiptStatuses, '', '全部')}</select></label>
+          <label class="operations-field school-order-filter-net-vegetable"><span class="filter-label">是否净菜</span><select id="schoolOrderNetVegetable" class="filter-select" aria-label="是否净菜"><option value="">全部</option><option value="net">净菜</option><option value="non-net">非净菜</option></select></label>
           </div>
           <div class="operations-filter-actions school-order-filter-actions"><button type="submit" class="btn btn-primary btn-sm">查询</button><button type="button" class="btn btn-sm" data-action="reset">重置</button></div>
         </div>
@@ -190,7 +191,8 @@
       status: page.querySelector('#schoolOrderStatus').value,
       orderNo: page.querySelector('#schoolOrderNo').value,
       source: page.querySelector('#schoolOrderSource').value,
-      receiptStatus: page.querySelector('#schoolOrderReceiptStatus').value
+      receiptStatus: page.querySelector('#schoolOrderReceiptStatus').value,
+      netVegetable: page.querySelector('#schoolOrderNetVegetable').value
     });
 
     const refresh = (resetPage = true) => {

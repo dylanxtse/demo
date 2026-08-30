@@ -318,6 +318,16 @@
   text-align: center;
 }
 
+.product-display-text {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .operation-status {
   display: inline-flex;
   align-items: center;

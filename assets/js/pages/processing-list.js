@@ -1623,9 +1623,9 @@
           </table>
         </div>
       </div>
-      <div class="processing-form-footer">
+      <div class="processing-form-footer template-editor-footer">
+        <button class="btn" type="button" data-action="close-template-modal">返回</button>
         <button class="btn btn-primary" type="button" data-action="save-template">保存方案</button>
-        <button class="btn" type="button" data-action="close-template-modal">取消</button>
       </div>
     `;
 

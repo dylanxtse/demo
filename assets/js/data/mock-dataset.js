@@ -278,8 +278,8 @@
   ];
 
   const qualityReports = [
-    { id: 'QR-001', inboundAt: '2026-07-30 06:20', inboundNo: 'RK202607300009', goodsName: '鲫鱼(斤/--/--)', partner: '海鲜供应商', inboundType: '采购入库', warehouse: '中心仓', reportStatus: '未上传', reportName: '', createdAt: '2026-07-30 06:20' },
-    { id: 'QR-002', inboundAt: '2026-07-29 05:40', inboundNo: 'RK202607290016', goodsName: '大米(KG/--/--)', partner: '粮油供应商', inboundType: '采购入库', warehouse: '北区仓', reportStatus: '已上传', reportName: '大米质检报告.pdf', createdAt: '2026-07-29 05:40' }
+    { id: 'QR-001', inboundAt: '2026-07-30 06:20', inboundNo: 'RK202607300009', goodsCode: 'SP0300029', goodsName: '鲫鱼(斤/--/--)', isNetVegetable: false, partner: '海鲜供应商', inboundType: '采购入库', warehouse: '中心仓', reportStatus: '未上传', reportName: '', createdAt: '2026-07-30 06:20' },
+    { id: 'QR-002', inboundAt: '2026-07-29 05:40', inboundNo: 'RK202607290016', goodsCode: 'SP0300025', goodsName: '大米(KG/--/--)', isNetVegetable: false, partner: '粮油供应商', inboundType: '采购入库', warehouse: '北区仓', reportStatus: '已上传', reportName: '大米质检报告.pdf', createdAt: '2026-07-29 05:40' }
   ];
 
   const inventoryCounts = [
@@ -439,6 +439,149 @@
   orders.unshift(processingDemoOrder, simulatedOrder);
   sortingItems.unshift(...processingDemoSortingItems, simulatedSortingItem);
 
+  const productSales = [
+    {
+      id: 'SALE-001',
+      goodsCode: 'SP0300039',
+      goodsName: '土豆丝(斤/--/散装)',
+      isNetVegetable: true,
+      category: '果蔬',
+      fullCategory: '果蔬-净菜类',
+      unit: '斤',
+      orderCount: 4,
+      orderQty: 120,
+      orderAmount: 576,
+      shippedQty: 110,
+      shippedAmount: 528,
+      returnCount: 0,
+      returnQty: 0,
+      returnAmount: 0,
+      actualAmount: 528,
+      actualRank: 1,
+      warehouse: '中心仓',
+      businessUnit: '学校',
+      customerType: '学校',
+      customerName: '第一实验学校',
+      canteen: '第一食堂',
+      createdAt: '2026-08-01 08:00:00'
+    },
+    {
+      id: 'SALE-002',
+      goodsCode: 'SP0300040',
+      goodsName: '土豆(斤/田园直供/散装)',
+      isNetVegetable: false,
+      category: '果蔬',
+      fullCategory: '果蔬-根茎类',
+      unit: '斤',
+      orderCount: 3,
+      orderQty: 95,
+      orderAmount: 304,
+      shippedQty: 95,
+      shippedAmount: 304,
+      returnCount: 0,
+      returnQty: 0,
+      returnAmount: 0,
+      actualAmount: 304,
+      actualRank: 2,
+      warehouse: '中心仓',
+      businessUnit: '学校',
+      customerType: '学校',
+      customerName: '育才中学',
+      canteen: '高中部食堂',
+      createdAt: '2026-08-02 08:00:00'
+    },
+    {
+      id: 'SALE-003',
+      goodsCode: 'SP0300025',
+      goodsName: '大米(KG/--/--)',
+      isNetVegetable: false,
+      category: '主食',
+      fullCategory: '主食-粮食类',
+      unit: 'KG',
+      orderCount: 2,
+      orderQty: 160,
+      orderAmount: 3040,
+      shippedQty: 160,
+      shippedAmount: 3040,
+      returnCount: 1,
+      returnQty: 10,
+      returnAmount: 190,
+      actualAmount: 2850,
+      actualRank: 3,
+      warehouse: '北区仓',
+      businessUnit: '学校',
+      customerType: '学校',
+      customerName: '育才中学',
+      canteen: '高中部食堂',
+      createdAt: '2026-08-03 08:00:00'
+    }
+  ];
+
+  const goodsProfitStatistics = [
+    {
+      id: 'PROFIT-001',
+      goodsCode: 'SP0300039',
+      goodsName: '土豆丝(斤/--/散装)',
+      isNetVegetable: true,
+      category: '果蔬',
+      warehouse: '中心仓',
+      unit: '斤',
+      orderCount: 4,
+      sendQty: 110,
+      sendAvgPrice: 4.80,
+      sendAmt: 528,
+      sendCostAvgPrice: 3.20,
+      sendCost: 352,
+      returnOrderCount: 0,
+      returnQty: 0,
+      returnAmt: 0,
+      returnCost: 0,
+      actualQty: 110,
+      actualAvgPrice: 4.80,
+      actualAmt: 528,
+      actualCost: 352,
+      grossProfit: 176,
+      grossProfitRate: '33.33%',
+      businessUnit: '学校',
+      customerType: '学校',
+      customerName: '第一实验学校',
+      canteen: '第一食堂',
+      orderNo: 'DD202608010100001',
+      createdAt: '2026-08-01 08:00:00'
+    },
+    {
+      id: 'PROFIT-002',
+      goodsCode: 'SP0300040',
+      goodsName: '土豆(斤/田园直供/散装)',
+      isNetVegetable: false,
+      category: '果蔬',
+      warehouse: '中心仓',
+      unit: '斤',
+      orderCount: 3,
+      sendQty: 95,
+      sendAvgPrice: 3.20,
+      sendAmt: 304,
+      sendCostAvgPrice: 2.10,
+      sendCost: 199.50,
+      returnOrderCount: 0,
+      returnQty: 0,
+      returnAmt: 0,
+      returnCost: 0,
+      actualQty: 95,
+      actualAvgPrice: 3.20,
+      actualAmt: 304,
+      actualCost: 199.50,
+      grossProfit: 104.50,
+      grossProfitRate: '34.38%',
+      businessUnit: '学校',
+      customerType: '学校',
+      customerName: '育才中学',
+      canteen: '高中部食堂',
+      orderNo: 'DD202608020100002',
+      createdAt: '2026-08-02 08:00:00'
+    }
+  ];
+
   window.MockOperations = {
     orders,
     returns,
@@ -456,7 +599,9 @@
     inventoryLosses,
     openingInventory,
     inventoryBalance,
-    inventoryDetails
+    inventoryDetails,
+    productSales,
+    goodsProfitStatistics
   };
 })();
 
