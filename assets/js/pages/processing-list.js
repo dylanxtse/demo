@@ -284,6 +284,30 @@
     return `${name}（${unit}/${brand}/${spec}）`;
   }
 
+  function getProductSearchText(product = {}) {
+    return [product.code, product.name, product.unit, product.brand, product.spec]
+      .filter((value) => value !== undefined && value !== null && String(value).trim())
+      .join(' ')
+      .toLowerCase();
+  }
+
+  function filterProductSelectOptions(select, searchValue = '') {
+    if (!select) return;
+    const keyword = String(searchValue || '').trim().toLowerCase();
+    let visibleCount = 0;
+    select.querySelectorAll('.custom-select-option').forEach((option) => {
+      const searchableText = String(option.dataset.searchText || option.textContent || '').toLowerCase();
+      const isVisible = !keyword || searchableText.includes(keyword);
+      option.style.display = isVisible ? '' : 'none';
+      if (isVisible) visibleCount += 1;
+    });
+    const emptyState = select.querySelector('.product-select-empty');
+    if (emptyState) {
+      emptyState.textContent = visibleCount > 0 ? '' : (keyword ? '暂无匹配商品' : '暂无商品');
+      emptyState.style.display = visibleCount > 0 ? 'none' : 'block';
+    }
+  }
+
   function productNetTag(productCode) {
     const product = findProduct(productCode);
     return product?.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
@@ -308,6 +332,11 @@
           <svg class="custom-select-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="custom-select-dropdown">
+          ${isTemplateProduct ? `
+            <div class="product-select-search-wrap" data-action="search-product">
+              <input class="product-select-search" type="search" placeholder="搜索商品名称/编码" autocomplete="off" aria-label="搜索商品" data-action="search-product">
+            </div>
+          ` : ''}
           ${state.products.map((p) => {
             const tag = p.isNetVegetable ? '<span class="net-vegetable-tag">净菜</span>' : '';
             const isDuplicate = fieldType === 'output'
@@ -315,8 +344,9 @@
               : isManyToOneMaterial
                 ? p.code !== selectedCode && selectedMaterialCodes.includes(p.code)
                 : false;
-            return `<div class="custom-select-option ${p.code === selectedCode ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(p.code)}" data-disabled="${isDuplicate}" data-action="select-product">${tag}${escapeHtml(formatProductDisplay(p))}</div>`;
+            return `<div class="custom-select-option ${p.code === selectedCode ? 'selected' : ''} ${isDuplicate ? 'is-disabled' : ''}" data-value="${escapeHtml(p.code)}" data-search-text="${escapeHtml(getProductSearchText(p))}" data-disabled="${isDuplicate}" data-action="select-product">${tag}${escapeHtml(formatProductDisplay(p))}</div>`;
           }).join('')}
+          ${isTemplateProduct ? '<div class="product-select-empty">暂无商品</div>' : ''}
         </div>
       </div>
     `;
@@ -1524,7 +1554,7 @@
           <div class="cost-mode-row template-relation-type-row">
             <label class="radio-option">
               <input type="radio" name="tplRelationType" value="one-to-many" ${data.relationType !== 'many-to-one' ? 'checked' : ''} ${isEdit ? 'disabled' : ''}>
-              一种原料加工为多个成品
+              一种原料对应多种成品
             </label>
             <label class="radio-option">
               <input type="radio" name="tplRelationType" value="many-to-one" ${data.relationType === 'many-to-one' ? 'checked' : ''} ${isEdit ? 'disabled' : ''}>
@@ -1804,6 +1834,10 @@
         renderTplOutputTable();
         return;
       }
+      if (action === 'search-product') {
+        event.stopPropagation();
+        return;
+      }
       if (action === 'toggle-select') {
         const select = event.target.closest('.custom-select');
         document.querySelectorAll('.custom-select.is-open').forEach((s) => {
@@ -1819,6 +1853,11 @@
           dropdown.style.display = 'none';
         } else {
           select.classList.add('is-open');
+          const searchInput = dropdown.querySelector('.product-select-search');
+          if (searchInput) {
+            searchInput.value = '';
+            filterProductSelectOptions(select);
+          }
           // 用 fixed 定位脱离弹窗 overflow 裁剪
           const trigger = select.querySelector('.custom-select-trigger');
           const rect = trigger.getBoundingClientRect();
@@ -1838,6 +1877,7 @@
             dropdown.style.top = (rect.top - Math.min(240, spaceAbove)) + 'px';
             dropdown.style.maxHeight = Math.min(240, spaceAbove) + 'px';
           }
+          if (searchInput) searchInput.focus();
         }
         event.stopPropagation();
         return;
@@ -1916,6 +1956,11 @@
     });
 
     body.addEventListener('input', (event) => {
+      const productSearchInput = event.target.closest('.product-select-search');
+      if (productSearchInput) {
+        filterProductSelectOptions(productSearchInput.closest('.custom-select'), productSearchInput.value);
+        return;
+      }
       if (event.target.id === 'tplDesc') {
         const counter = document.getElementById('tplDescCounter');
         if (counter) counter.textContent = `${event.target.value.length}/200`;

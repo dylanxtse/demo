@@ -1,14 +1,17 @@
+const path = require('node:path');
 const { defineConfig, devices } = require('@playwright/test');
+
+const artifactRoot = path.resolve(__dirname, '..', 'other', 'procurement-demo');
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  outputDir: './test-results',
+  outputDir: path.join(artifactRoot, 'test-results'),
   fullyParallel: false,
   timeout: 30_000,
   expect: { timeout: 5_000 },
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }]
+    ['html', { outputFolder: path.join(artifactRoot, 'playwright-report'), open: 'never' }]
   ],
   use: {
     baseURL: 'http://127.0.0.1:4173',
