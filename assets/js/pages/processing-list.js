@@ -616,7 +616,7 @@
                   <th style="width:80px">单位</th>
                   <th style="width:90px">当前库存</th>
                   <th style="width:90px">库存均价</th>
-                  ${isManyToOne ? '<th style="width:140px">单位成品参考消耗量</th>' : ''}
+                  ${isManyToOne ? '<th style="width:140px">单位成品需求系数</th>' : ''}
                   <th style="width:120px">消耗量</th>
                 </tr>
               </thead>
@@ -646,7 +646,7 @@
                 <tr>
                   <th style="width:180px">成品商品</th>
                   <th style="width:70px">单位</th>
-                  <th style="width:80px;display:${tpl.relationType === 'many-to-one' ? 'none' : 'table-cell'}">参考系数</th>
+                  <th style="width:100px;display:${tpl.relationType === 'many-to-one' ? 'none' : 'table-cell'}">参考加工系数</th>
                   <th style="width:90px">参考获得量</th>
                   <th style="width:90px">实际获得量</th>
                   ${showOrderDemandColumns ? '<th style="width:90px">订单分拣量</th><th style="width:90px">剩余量</th>' : ''}
@@ -1578,7 +1578,7 @@
               <tr>
                 <th class="template-product-column">原料商品</th>
                 <th class="template-unit-column">单位</th>
-                <th class="template-detail-column" id="tplMaterialDemandHeader" style="display:none">单位成品需求量</th>
+                <th class="template-detail-column" id="tplMaterialDemandHeader" style="display:none">单位成品需求系数</th>
                 <th class="template-action-column" id="tplMaterialActionHeader" style="display:none">操作</th>
               </tr>
             </thead>
@@ -1601,7 +1601,7 @@
               <tr>
                 <th class="template-product-column">成品商品</th>
                 <th class="template-unit-column">单位</th>
-                <th class="template-detail-column" id="tplOutputCoefficientHeader">转换系数</th>
+                <th class="template-detail-column" id="tplOutputCoefficientHeader">加工系数</th>
                 <th class="template-action-column" id="tplOutputActionHeader">操作</th>
               </tr>
             </thead>
@@ -2044,7 +2044,7 @@
         return;
       }
       if (validMaterials.some((material) => !Number.isFinite(Number(material.refConsumeQty)) || Number(material.refConsumeQty) <= 0)) {
-        alert('请填写每种原料的单位成品需求量，且必须大于0');
+        alert('请填写每种原料的单位成品需求系数，且必须大于0');
         return;
       }
     }
@@ -2077,7 +2077,7 @@
     }
     if (relationType === 'one-to-many'
       && validOutputs.some((output) => !Number.isFinite(Number(output.refCoefficient)) || Number(output.refCoefficient) <= 0)) {
-      alert('转换系数不能为空且必须大于0');
+      alert('加工系数不能为空且必须大于0');
       return;
     }
 
