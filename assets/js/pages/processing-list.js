@@ -3,6 +3,10 @@
   const backIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/><path d="M19 12H9"/></svg>';
   const settingsIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   const recordIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+  const coefficientHints = Object.freeze({
+    materialDemand: '生产 1 个单位成品预计需要消耗的原料数量，用于按成品需求量倒推原料需求量。例如：生产 1kg 成品需 1.2kg 原料，填写 1.2。',
+    outputCoefficient: '投入 1 个单位原料预计可加工产出的成品数量，用于按原料投入量计算成品参考产出量。例如：投入 1kg 原料可产出 0.8kg 成品，填写 0.8。'
+  });
 
   const warehouses = (window.DemoStore?.get('warehouses') || []).map((warehouse) => warehouse.warehouseName || warehouse.name).filter(Boolean);
   const defaultWarehouse = warehouses[0] || '';
@@ -262,6 +266,14 @@
   /* ===== 工具函数 ===== */
   function escapeHtml(value) {
     return window.DomUtils.escapeHtml(value);
+  }
+
+  function renderCoefficientHint(text) {
+    return `<span class="processing-header-help" tabindex="0" role="img" aria-label="查看字段说明" data-tooltip="${escapeHtml(text)}"><svg class="processing-header-help-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 5.7c.1-1.4 1.2-2.3 2.8-2.3 1.7 0 2.8 1 2.8 2.5 0 1.1-.6 1.8-1.7 2.5-.9.6-1.3 1.1-1.3 2.1" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><circle cx="7.9" cy="12.7" r=".75" fill="currentColor"/></svg></span>`;
+  }
+
+  function renderCoefficientHeader(label, text) {
+    return `<span class="processing-header-content"><span>${label}</span>${renderCoefficientHint(text)}</span>`;
   }
 
   function findProduct(code) {
@@ -1554,7 +1566,7 @@
           <div class="cost-mode-row template-relation-type-row">
             <label class="radio-option">
               <input type="radio" name="tplRelationType" value="one-to-many" ${data.relationType !== 'many-to-one' ? 'checked' : ''} ${isEdit ? 'disabled' : ''}>
-              一种原料对应多种成品
+                一种原料加工为多种成品
             </label>
             <label class="radio-option">
               <input type="radio" name="tplRelationType" value="many-to-one" ${data.relationType === 'many-to-one' ? 'checked' : ''} ${isEdit ? 'disabled' : ''}>
@@ -1578,7 +1590,7 @@
               <tr>
                 <th class="template-product-column">原料商品</th>
                 <th class="template-unit-column">单位</th>
-                <th class="template-detail-column" id="tplMaterialDemandHeader" style="display:none">单位成品需求系数</th>
+                <th class="template-detail-column" id="tplMaterialDemandHeader" style="display:none">${renderCoefficientHeader('单位成品需求系数', coefficientHints.materialDemand)}</th>
                 <th class="template-action-column" id="tplMaterialActionHeader" style="display:none">操作</th>
               </tr>
             </thead>
@@ -1601,7 +1613,7 @@
               <tr>
                 <th class="template-product-column">成品商品</th>
                 <th class="template-unit-column">单位</th>
-                <th class="template-detail-column" id="tplOutputCoefficientHeader">加工系数</th>
+                <th class="template-detail-column" id="tplOutputCoefficientHeader">${renderCoefficientHeader('加工系数', coefficientHints.outputCoefficient)}</th>
                 <th class="template-action-column" id="tplOutputActionHeader">操作</th>
               </tr>
             </thead>
