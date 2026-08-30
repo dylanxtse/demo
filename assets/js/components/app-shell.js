@@ -1,4 +1,64 @@
 /*
+ * 项目工具包显示开关：
+ * 仅隐藏标注覆盖层和迭代记录面板，不删除代码数据或本地存储数据。
+ * 后续可通过 window.PrototypeToolsDisplay.show() 重新显示，或将
+ * PrototypeToolsConfig.displayEnabled 设置为 true 后重新加载页面。
+ */
+(function () {
+  const styleAttribute = 'data-prototype-tools-display-style';
+  const defaultVisible = false;
+  const initialVisible = typeof window.PrototypeToolsConfig?.displayEnabled === 'boolean'
+    ? window.PrototypeToolsConfig.displayEnabled
+    : defaultVisible;
+
+  function setVisible(visible) {
+    const nextVisible = Boolean(visible);
+    window.PrototypeToolsConfig = {
+      ...(window.PrototypeToolsConfig || {}),
+      displayEnabled: nextVisible
+    };
+
+    let style = document.head?.querySelector(`style[${styleAttribute}]`);
+    if (nextVisible) {
+      style?.remove();
+    } else {
+      if (!style) {
+        style = document.createElement('style');
+        style.setAttribute(styleAttribute, '');
+        style.textContent = `
+          .record-annotation-overlay,
+          .project-iteration-panel-root {
+            display: none !important;
+          }
+        `;
+        (document.head || document.documentElement).appendChild(style);
+      }
+    }
+
+    document.documentElement.dataset.prototypeToolsDisplay = nextVisible ? 'visible' : 'hidden';
+    window.dispatchEvent(new CustomEvent('prototype-tools-display-change', {
+      detail: { visible: nextVisible }
+    }));
+    return nextVisible;
+  }
+
+  window.PrototypeToolsDisplay = {
+    get visible() {
+      return window.PrototypeToolsConfig?.displayEnabled === true;
+    },
+    setVisible,
+    show() {
+      return setVisible(true);
+    },
+    hide() {
+      return setVisible(false);
+    }
+  };
+
+  setVisible(initialVisible);
+})();
+
+/*
  * 多端导航底层约束：
  * 1. 先按页面所属端识别目标文件；
  * 2. 同一端内的菜单、页签和业务按钮正常跳转；
