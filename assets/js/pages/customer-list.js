@@ -7,7 +7,7 @@
     .replace(/'/g, '&#039;');
 
   const content = `
-    <section class="page-card operations-page customer-page" aria-label="客户档案">
+    <section class="page-card operations-page order-module-page customer-page" aria-label="客户档案">
       <div class="operations-filter filter-section">
         <div class="operations-filter-main">
           <div class="operations-filter-grid">
