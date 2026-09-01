@@ -1,12 +1,12 @@
 /*
  * 项目工具包显示开关：
  * 仅隐藏标注覆盖层和迭代记录面板，不删除代码数据或本地存储数据。
- * 后续可通过 window.PrototypeToolsDisplay.show() 重新显示，或将
- * PrototypeToolsConfig.displayEnabled 设置为 true 后重新加载页面。
+ * 也可以通过 window.PrototypeToolsDisplay.hide() 临时隐藏，或将
+ * PrototypeToolsConfig.displayEnabled 设置为 false 后重新加载页面。
  */
 (function () {
   const styleAttribute = 'data-prototype-tools-display-style';
-  const defaultVisible = false;
+  const defaultVisible = true;
   const initialVisible = typeof window.PrototypeToolsConfig?.displayEnabled === 'boolean'
     ? window.PrototypeToolsConfig.displayEnabled
     : defaultVisible;
