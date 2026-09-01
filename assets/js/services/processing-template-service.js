@@ -10,20 +10,24 @@
     return window.BusinessRules.now();
   }
 
+  function parseActionTime(value) {
+    return Date.parse(String(value || '').replace(/-/g, '/')) || 0;
+  }
+
   function getActionMeta(template) {
     const actionType = template.lastActionType || 'created';
     const actionAt = template.lastActionAt || template.updatedAt || template.createTime || '';
-    const priority = { processed: 3, created: 2, edited: 1 }[actionType] || 0;
-    const actionTime = Date.parse(String(actionAt).replace(/-/g, '/')) || 0;
-    return { priority, actionTime };
+    const actionPriority = { processed: 3, created: 2, edited: 1 }[actionType] || 0;
+    return { actionPriority, actionTime: parseActionTime(actionAt) };
   }
 
   function sortTemplates(templates) {
     return templates.slice().sort((a, b) => {
       const actionA = getActionMeta(a);
       const actionB = getActionMeta(b);
-      if (actionA.priority !== actionB.priority) return actionB.priority - actionA.priority;
-      return actionB.actionTime - actionA.actionTime;
+      if (actionA.actionTime !== actionB.actionTime) return actionB.actionTime - actionA.actionTime;
+      if (actionA.actionPriority !== actionB.actionPriority) return actionB.actionPriority - actionA.actionPriority;
+      return String(b.id || '').localeCompare(String(a.id || ''), undefined, { numeric: true });
     });
   }
 
@@ -92,15 +96,48 @@
     return { templates: merged, changed };
   }
 
+  function syncProcessingActivity(templates) {
+    const orders = window.DemoStore?.get('processingOrders') || [];
+    const latestByTemplate = new Map();
+    orders.forEach((order) => {
+      const templateId = normalizeTemplateId(order.templateId);
+      if (!templateId) return;
+      const actionAt = order.createTime || order.createdAt || order.processingDate || '';
+      const actionTime = parseActionTime(actionAt);
+      const current = latestByTemplate.get(templateId);
+      if (!current || actionTime > current.actionTime) {
+        latestByTemplate.set(templateId, { actionAt, actionTime });
+      }
+    });
+
+    let changed = false;
+    const syncedTemplates = templates.map((template) => {
+      const latest = latestByTemplate.get(template.id);
+      const currentActionAt = template.lastActionAt || template.updatedAt || template.createTime || '';
+      if (!latest || latest.actionTime <= parseActionTime(currentActionAt)) return template;
+      changed = true;
+      return {
+        ...template,
+        lastActionType: 'processed',
+        lastActionAt: latest.actionAt,
+        lastProcessedAt: latest.actionAt
+      };
+    });
+    return { templates: syncedTemplates, changed };
+  }
+
   function load() {
     if (!window.DemoStore) throw new Error('统一数据仓库未加载');
     const sourceTemplates = window.DemoStore.get('processingTemplates') || [];
     const mergedResult = mergeDemoTemplates(sourceTemplates);
     const normalizedTemplates = clone(mergedResult.templates).map(normalizeTemplate);
-    if (mergedResult.changed || JSON.stringify(normalizedTemplates) !== JSON.stringify(sourceTemplates)) {
-      window.DemoStore.replace('processingTemplates', normalizedTemplates);
+    const activityResult = syncProcessingActivity(normalizedTemplates);
+    if (mergedResult.changed
+      || activityResult.changed
+      || JSON.stringify(activityResult.templates) !== JSON.stringify(sourceTemplates)) {
+      window.DemoStore.replace('processingTemplates', activityResult.templates);
     }
-    return sortTemplates(normalizedTemplates);
+    return sortTemplates(activityResult.templates);
   }
 
   function save(templates) {
