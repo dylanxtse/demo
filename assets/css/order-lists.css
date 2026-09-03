@@ -292,8 +292,40 @@
 .order-module-page .operations-table td:nth-child(25) { min-width: 190px; }
 
 .order-module-page.order-tag-page .operations-table {
-  min-width: 720px;
+  min-width: 1140px;
   table-layout: fixed;
+}
+
+/* 订单标签列按参考页放宽，避免标签名称和表头被固定布局挤压。 */
+.order-module-page.order-tag-page .operations-table th:nth-child(1),
+.order-module-page.order-tag-page .operations-table td:nth-child(1) {
+  min-width: 72px;
+  width: 72px;
+}
+.order-module-page.order-tag-page .operations-table th:nth-child(2),
+.order-module-page.order-tag-page .operations-table td:nth-child(2) {
+  min-width: 260px;
+  width: 260px;
+}
+.order-module-page.order-tag-page .operations-table th:nth-child(3),
+.order-module-page.order-tag-page .operations-table td:nth-child(3) {
+  min-width: 220px;
+  width: 220px;
+}
+.order-module-page.order-tag-page .operations-table th:nth-child(4),
+.order-module-page.order-tag-page .operations-table td:nth-child(4) {
+  min-width: 220px;
+  width: 220px;
+}
+.order-module-page.order-tag-page .operations-table th:nth-child(5),
+.order-module-page.order-tag-page .operations-table td:nth-child(5) {
+  min-width: 150px;
+  width: 150px;
+}
+.order-module-page.order-tag-page .operations-table th:nth-child(6),
+.order-module-page.order-tag-page .operations-table td:nth-child(6) {
+  min-width: 220px;
+  width: 220px;
 }
 
 .order-module-page .operations-table th,
@@ -336,6 +368,18 @@
 
 .order-module-page .operations-table .cell-actions {
   justify-content: center;
+}
+
+/* 订单标签操作项按产品参考页使用竖线分隔。 */
+.order-module-page.order-tag-page .operations-table .operation-actions {
+  gap: 0;
+}
+.order-module-page.order-tag-page .operations-table .operation-actions .btn-text + .btn-text::before {
+  content: '|';
+  display: inline-block;
+  margin: 0 8px 0 4px;
+  color: #d9dee8;
+  font-weight: 400;
 }
 
 /* 仓库档案字段较多，保持可读列宽，超出容器时通过横向滚动查看。 */

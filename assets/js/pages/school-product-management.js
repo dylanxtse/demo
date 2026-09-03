@@ -7,37 +7,15 @@
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-  const categoryTree = [
-    { name: '全部' },
-    { name: '主食（米面粉点心类）', expanded: true, children: [
-      { name: '米（二级）', expanded: true, children: [{ name: '米面（三级）' }] },
-      { name: '点心（二级）', expanded: true, children: [{ name: '点心（三级）' }] },
-      { name: '主食其他（二级）', expanded: true, children: [{ name: '主食其他（三级）' }, { name: '主食冻品（三级）' }] }
-    ] },
-    { name: '食油', expanded: true, children: [{ name: '食油（二级）', children: [{ name: '食油（三级）' }] }] },
-    { name: '果蔬', expanded: true, children: [
-      { name: '蔬菜（二级）', children: [{ name: '蔬菜（三级）' }] },
-      { name: '水果（二级）', children: [{ name: '水果（三级）' }] }
-    ] },
-    { name: '肉（豆）制品', expanded: true, children: [
-      { name: '鲜肉（二级）', children: [{ name: '鲜肉（三级）' }] },
-      { name: '豆制品（二级）', children: [{ name: '豆制品（三级）' }] },
-      { name: '冻肉（二级）', children: [{ name: '冻肉（三级）' }] }
-    ] },
-    { name: '水产品', expanded: true, children: [
-      { name: '冻品（二级）', children: [{ name: '冻品（三级）' }] },
-      { name: '水产品（二级）', children: [{ name: '水产品（三级）' }] }
-    ] },
-    { name: '蛋奶类', expanded: true, children: [
-      { name: '鲜鸡蛋（二级）', children: [{ name: '鲜鸡蛋（三级）' }] },
-      { name: '奶制品（二级）', children: [{ name: '奶制品（三级）' }] }
-    ] },
-    { name: '调料', expanded: true, children: [
-      { name: '调料（二级）', children: [{ name: '调料（三级）' }] },
-      { name: '干货（二级）', children: [{ name: '干货（三级）' }] }
-    ] },
-    { name: '其他材料', expanded: true, children: [{ name: '其他材料（二级）', children: [{ name: '其他材料（三级）' }] }] }
-  ];
+  function getThirdLevelCategories(rows) {
+    const names = new Set();
+    rows.forEach((row) => {
+      const category = String(row.category || '').trim();
+      const parts = category.split('-').map((part) => part.trim()).filter(Boolean);
+      if (parts.length) names.add(parts[parts.length - 1]);
+    });
+    return [{ name: '全部' }, ...[...names].map((name) => ({ name }))];
+  }
 
   function showToast(message) {
     document.querySelector('.operations-toast')?.remove();
@@ -48,23 +26,59 @@
     window.setTimeout(() => toast.remove(), 1800);
   }
 
+  function displayValue(value, fallback = '--') {
+    if (value === null || value === undefined) return fallback;
+    const text = String(value).trim();
+    return text || fallback;
+  }
+
+  function appendUnit(value, unit) {
+    const text = String(value ?? '').trim();
+    return text ? `${text}${unit || ''}` : '';
+  }
+
+  function detailField(label, value, { required = false, className = '' } = {}) {
+    const labelClass = `field-label${required ? ' required' : ''}`;
+    const text = displayValue(value);
+    return `<div class="form-field${className ? ` ${className}` : ''}">
+      <span class="${labelClass}">${escapeHtml(label)}</span>
+      <span class="readonly-value" title="${escapeHtml(text)}">${escapeHtml(text)}</span>
+    </div>`;
+  }
+
+  function formatMultiUnitRelation(product, index) {
+    const name = String(product[`multiUnitName${index}`] ?? '').trim();
+    const rate = appendUnit(product[`multiUnitRate${index}`], product.unit);
+    if (name && rate) return `${name} = ${rate}`;
+    return name || rate;
+  }
+
+  function navigateToList() {
+    const target = './school-product-management.html';
+    if (window.AppNavigation?.navigate) window.AppNavigation.navigate(target);
+    else window.location.href = target;
+  }
+
+  function navigateToDetail(code) {
+    const target = `./school-product-management.html?mode=view&id=${encodeURIComponent(code)}`;
+    if (window.AppNavigation?.navigate) window.AppNavigation.navigate(target);
+    else window.location.href = target;
+  }
+
   function renderTree(page, state) {
     const query = state.treeKeyword.trim().toLocaleLowerCase();
     const tree = page.querySelector('#schoolCategoryTree');
-    const renderNodes = (nodes, parent = '') => nodes.map((node, index) => {
-      const path = `${parent}${index}`;
-      const childHtml = node.children ? renderNodes(node.children, `${path}-`) : '';
-      const matches = !query || node.name.toLocaleLowerCase().includes(query) || childHtml;
+    const renderNodes = (nodes) => nodes.map((node) => {
+      const matches = !query || node.name.toLocaleLowerCase().includes(query);
       if (!matches) return '';
-      const selected = (node.name === '全部' && !state.category) || node.name === state.category || state.category.endsWith(`-${node.name}`);
-      return `<div class="school-tree-node ${node.expanded || query ? 'is-expanded' : ''}">
-        <button type="button" class="school-tree-label ${selected ? 'is-selected' : ''}" data-tree-category="${escapeHtml(node.name === '全部' ? '' : node.name)}" data-tree-path="${path}">
-          ${node.children ? '<span class="school-tree-arrow">⌄</span>' : '<span class="school-tree-arrow school-tree-arrow-empty"></span>'}<span>${escapeHtml(node.name)}</span>
+      const selected = (node.name === '全部' && !state.category) || node.name === state.category;
+      return `<div class="school-tree-node">
+        <button type="button" class="school-tree-label ${selected ? 'is-selected' : ''}" data-tree-category="${escapeHtml(node.name === '全部' ? '' : node.name)}">
+          <span class="school-tree-arrow school-tree-arrow-empty"></span><span>${escapeHtml(node.name)}</span>
         </button>
-        ${node.children ? `<div class="school-tree-children">${childHtml}</div>` : ''}
       </div>`;
     }).join('');
-    tree.innerHTML = renderNodes(categoryTree);
+    tree.innerHTML = renderNodes(getThirdLevelCategories(state.rows));
   }
 
   function renderRows(page, state) {
@@ -92,7 +106,84 @@
       : '<tr><td class="school-product-empty" colspan="11">暂无符合条件的数据</td></tr>';
   }
 
-  function render() {
+  function renderDetail(productId) {
+    const product = window.ProductService?.getDetail(productId);
+    if (!product) {
+      renderList();
+      showToast('未找到该商品，请返回商品管理页面重新选择。');
+      return;
+    }
+
+    const isNetVegetable = product.isNetVegetable === true;
+    const isWeighed = product.isWeighed === true;
+    const multiUnitEnabled = product.multiUnit === true;
+    const shelfLifeEnabled = Boolean(product.shelfLife || product.shelfLifeEnabled || product.shelfLifeValue);
+    const shelfLife = product.shelfLife || appendUnit(product.shelfLifeValue, product.shelfLifeUnit);
+    const procurementFields = isNetVegetable ? '' : [
+      detailField('默认供应商', product.defaultSupplier || product.supplier || '平台默认供应商', { required: true }),
+      detailField('采购负责人', product.responsible || '管理员', { required: true })
+    ].join('');
+    const multiUnitFields = multiUnitEnabled ? [
+      detailField('辅助单位1:', formatMultiUnitRelation(product, 1), { required: true }),
+      detailField('市场价1', product.multiUnitPrice1, { required: true }),
+      detailField('辅助单位2:', formatMultiUnitRelation(product, 2)),
+      detailField('市场价2', product.multiUnitPrice2)
+    ].join('') : '';
+    const weighingFields = isWeighed
+      ? detailField(`“${displayValue(product.unit)}”与“kg”的换算率=`, appendUnit(product.conversionRate, 'kg'), { required: true })
+      : '';
+    const shelfLifeFields = shelfLifeEnabled ? [
+      detailField('保质期', shelfLife, { required: true }),
+      detailField('预警天数', product.shelfLifeWarning),
+      detailField('到期日计算方式', product.expiryCalculationMethod, { required: true })
+    ].join('') : '';
+
+    const content = `<section class="page-card product-form-page school-product-detail" id="schoolProductDetail" aria-label="商品详情">
+      <div class="product-form-header">
+        <button class="back-link" type="button" data-action="back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/><path d="M19 12H9"/></svg>
+          <span>返回</span>
+        </button>
+        <h1>商品详情</h1>
+      </div>
+
+      <div class="product-form is-readonly" role="region" aria-label="商品详情信息">
+        <div class="form-grid">
+          ${detailField('商品分类', product.category, { required: true })}
+          ${detailField('商品名称', product.name, { required: true })}
+          ${detailField('对应食材', product.correspondingFood)}
+          ${detailField('计量单位', product.unit, { required: true })}
+          ${detailField('市场价', product.marketPrice, { required: true })}
+          ${detailField('品牌', product.brand)}
+          ${detailField('规格', product.spec)}
+          ${detailField('产地', product.origin)}
+          ${detailField('指标说明', product.indicatorDescription)}
+          ${detailField('商品别名', product.alias)}
+          ${detailField('净含量', appendUnit(product.netContent, product.netContentUnit))}
+          ${detailField('上传合格证明', product.qualificationCertificate)}
+          ${detailField('是否净菜', isNetVegetable ? '是' : '否')}
+          ${detailField('采购类型', product.purchaseType || '供应商送货', { required: true })}
+          ${procurementFields}
+          ${detailField('启用多单位', multiUnitEnabled ? '是' : '否')}
+          ${multiUnitFields}
+          ${detailField('是否称重', isWeighed ? '是' : '否')}
+          ${weighingFields}
+          ${detailField('设置保质期', shelfLifeEnabled ? '是' : '否')}
+          ${shelfLifeFields}
+          ${detailField('图片', product.imageName || product.image, { className: 'image-field' })}
+          <div class="form-actions">
+            <button class="btn" type="button" data-action="back">返回</button>
+          </div>
+        </div>
+      </div>
+    </section>`;
+    const root = window.AppShell.mount({ title: '商品管理', content, variant: 'school', companyName: '静安第一中学', emptyText: '商品管理' });
+    root.querySelector('#schoolProductDetail')?.addEventListener('click', (event) => {
+      if (event.target.closest('[data-action="back"]')) navigateToList();
+    });
+  }
+
+  function renderList() {
     const content = `<section class="page-card school-product-page" id="schoolProductPage" aria-label="商品管理">
       <div class="school-product-workspace">
         <aside class="school-category-panel">
@@ -164,10 +255,14 @@
         renderTree(page, state);
         applyFilters(true);
       } else if (action === 'detail') {
-        showToast(`商品详情演示：${event.target.closest('[data-code]')?.dataset.code || ''}`);
+        const code = event.target.closest('[data-code]')?.dataset.code;
+        if (code) navigateToDetail(code);
       }
     });
   }
 
-  render();
+  const parameters = new URLSearchParams(window.location.search);
+  const productId = parameters.get('id');
+  if (parameters.get('mode') === 'view' && productId) renderDetail(productId);
+  else renderList();
 })();

@@ -525,6 +525,18 @@
     return result;
   }
 
+  const orderTagSeedRevision = 'order-tags-v2';
+  const legacyOrderTagNames = new Set(['营养餐', '普通餐', '应急保供', '节日餐']);
+  function normalizeOrderTags(state) {
+    if (state.orderTagSeedRevision === orderTagSeedRevision) return false;
+    const tags = Array.isArray(state.tags) ? state.tags : [];
+    const isLegacySeed = tags.length === 0
+      || tags.every((tag) => legacyOrderTagNames.has(String(tag?.tagName || '').trim()));
+    if (isLegacySeed) state.tags = clone(window.MockOperations?.tags || []);
+    state.orderTagSeedRevision = orderTagSeedRevision;
+    return true;
+  }
+
   function sourceCustomers(extraOrders = []) {
     const base = [
       { id: 'CUS-001', customerId: 'CUS-001', customerCode: 'CUS001', name: '第一实验学校', customerName: '第一实验学校', type: '学校', status: 'ENABLE' },
@@ -1589,7 +1601,7 @@
         const order = orders[index % orders.length]; const line = order.items[0];
         return { id: `RET-${String(index + 1).padStart(3, '0')}`, returnNo: `THD2026080503${String(index + 1).padStart(5, '0')}`, customerName: order.customerName, canteen: order.canteen, orderNo: order.orderNo, inboundNo: `RKD2026080503${String(index + 1).padStart(5, '0')}`, goodsName: line.goodsName, warehouse: order.warehouse, status: ['PENDING_AUDIT', 'APPROVED', 'CLOSED'][index % 3], creator: '管理员', createdAt: '2026-08-05 10:00:00', reason: ['商品破损', '数量多发', '质量不符合要求'][index % 3], refundAmount: number(line.unitPrice) * 2, items: [{ id: `RL-${index + 1}`, goodsName: line.goodsName, unit: line.unit, orderPrice: number(line.unitPrice), shippedQty: number(line.quantity), returnedQty: 0, applyQty: 2, applyPrice: number(line.unitPrice), applyAmount: number(line.unitPrice) * 2, damageQty: 1, remark: '按订单明细退货' }] };
       }),
-      tags: padRecords(window.MockOperations?.tags || [], 20, (index) => ({ id: `TAG-${String(index + 1).padStart(3, '0')}`, tagName: ['营养餐', '普通餐', '应急保供', '节日餐'][index % 4], status: 'ENABLE', createdAt: '2026-08-05 09:00:00' })),
+      tags: clone(window.MockOperations?.tags || []),
       receiptChanges: padRecords(window.MockOperations?.receiptChanges || [], 20, (index) => { const order = orders[index % orders.length]; return { id: `CHANGE-${String(index + 1).padStart(3, '0')}`, changeNo: `BG2026080503${String(index + 1).padStart(5, '0')}`, status: 'PENDING_AUDIT', customerName: order.customerName, canteen: order.canteen, orderNo: order.orderNo, items: order.items, createdAt: '2026-08-05 11:00:00' }; }),
       sortingProgress: padRecords(window.MockOperations?.sortingProgress || [], 20, (index) => { const order = orders[index % orders.length]; return { id: `PROGRESS-${String(index + 1).padStart(3, '0')}`, customerName: order.customerName, canteen: order.canteen, sortedCount: index % 3, orderCount: order.items.length, progress: `${index % 3}/${order.items.length}`, status: index % 3 ? 'PARTIAL' : 'PENDING', warehouse: order.warehouse, expectedAt: order.expectedAt, route: order.route }; }),
       shortageItems: padRecords(window.MockOperations?.shortageItems || [], 20, (index) => { const task = sortingTasks[index % sortingTasks.length]; return { ...clone(task), id: `SHORTAGE-${String(index + 1).padStart(3, '0')}`, shortage: '是', status: 'SHORTAGE', shortageQty: 1 }; }),
@@ -1647,11 +1659,12 @@
       const processingRelationsNormalized = normalizeProcessingRelations(state);
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
       const contractsNormalized = normalizeStateContracts(state);
+      const orderTagsNormalized = normalizeOrderTags(state);
       const warehouseCodesNormalized = normalizeWarehouseCodes(state);
       const settingsNormalized = normalizeSettings(state);
       const decimalsNormalized = normalizeStateDecimals(state);
       const statisticsResourcesNormalized = ensureStatisticsResources(state);
-      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
+      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || orderTagsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
     }
     else {
       state = buildSeed();
@@ -1666,6 +1679,7 @@
       normalizeProcessingRelations(state);
       normalizeProcessingOutputs(state);
       normalizeStateContracts(state);
+      normalizeOrderTags(state);
       normalizeWarehouseCodes(state);
       normalizeSettings(state);
       normalizeStateDecimals(state);

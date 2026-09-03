@@ -91,9 +91,14 @@
   ];
 
   const tags = [
-    { id: 'TAG-001', tagName: '营养餐', nutritious: '是', remark: '学校营养餐订单', status: 'ENABLE', createdAt: '2026-03-11 09:30:00' },
-    { id: 'TAG-002', tagName: '普通餐', nutritious: '否', remark: '常规订单', status: 'ENABLE', createdAt: '2026-03-11 09:31:00' },
-    { id: 'TAG-003', tagName: '应急保供', nutritious: '否', remark: '突发保供订单', status: 'DISABLE', createdAt: '2026-04-08 16:20:00' }
+    { id: 'TAG-001', tagName: '学生', nutritious: '营养餐', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:37:00' },
+    { id: 'TAG-002', tagName: '学生', nutritious: '非营养餐', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:36:00' },
+    { id: 'TAG-003', tagName: '学生', nutritious: '不区分', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:35:00' },
+    { id: 'TAG-004', tagName: '教师', nutritious: '营养餐', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:34:00' },
+    { id: 'TAG-005', tagName: '教师', nutritious: '非营养餐', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:33:00' },
+    { id: 'TAG-006', tagName: '教师', nutritious: '不区分', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:32:00' },
+    { id: 'TAG-007', tagName: '其他', nutritious: '非营养餐', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:31:00' },
+    { id: 'TAG-008', tagName: '其他', nutritious: '不区分', remark: '', status: 'ENABLE', createdAt: '2026-03-11 09:30:00' }
   ];
 
   const receiptChanges = [
