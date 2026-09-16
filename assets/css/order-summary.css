@@ -1,0 +1,300 @@
+.order-summary-page {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.order-summary-filter {
+  position: relative;
+  flex-shrink: 0;
+  padding-right: 184px;
+}
+
+.order-summary-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 14px 28px;
+}
+
+.order-summary-field {
+  display: flex;
+  min-width: 0;
+  height: 32px;
+  align-items: center;
+}
+
+.order-summary-field > label {
+  width: 140px;
+  flex: 0 0 140px;
+  margin-right: 10px;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.order-summary-select-control {
+  position: relative;
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.order-summary-select-control select,
+.order-summary-date-range .date-range-display {
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid #e2e4ea;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+.order-summary-select-control select {
+  appearance: none;
+  padding: 0 30px 0 10px;
+  cursor: pointer;
+}
+
+.order-summary-select-control svg {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.order-summary-date-range {
+  position: relative;
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.order-summary-date-range .date-range-display {
+  width: 100%;
+  min-width: 0;
+  padding: 0 32px 0 10px;
+  cursor: pointer;
+}
+
+.order-summary-date-range .date-range-display:focus,
+.order-summary-select-control select:focus {
+  outline: 2px solid rgba(2, 73, 196, .14);
+  border-color: var(--primary);
+}
+
+.order-summary-date-range .date-range-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  color: var(--text-tertiary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.order-summary-filter-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 16px;
+}
+
+.order-summary-advanced-placeholder {
+  display: inline-block;
+  width: 72px;
+  height: 32px;
+}
+
+.order-summary-filter-actions .btn {
+  width: 76px;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+}
+
+.order-summary-toolbar {
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+.order-summary-export-row {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.order-summary-export {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 15px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.order-summary-export:hover {
+  color: var(--primary);
+}
+
+.order-summary-export svg {
+  width: 14px;
+  height: 14px;
+}
+
+.order-summary-note {
+  margin: 7px 0 3px;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.order-summary-table-container {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.order-summary-table-wrap {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #e2e4ea;
+  background: #fff;
+}
+
+.order-summary-table-wrap[data-summary-table]:not(.is-active) {
+  display: none;
+}
+
+.order-summary-table {
+  width: 100%;
+  min-width: 1100px;
+  table-layout: fixed;
+  font-size: 14px;
+}
+
+/* 订单列表的 page class 统一用于查询区，但统计表保留自身列宽与横向滚动规则。 */
+.order-summary-page .order-summary-table {
+  min-width: 1100px;
+}
+
+.order-summary-table th,
+.order-summary-table td {
+  height: 46px;
+  padding: 0 16px;
+  border-right: 1px solid #e2e4ea;
+  border-bottom: 1px solid #e2e4ea;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.order-summary-page .order-summary-table th,
+.order-summary-page .order-summary-table td {
+  min-width: 0;
+  padding: 0 16px;
+}
+
+.order-summary-page .order-summary-table th:last-child,
+.order-summary-page .order-summary-table td:last-child {
+  position: static;
+  min-width: 0;
+  box-shadow: none;
+}
+
+.order-summary-table th {
+  background: #f2f5fa;
+  color: #858b9c;
+  font-weight: 400;
+}
+
+.order-summary-table tbody tr:nth-child(even) {
+  background: #f2f5fa;
+}
+
+.order-summary-table tbody tr:hover {
+  background: #f7fbff;
+}
+
+.order-summary-table tfoot td {
+  background: #f2f5fa;
+  font-weight: 600;
+}
+
+.order-summary-table .empty-cell {
+  height: 160px;
+  color: var(--text-tertiary);
+}
+
+.order-summary-info {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #858b9c;
+  border-radius: 50%;
+  color: #858b9c;
+  font-size: 10px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.order-summary-page .pagination {
+  min-height: 48px;
+  flex-shrink: 0;
+  padding: 12px 0 0;
+}
+
+.order-summary-page .pagination .page-size-select {
+  height: 32px;
+}
+
+.order-summary-page .pagination .page-btn {
+  min-width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 1180px) {
+  .order-summary-filter {
+    padding-right: 0;
+  }
+
+  .order-summary-filter-grid {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+
+  .order-summary-filter-actions {
+    position: static;
+    justify-content: flex-end;
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .order-summary-page {
+    min-width: 980px;
+  }
+}

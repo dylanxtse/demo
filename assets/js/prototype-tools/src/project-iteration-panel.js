@@ -754,11 +754,11 @@
           <div class="project-iteration-heading">
             <h2 id="projectIterationPanelTitle">迭代记录</h2>
             <div class="project-iteration-heading-tools">
-              <button type="button" class="project-iteration-annotation-visibility-toggle" data-project-iteration-annotation-visibility aria-pressed="true" title="显示或隐藏页面标注按钮">
+              <button type="button" class="project-iteration-annotation-visibility-toggle" data-project-iteration-annotation-visibility aria-pressed="true" title="显示或隐藏页面标注按钮" hidden>
                 <span class="project-iteration-annotation-visibility-label">标注</span>
                 <span class="project-iteration-annotation-visibility-state" data-project-iteration-annotation-visibility-state>显示</span>
               </button>
-              <div class="project-iteration-annotation-mode-host" data-project-iteration-annotation-mode-host></div>
+              <div class="project-iteration-annotation-mode-host" data-project-iteration-annotation-mode-host hidden></div>
             </div>
           </div>
           <div class="project-iteration-header-actions">
@@ -811,10 +811,21 @@
       }
     };
     let annotationMarkersVisible = readAnnotationMarkerVisibility();
+    const syncAnnotationPageAvailability = () => {
+      const context = window.AnnotationOverlay?.getPageContext?.();
+      const available = context?.modeAvailable === true;
+      const hasVisibleAnnotations = context?.hasVisibleDefinitions === true;
+      const button = root.querySelector('[data-project-iteration-annotation-visibility]');
+      const modeHost = root.querySelector('[data-project-iteration-annotation-mode-host]');
+      root.classList.toggle('is-annotation-page-disabled', !available);
+      if (button) button.hidden = !hasVisibleAnnotations;
+      if (modeHost) modeHost.hidden = !available;
+      return available;
+    };
     const syncAnnotationMarkerVisibilityControl = () => {
       const button = root.querySelector('[data-project-iteration-annotation-visibility]');
       const state = root.querySelector('[data-project-iteration-annotation-visibility-state]');
-      if (!button) return;
+      if (!button || button.hidden) return;
       button.setAttribute('aria-pressed', String(annotationMarkersVisible));
       button.classList.toggle('is-off', !annotationMarkersVisible);
       if (state) state.textContent = annotationMarkersVisible ? '显示' : '隐藏';
@@ -836,13 +847,19 @@
       return annotationMarkersVisible;
     };
     const attachAnnotationModeControl = () => {
+      if (!syncAnnotationPageAvailability()) {
+        window.AnnotationOverlay?.setAnnotationMode?.(false);
+        return false;
+      }
       const attached = window.AnnotationOverlay?.attachModeControl?.(root) || false;
       applyAnnotationMarkerVisibility(annotationMarkersVisible, false);
       return attached;
     };
     const handleAnnotationReady = () => attachAnnotationModeControl();
+    const handleAnnotationContextChange = () => attachAnnotationModeControl();
     attachAnnotationModeControl();
     window.addEventListener('prototype-annotation-ready', handleAnnotationReady);
+    window.addEventListener('prototype-annotation-context-change', handleAnnotationContextChange);
     if (theme !== false) {
       if (theme && typeof theme.apply === 'function') theme.apply(root);
       else window.PrototypeToolsTheme?.apply(root);
@@ -2009,6 +2026,7 @@
         document.removeEventListener('mousemove', handleDocumentMouseMove);
         document.removeEventListener('keydown', handleDocumentKeydown);
         window.removeEventListener('prototype-annotation-ready', handleAnnotationReady);
+        window.removeEventListener('prototype-annotation-context-change', handleAnnotationContextChange);
         root.removeEventListener('click', handleClick);
         root.removeEventListener('dblclick', handleDoubleClick);
         root.removeEventListener('input', handleFormInput);

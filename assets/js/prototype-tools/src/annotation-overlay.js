@@ -24,6 +24,84 @@
       .replace(/'/g, '&#039;');
   }
 
+  const activeTabSelector = [
+    '[data-view-tab].active',
+    '[data-view-tab][aria-selected="true"]',
+    '[data-tab-key].active',
+    '[data-tab-key][aria-selected="true"]',
+    '[data-tab].active',
+    '[data-tab][aria-selected="true"]',
+    '[role="tab"].active',
+    '[role="tab"][aria-selected="true"]',
+    '.is-active[data-view-tab]',
+    '.is-active[data-tab]'
+  ].join(', ');
+  const addPagePathPattern = /(?:^|[-_])(?:add|form|editor)(?:[-_.]|$)|goodsadd(?:\.html)?$/i;
+
+  const normaliseTabKey = (value) => String(
+    typeof value === 'object' && value !== null ? (value.key ?? value.value ?? '') : value ?? ''
+  ).trim().toLowerCase();
+
+  const getTabValue = (element) => element?.dataset?.viewTab
+    || element?.dataset?.tabKey
+    || element?.dataset?.tab
+    || element?.dataset?.mode
+    || element?.dataset?.priceMode
+    || '';
+
+  function getActiveTabKey(root) {
+    const activeTab = [...(root?.querySelectorAll?.(activeTabSelector) || [])]
+      .find((element) => !element.closest('.project-iteration-panel-root'));
+    const activeValue = normaliseTabKey(getTabValue(activeTab));
+    if (activeValue) return activeValue;
+
+    const pageElement = root?.querySelector?.('.operations-page, .page-card');
+    const pageValue = normaliseTabKey(pageElement?.dataset?.activeTab);
+    if (pageValue) return pageValue;
+
+    const params = new URLSearchParams(window.location?.search || '');
+    for (const key of ['tab', 'view', 'viewTab', 'activeTab']) {
+      const value = normaliseTabKey(params.get(key));
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function getDefinitionTabValues(definition, placeholder = null) {
+    const configured = definition?.tab
+      ?? definition?.tabKey
+      ?? definition?.viewTab
+      ?? definition?.onlyOnTab
+      ?? definition?.tabs;
+    const source = configured ?? placeholder?.dataset?.annotationTab ?? '';
+    const values = Array.isArray(source) ? source : String(source || '').split(/[|,]/);
+    return values.map(normaliseTabKey).filter(Boolean);
+  }
+
+  function matchesActiveTab(definition, root, placeholder = null) {
+    const requiredTabs = getDefinitionTabValues(definition, placeholder);
+    if (!requiredTabs.length) return true;
+    const activeTab = getActiveTabKey(root);
+    return Boolean(activeTab) && requiredTabs.includes(activeTab);
+  }
+
+  function isAddPage(root) {
+    const explicit = [
+      root?.querySelector?.('.operations-page, .page-card'),
+      root,
+      document.querySelector('#app'),
+      document.body,
+      document.documentElement
+    ].filter(Boolean).map((element) => element.dataset?.annotationAddPage);
+    if (explicit.some((value) => String(value).toLowerCase() === 'true')) return true;
+    if (explicit.some((value) => String(value).toLowerCase() === 'false')) return false;
+
+    const fileName = (window.location?.pathname || '').split('/').pop() || '';
+    if (addPagePathPattern.test(fileName)) return true;
+    return /(?:添加|新建|编辑)/.test(document.title || '')
+      && Boolean(root?.querySelector?.('form, [data-page-form], [class*="form-page"]'));
+  }
+
   const deleteIcon = `
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="m6 6 12 12M18 6 6 18"></path>
@@ -40,7 +118,9 @@
     const entryClass = isEntry ? ' is-entry' : '';
     const scope = isEntry ? (annotation.entryScope || 'page') : (annotation.scope || 'page');
     const targetSelector = annotation.targetSelector || '';
-    return `<span class="record-annotation-placeholder${placementClass}${entryClass}" data-annotation-placeholder="${escapeHtml(id)}" data-annotation-base="${escapeHtml(baseId)}" data-annotation-target="${escapeHtml(annotation.target || '')}" data-annotation-target-selector="${escapeHtml(targetSelector)}" data-annotation-scope="${escapeHtml(scope)}" data-annotation-position="${escapeHtml(annotation.anchorPosition || '')}" aria-hidden="true"></span>`;
+    const tabValues = getDefinitionTabValues(annotation);
+    const tabAttribute = tabValues.length ? ` data-annotation-tab="${escapeHtml(tabValues.join('|'))}"` : '';
+    return `<span class="record-annotation-placeholder${placementClass}${entryClass}" data-annotation-placeholder="${escapeHtml(id)}" data-annotation-base="${escapeHtml(baseId)}" data-annotation-target="${escapeHtml(annotation.target || '')}" data-annotation-target-selector="${escapeHtml(targetSelector)}" data-annotation-scope="${escapeHtml(scope)}" data-annotation-position="${escapeHtml(annotation.anchorPosition || '')}"${tabAttribute} aria-hidden="true"></span>`;
   }
 
   function definitionMap(definitions) {
@@ -151,6 +231,22 @@
       baseDefinitions,
       getCodeDefinitions(pageKey, options.data)
     ));
+    const getVisibleDefinitions = () => [...definitionById.values()]
+      .filter((definition) => matchesActiveTab(definition, root));
+    const getPageContext = () => {
+      const activeDefinitions = getVisibleDefinitions();
+      const addPage = isAddPage(root);
+      return {
+        pageKey,
+        activeTab: getActiveTabKey(root),
+        hasDefinitions: definitionById.size > 0,
+        hasVisibleDefinitions: activeDefinitions.length > 0,
+        isAddPage: addPage,
+        modeAvailable: !readOnly && options.showAnnotationControls !== false,
+        enabled: activeDefinitions.length > 0 || addPage || options.showAnnotationControls === true
+      };
+    };
+    const isAnnotationContextEnabled = () => getPageContext().enabled;
     const anchors = new Map();
     const drafts = new Map();
     const saveQueues = new Map();
@@ -165,6 +261,8 @@
     let repositionFrame = null;
     let queuedRepositionOptions = null;
     let syncFrame = null;
+    let lastContextSignature = '';
+    let controller = null;
     const modalTargetSelector = [
       '[role="dialog"]',
       '.operations-modal',
@@ -679,6 +777,8 @@
       placeholder.dataset.annotationTarget = 'custom';
       placeholder.dataset.annotationTargetSelector = definition.targetSelector || '';
       placeholder.dataset.annotationScope = definition.scope || 'page';
+      const tabValues = getDefinitionTabValues(definition);
+      if (tabValues.length) placeholder.dataset.annotationTab = tabValues.join('|');
       placeholder.setAttribute('aria-hidden', 'true');
       root.appendChild(placeholder);
       return placeholder;
@@ -712,6 +812,8 @@
       anchor.dataset.annotationAction = definition.actionKey || '';
       anchor.dataset.annotationEntryPosition = definition.entryMarkerPosition || '';
       anchor.dataset.annotationScope = scope;
+      const tabValues = getDefinitionTabValues(definition, placeholder);
+      if (tabValues.length) anchor.dataset.annotationTab = tabValues.join('|');
       anchor.innerHTML = `<button class="record-annotation-marker" type="button" data-annotation-toggle="${escapeHtml(id)}" aria-expanded="false" aria-label="查看标注${number}">${number}</button>`;
       syncAnnotationMarkerState(anchor, definition);
 
@@ -1009,9 +1111,22 @@
 
     const sync = () => {
       placeholderCache.clear();
+      const context = getPageContext();
+      // Tab 切换可能只改变业务 DOM 的 active 状态，统一刷新工具层的可见性，
+      // 保留用户开关状态，同时让当前页面/Tab 的标注上下文立即生效。
+      setMarkerVisibility(markersVisible);
+      const contextSignature = `${context.enabled}|${context.activeTab}|${context.hasVisibleDefinitions}`;
+      if (contextSignature !== lastContextSignature) {
+        lastContextSignature = contextSignature;
+        if (controller) {
+          window.dispatchEvent(new CustomEvent('prototype-annotation-context-change', {
+            detail: { controller, context }
+          }));
+        }
+      }
       // 页面刷新后，项目代码中的自定义标注没有业务模板占位点，需要按持久化定位选择器补回占位点。
       definitionById.forEach((definition, id) => {
-        if (definition.target !== 'custom' || !definition.targetSelector || findPlaceholderForDefinition(id)) return;
+        if (!context.enabled || !matchesActiveTab(definition, root) || definition.target !== 'custom' || !definition.targetSelector || findPlaceholderForDefinition(id)) return;
         createCodePlaceholder({ ...definition, id });
       });
       renumberDefinitions();
@@ -1019,7 +1134,7 @@
       [...root.querySelectorAll('[data-annotation-placeholder]')].forEach((placeholder) => {
         const id = placeholder.dataset.annotationPlaceholder;
         const definition = definitionById.get(placeholder.dataset.annotationBase);
-        if (!id || !definition) return;
+        if (!id || !definition || !context.enabled || !matchesActiveTab(definition, root, placeholder)) return;
         activeIds.add(id);
         if (anchors.has(id)) {
           syncAnnotationMarkerState(anchors.get(id), definition);
@@ -1140,6 +1255,8 @@
         title,
         items
       };
+      const activeTab = getActiveTabKey(root);
+      if (activeTab) definition.tab = activeTab;
       draft.saving = true;
       draft.saveButton.disabled = true;
       draft.saveButton.textContent = '保存中...';
@@ -1223,17 +1340,18 @@
 
     const setMarkerVisibility = (visible) => {
       markersVisible = Boolean(visible);
-      overlay.classList.toggle('is-markers-hidden', !markersVisible);
-      editor.hidden = readOnly || !markersVisible;
-      modeToggle.hidden = readOnly || !markersVisible;
-      if (!markersVisible) {
+      const effectiveVisibility = markersVisible;
+      overlay.classList.toggle('is-markers-hidden', !effectiveVisibility);
+      editor.hidden = readOnly || !effectiveVisibility;
+      modeToggle.hidden = readOnly || !effectiveVisibility;
+      if (!effectiveVisibility) {
         closeAll();
         if (annotationMode && !modeTransitioning) exitAnnotationMode();
       } else {
         reposition();
       }
-      if (!modeTransitioning) modeToggle.disabled = !markersVisible && !annotationMode;
-      return markersVisible;
+      if (!modeTransitioning) modeToggle.disabled = !effectiveVisibility && !annotationMode;
+      return effectiveVisibility;
     };
 
     const savePendingAnnotationChanges = async () => {
@@ -1542,6 +1660,11 @@
       if (!event.target.closest?.('.record-annotation-anchor, .record-annotation-popover, .record-annotation-editor')) closeAll();
     };
 
+    const handleTabClick = (event) => {
+      const tab = event.target.closest?.('[data-view-tab], [data-tab-key], [data-tab], [role="tab"]');
+      if (tab && root.contains(tab)) scheduleSync();
+    };
+
     overlay.addEventListener('click', handleClick);
     overlay.addEventListener('pointerdown', handlePointerDown);
     overlay.addEventListener('pointermove', handlePointerMove);
@@ -1550,25 +1673,35 @@
     overlay.addEventListener('keydown', handleKeydown);
     document.addEventListener('dblclick', handleDoubleClick, true);
     document.addEventListener('click', handleDocumentClick);
+    document.addEventListener('click', handleTabClick, true);
     document.addEventListener('scroll', handleDocumentScroll, true);
     window.addEventListener('resize', handleResize);
+    window.addEventListener('popstate', scheduleSync);
+    window.addEventListener('hashchange', scheduleSync);
     const modalObserver = new MutationObserver(scheduleSync);
-    modalObserver.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-hidden', 'style'] });
+    modalObserver.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-hidden', 'style', 'data-active-tab', 'aria-selected'] });
 
     const attachModeControl = (target) => {
-      if (readOnly) return false;
+      if (readOnly) {
+        editor.hidden = true;
+        editor.classList.remove('is-docked');
+        return false;
+      }
       const host = target?.querySelector?.('[data-project-iteration-annotation-mode-host]');
       if (!host) return false;
       host.appendChild(editor);
       editor.classList.add('is-docked');
+      editor.hidden = !markersVisible;
       return true;
     };
 
-    if (!markersVisible) setMarkerVisibility(false);
+    setMarkerVisibility(markersVisible);
 
-    const controller = {
+    controller = {
       pageKey,
       readOnly,
+      getPageContext: () => getPageContext(),
+      getActiveTab: () => getActiveTabKey(root),
       sync,
       setAnnotationMode,
       setMarkerVisibility,
@@ -1586,8 +1719,11 @@
         editor.removeEventListener('click', handleEditorClick);
         document.removeEventListener('dblclick', handleDoubleClick, true);
         document.removeEventListener('click', handleDocumentClick);
+        document.removeEventListener('click', handleTabClick, true);
         document.removeEventListener('scroll', handleDocumentScroll, true);
         window.removeEventListener('resize', handleResize);
+        window.removeEventListener('popstate', scheduleSync);
+        window.removeEventListener('hashchange', scheduleSync);
         cancelScheduledFrame(repositionFrame);
         cancelScheduledFrame(syncFrame);
         repositionFrame = null;
@@ -1613,6 +1749,9 @@
     renderPlaceholder,
     mount,
     attachModeControl: (target) => activeController?.attachModeControl?.(target) || false,
+    getPageContext: () => activeController?.getPageContext?.() || null,
+    getActiveTab: () => activeController?.getActiveTab?.() || '',
+    setAnnotationMode: (enabled) => activeController?.setAnnotationMode?.(enabled),
     setMarkerVisibility: (visible) => activeController?.setMarkerVisibility?.(visible) ?? false,
     getMarkerVisibility: () => activeController?.getMarkerVisibility?.() ?? true
   };

@@ -901,6 +901,160 @@
           }
         }
       }
+    ],
+    "product-sales.html::商品销量": [
+      {
+        "id": "custom-1789559390858-1",
+        "target": "custom",
+        "targetSelector": "[aria-label=\"商品销量\"]",
+        "tab": "category",
+        "placement": "right",
+        "scope": "page",
+        "title": "日期区间查询查询",
+        "items": [
+          "默认期望送达/退货时间，可切换为下单时间/退货时间；",
+          "默认为当前日期的前一天；"
+        ],
+        "number": "1",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 143,
+              "y": 89
+            },
+            "popoverPosition": {
+              "x": 31,
+              "y": 23
+            }
+          }
+        }
+      },
+      {
+        "id": "custom-1789559533309-2",
+        "target": "custom",
+        "targetSelector": "section.page-card > div.operations-filter:nth-of-type(3)",
+        "tab": "category",
+        "placement": "right",
+        "scope": "page",
+        "title": "学校查询",
+        "items": [
+          "查询学校所属的区域"
+        ],
+        "number": "2",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 1066,
+              "y": 25
+            },
+            "popoverPosition": {
+              "x": -370,
+              "y": 20
+            }
+          }
+        }
+      },
+      {
+        "id": "custom-1789559610289-3",
+        "target": "custom",
+        "targetSelector": "section.page-card > div.operations-toolbar:nth-of-type(4)",
+        "tab": "category",
+        "placement": "right",
+        "scope": "page",
+        "title": "导出",
+        "items": [
+          "导出当前页面全部列表信息；",
+          "导出字段和当前页面列表字段一致（不含操作项）"
+        ],
+        "number": "3",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 1532,
+              "y": 13
+            },
+            "popoverPosition": {
+              "x": -383,
+              "y": 9
+            }
+          }
+        }
+      },
+      {
+        "id": "custom-1789559713839-4",
+        "target": "custom",
+        "targetSelector": "section.page-card > div.record-table-annotation-surface:nth-of-type(5) > div.operations-table-container > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(2)",
+        "tab": "category",
+        "placement": "right",
+        "scope": "page",
+        "title": "分类项",
+        "items": [
+          "表头显示一级分类；",
+          "统计数据包含状态为“已完成”的退货单商品所属分类的退货金额；",
+          "包含状态为“待确认”“待发货”“待出库”和“已完成”的订单商品所属分类的销售金额；",
+          "显示区域取当前启用的教育局的所属区域名称"
+        ],
+        "number": "4",
+        "positionByScope": {
+          "page": {
+            "popoverPosition": {
+              "x": 22,
+              "y": 28
+            }
+          }
+        }
+      },
+      {
+        "id": "custom-1789561764494-1",
+        "target": "custom",
+        "targetSelector": "section.page-card > div.record-table-annotation-surface:nth-of-type(5) > div.operations-table-container > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(2)",
+        "placement": "right",
+        "scope": "page",
+        "title": "列表",
+        "items": [
+          "新增序号列"
+        ],
+        "tab": "product",
+        "number": "5",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 94,
+              "y": -18
+            },
+            "popoverPosition": {
+              "x": 35,
+              "y": 27
+            }
+          }
+        }
+      },
+      {
+        "id": "custom-1789561790593-2",
+        "target": "custom",
+        "targetSelector": "#filter-dateRange",
+        "placement": "right",
+        "scope": "page",
+        "title": "日期区间查询",
+        "items": [
+          "默认期望送达/退货时间，可切换为下单时间/退货时间；",
+          "默认为当前日期的前一天；"
+        ],
+        "tab": "product",
+        "number": "6",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": -77,
+              "y": 27
+            },
+            "popoverPosition": {
+              "x": 30,
+              "y": 7
+            }
+          }
+        }
+      }
     ]
   }
 };

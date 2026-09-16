@@ -1611,18 +1611,37 @@
       inventoryLosses: padRecords(window.MockOperations?.inventoryLosses || [], 20, (index) => { const product = products[index % products.length]; return { id: `LOSS-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', status: 'PENDING_AUDIT', goodsName: product.name, productCode: product.code, quantity: 1, amount: number(product.marketPrice) }; }),
       openingInventory: padRecords(window.MockOperations?.openingInventory || [], 20, (index) => { const product = products[index % products.length]; return { id: `OPENING-${String(index + 1).padStart(3, '0')}`, warehouse: index % 2 ? '中心仓' : '北区仓', goodsName: product.name, goodsCode: product.code, openingQty: 100, openingPrice: number(product.marketPrice), openingAmount: 100 * number(product.marketPrice), status: 'COMPLETED' }; }),
       productSales: clone(window.MockOperations?.productSales || []),
+      categorySales: clone(window.MockOperations?.categorySales || []),
+      categorySalesSchools: clone(window.MockOperations?.categorySalesSchools || []),
       goodsProfitStatistics: clone(window.MockOperations?.goodsProfitStatistics || [])
     };
   }
 
   function ensureStatisticsResources(current) {
     let changed = false;
-    ['productSales', 'goodsProfitStatistics'].forEach((resource) => {
+    ['productSales', 'categorySales', 'categorySalesSchools', 'goodsProfitStatistics'].forEach((resource) => {
       if (!Array.isArray(current[resource])) {
         current[resource] = clone(window.MockOperations?.[resource] || []);
         changed = true;
       }
     });
+    /* 为已有本地演示存储补充商品分类销量初始统计数据。 */
+    const categorySalesNeedsSeed = !current.categorySales.length
+      || !current.categorySales[0]?.meatBeanQty
+      || !current.categorySales[0]?.seasoningQty
+      || !current.categorySales[0]?.otherQty;
+    if (categorySalesNeedsSeed && Array.isArray(window.MockOperations?.categorySales) && window.MockOperations.categorySales.length) {
+      current.categorySales = clone(window.MockOperations.categorySales);
+      changed = true;
+    }
+    const categorySalesSchoolsNeedsSeed = !current.categorySalesSchools.length
+      || !current.categorySalesSchools[0]?.stapleQty
+      || !current.categorySalesSchools[0]?.meatBeanQty
+      || !current.categorySalesSchools[0]?.seasoningQty;
+    if (categorySalesSchoolsNeedsSeed && Array.isArray(window.MockOperations?.categorySalesSchools) && window.MockOperations.categorySalesSchools.length) {
+      current.categorySalesSchools = clone(window.MockOperations.categorySalesSchools);
+      changed = true;
+    }
     return changed;
   }
 

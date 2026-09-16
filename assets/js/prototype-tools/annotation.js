@@ -27,6 +27,8 @@
         data: options.data,
         theme: options.theme,
         readOnly: options.readOnly,
+        markersVisible: options.markersVisible,
+        showAnnotationControls: options.showAnnotationControls,
         saveDefinition,
         onChange: options.onChange
       }

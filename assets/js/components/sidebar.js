@@ -21,7 +21,8 @@
       'purchase-task-allocation.html': 'purchase-task.html',
       'purchase-task-allocation-detail.html': 'purchase-task.html',
       'purchase-order-form.html': 'purchase-order.html',
-      'purchase-order-receipt.html': 'purchase-order.html'
+      'purchase-order-receipt.html': 'purchase-order.html',
+      'category-sales-detail.html': 'product-sales.html'
     };
     const pageAliases = {
       'bid-management': 'bid-management.html',

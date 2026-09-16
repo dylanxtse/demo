@@ -3,7 +3,7 @@
     'orders', 'orderLines', 'sortingItems', 'sortingProgress', 'shippingOrders', 'outboundOrders',
     'inventoryBalance', 'inventoryDetails', 'inventoryCounts', 'inventoryLosses', 'openingInventory',
     'returns', 'tags', 'receiptChanges', 'shortageItems', 'sorters', 'warehouses', 'qualityReports',
-    'shippingDifferences', 'productSales', 'goodsProfitStatistics'
+    'shippingDifferences', 'productSales', 'categorySales', 'categorySalesSchools', 'goodsProfitStatistics'
   ]);
   const legacyOrderNumbers = {
     XS202607300001: { orderNo: 'DD202607300100001', orderId: 'ORD-20260730-001' },
@@ -137,12 +137,34 @@
         const keyword = normalize(value);
         return Object.values(item).some((field) => normalize(field).includes(keyword));
       }
+      if (resource === 'categorySalesSchools' && key === 'schoolCanteen') {
+        const keyword = normalize(value);
+        const canteenNames = Array.isArray(item.canteens) && item.canteens.length
+          ? item.canteens.map((canteen) => typeof canteen === 'string'
+            ? canteen
+            : canteen?.canteenName || canteen?.name || canteen?.canteen || canteen?.schoolName || '')
+          : ['第一食堂', '第二食堂'];
+        return [item.schoolName, ...canteenNames].some((name) => normalize(name).includes(keyword));
+      }
+      if (resource === 'categorySales' && key === 'schoolName') {
+        const keyword = normalize(value);
+        const schoolRows = window.DemoStore?.get('categorySalesSchools') || [];
+        return schoolRows.some((school) => school.educationUnit === item.educationUnit
+          && normalize(school.schoolName).includes(keyword));
+      }
+      if (['categorySales', 'productSales'].includes(resource) && key === 'dateType') {
+        return ['expectedReturn', 'orderReturn'].includes(String(value));
+      }
       if (key === 'contact') {
         const keyword = normalize(value);
         return [item.manager, item.phone].some((field) => normalize(field).includes(keyword));
       }
       if (key === 'dateRange' && Array.isArray(value) && value.length === 2) {
-        const source = item.createdAt || item.expectedAt || item.occurredAt || item.inboundAt || item.countAt || '';
+        const source = ['categorySales', 'productSales'].includes(resource)
+          ? conditions.dateType === 'orderReturn'
+            ? item.orderAt || item.orderTime || item.returnAt || item.returnTime || item.createdAt || ''
+            : item.expectedAt || item.returnAt || item.createdAt || ''
+          : item.createdAt || item.expectedAt || item.occurredAt || item.inboundAt || item.countAt || '';
         return (!value[0] || source >= value[0]) && (!value[1] || source <= `${value[1]} 23:59:59`);
       }
       if (resource === 'orders' && key === 'netVegetable') {
@@ -332,9 +354,25 @@
       const page = Math.max(1, Number(query.page) || 1);
       const pageSize = Math.max(1, Number(query.pageSize) || 20);
       const conditions = query.condition || {};
+      const sort = query.sort?.key && query.sort?.direction ? query.sort : null;
       const filtered = load(resource)
         .filter((item) => matches(item, conditions, resource))
-        .sort((a, b) => String(b.createdAt || b.occurredAt || b.id).localeCompare(String(a.createdAt || a.occurredAt || a.id)));
+        .sort((a, b) => {
+          if (sort) {
+            const left = a[sort.key];
+            const right = b[sort.key];
+            const leftNumber = Number(left);
+            const rightNumber = Number(right);
+            if (left !== '' && right !== '' && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+              const difference = leftNumber - rightNumber;
+              if (difference !== 0) return sort.direction === 'desc' ? -difference : difference;
+            } else {
+              const difference = String(left ?? '').localeCompare(String(right ?? ''), 'zh-CN');
+              if (difference !== 0) return sort.direction === 'desc' ? -difference : difference;
+            }
+          }
+          return String(b.createdAt || b.occurredAt || b.id).localeCompare(String(a.createdAt || a.occurredAt || a.id));
+        });
       const start = (page - 1) * pageSize;
       return {
         items: clone(filtered.slice(start, start + pageSize)),

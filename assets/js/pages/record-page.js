@@ -47,26 +47,43 @@
   function mount(config) {
     const statusMap = { ...defaultStatusMap, ...(config.statusMap || {}) };
     const annotations = (config.annotations || []).filter(Boolean);
+    const initialTabKey = config.initialTab || config.tabs?.[0]?.key;
+    const initialTabConfig = config.tabs?.find((tab) => tab.key === initialTabKey);
     const state = {
       page: 1,
       pageSize: config.pageSize || 20,
       total: 0,
       items: [],
       selected: new Set(),
-      condition: {},
+      expanded: new Set(),
+      condition: typeof config.initialCondition === 'function'
+        ? (config.initialCondition() || {})
+        : { ...(config.initialCondition || {}) },
       filterExpanded: false,
       pagination: null,
-      activeTab: config.tabs?.[0]?.key,
-      activeStatus: config.tabs?.[0]?.statusTabs?.[0]?.value ?? config.statusTabs?.[0]?.value ?? ''
+      activeTab: initialTabKey,
+      activeStatus: initialTabConfig?.initialStatus ?? initialTabConfig?.statusTabs?.[0]?.value ?? config.statusTabs?.[0]?.value ?? '',
+      sort: { ...(config.initialSort || {}) }
     };
+    const renderFilterLabel = (field) => field.labelOptions
+      ? `<label class="filter-label filter-label-select-wrap" for="filter-${field.key}-label">
+          <select class="filter-label-select" id="filter-${field.key}-label" aria-label="${escapeHtml(field.label)}">${field.labelOptions.map((option) => {
+            const value = typeof option === 'string' ? option : option.value;
+            const label = typeof option === 'string' ? option : option.label;
+            const selected = String(field.defaultLabelValue ?? '') === String(value) ? ' selected' : '';
+            return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
+          }).join('')}</select>
+        </label>`
+      : `<label class="filter-label" for="filter-${field.key}">${field.label}</label>`;
     const renderFilter = (field) => `
       <div class="operations-field">
-        <label class="filter-label" for="filter-${field.key}">${field.label}</label>
+        ${renderFilterLabel(field)}
         ${field.options
           ? `<select class="filter-select" id="filter-${field.key}"><option value="">全部</option>${field.options.map((option) => {
             const value = typeof option === 'string' ? option : option.value;
             const label = typeof option === 'string' ? option : option.label;
-            return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+            const selected = String(field.defaultValue ?? '') === String(value) ? ' selected' : '';
+            return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
           }).join('')}</select>`
           : field.type === 'dateRange'
             ? `<div class="date-range-picker operations-date-range" id="filter-wrap-${field.key}">
@@ -77,8 +94,7 @@
               ? `<div class="date-input-control operations-date-control"><input class="filter-input operations-date-input" id="filter-${field.key}" type="text" readonly placeholder="${field.placeholder || '请选择日期'}"><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div>`
               : `<input class="filter-input" id="filter-${field.key}" type="${field.type || 'text'}" placeholder="${field.placeholder || '请输入'}">`}
       </div>`;
-    const filters = config.filters || [];
-    const filterHtml = filters.map(renderFilter).join('');
+    const filterHtml = currentFilters().map(renderFilter).join('');
     const tableHeaderAnnotations = annotations.filter((annotation) => annotation.target === 'table-header');
     const filterAnnotations = annotations.filter((annotation) => annotation.target === 'filter');
     const addModalAnnotation = annotations.find((annotation) => annotation.target === 'add-modal');
@@ -133,6 +149,7 @@
     ).join('');
     const standardContent = `
       <section class="page-card operations-page ${escapeHtml(config.pageClass || '')}" aria-label="${escapeHtml(config.title)}">
+        ${config.pageHeader || ''}
         ${config.tabs ? `<div class="operations-tabs">${config.tabs.map((tab, index) => `<button class="operations-tab ${index === 0 ? 'active' : ''}" data-view-tab="${tab.key}">${tab.label}</button>`).join('')}</div>` : ''}
         <div class="operations-status-row"><div class="operations-status-tabs" id="recordStatusTabs"></div></div>
         <div class="operations-filter filter-section">
@@ -175,6 +192,16 @@
     const content = config.pageClass ? standardContent : legacyContent;
     const root = window.AppShell.mount({ title: config.title, content });
     const $ = (selector) => root.querySelector(selector);
+    const pageElement = root.querySelector('.operations-page');
+    const syncActiveTabState = () => {
+      if (pageElement && config.tabs?.length) {
+        pageElement.dataset.activeTab = state.activeTab || '';
+        root.querySelectorAll('.operations-tab').forEach((element) => {
+          element.classList.toggle('active', element.dataset.viewTab === state.activeTab);
+        });
+      }
+    };
+    syncActiveTabState();
     const overlay = $('#recordOverlay');
     const annotationById = new Map(annotations.map((annotation) => [
       annotation.id || `annotation-${annotation.number || 1}`,
@@ -188,6 +215,28 @@
     };
     const syncAnnotationOverlay = () => annotationOverlay.sync?.();
     const datePickers = new Map();
+
+    function initializeDatePickers() {
+      currentFilters().filter((field) => field.type === 'date').forEach((field) => {
+        const input = $(`#filter-${field.key}`);
+        if (input && window.DatePicker) datePickers.set(field.key, window.DatePicker.create({ input }));
+      });
+      currentFilters().filter((field) => field.type === 'dateRange').forEach((field) => {
+        const container = $(`#filter-wrap-${field.key}`);
+        if (container && window.DateRangePicker) datePickers.set(field.key, window.DateRangePicker.create({ container }));
+      });
+    }
+
+    function renderFilters() {
+      const grid = root.querySelector('[data-operations-filter-grid]');
+      if (!grid) return;
+      datePickers.forEach((picker) => picker?.destroy?.());
+      datePickers.clear();
+      grid.innerHTML = currentFilters().map(renderFilter).join('');
+      initializeDatePickers();
+      updateFilterLayout();
+      syncAnnotationOverlay();
+    }
 
     function updateFilterLayout() {
       const grid = root.querySelector('[data-operations-filter-grid]');
@@ -289,8 +338,34 @@
       return active?.resource || config.resource;
     }
 
+    function currentFilters() {
+      const active = config.tabs?.find((tab) => tab.key === state.activeTab);
+      return active?.filters || config.filters || [];
+    }
+
     function currentTab() {
       return config.tabs?.find((tab) => tab.key === state.activeTab);
+    }
+
+    function showSequenceColumn() {
+      const active = currentTab();
+      return (active?.hideSequence ?? config.hideSequence) !== true;
+    }
+
+    function isExpandable() {
+      const active = currentTab();
+      if (active?.expandableRows === false || config.expandableRows === false) return false;
+      return active?.expandableRows === true || config.expandableRows === true;
+    }
+
+    function isSeparateExpandColumn() {
+      const active = currentTab();
+      return active?.separateExpandColumn === true || config.separateExpandColumn === true;
+    }
+
+    function expandedRowRenderer() {
+      const active = currentTab();
+      return active?.renderExpandedRow || config.renderExpandedRow;
     }
 
     function currentStatusTabs() {
@@ -334,6 +409,12 @@
       });
     }
 
+    function showRowActions() {
+      const active = currentTab();
+      if (active && active.hideRowActions !== undefined) return active.hideRowActions !== true;
+      return config.hideRowActions !== true;
+    }
+
     function isSelectable(item) {
       const active = currentTab();
       const predicate = active?.selectableWhen || config.selectableWhen;
@@ -372,8 +453,11 @@
     }
 
     function renderHead() {
-      const showSequence = config.hideSequence !== true;
-      const showActions = config.hideRowActions !== true;
+      const showSequence = showSequenceColumn();
+      const showActions = showRowActions();
+      const expandHeader = isExpandable() && isSeparateExpandColumn()
+        ? '<th class="record-expand-cell" aria-label="展开"></th>'
+        : '';
       const selectionHeader = config.selectable === false
         ? ''
         : config.customSelection
@@ -395,7 +479,7 @@
             return '<th' + rowspan + colspan + '><span class="record-annotation-header-label">' + escapeHtml(header.label) + '</span>' + marker + '</th>';
           }).join('');
           const leading = rowIndex === 0
-            ? headerSelection + (showSequence ? '<th rowspan="' + rows.length + '">序号</th>' : '')
+            ? expandHeader + headerSelection + (showSequence ? '<th rowspan="' + rows.length + '">序号</th>' : '')
             : '';
           const trailing = rowIndex === 0 && showActions ? '<th rowspan="' + rows.length + '">操作</th>' : '';
           return '<tr>' + leading + cells + trailing + '</tr>';
@@ -404,13 +488,16 @@
         return;
       }
       $('#recordHead').innerHTML = `<tr>
-        ${selectionHeader}
+        ${expandHeader}${selectionHeader}
         ${showSequence ? '<th>序号</th>' : ''}${currentColumns().map((column) => {
           const annotation = columnHeaderAnnotations.get(column.key);
           const marker = annotation
             ? renderAnnotationMarker(annotation, `${column.key}-header`, true)
             : '';
-          return `<th><span class="record-annotation-header-label">${column.label}</span>${marker}</th>`;
+          const header = typeof column.headerRender === 'function'
+            ? column.headerRender(column, state)
+            : `<span class="record-annotation-header-label">${column.label}</span>`;
+          return `<th>${header}${marker}</th>`;
         }).join('')}${showActions ? '<th>操作</th>' : ''}
       </tr>`;
     }
@@ -425,30 +512,60 @@
       `).join('');
     }
 
+    function expandedRowsFor(item) {
+      const active = currentTab();
+      if (active?.expandableRows === false || config.expandableRows === false) return [];
+      const provider = active?.expandedRows || config.expandedRows;
+      if (typeof provider !== 'function') return [];
+      const rows = provider(item);
+      return Array.isArray(rows) ? rows : [];
+    }
+
     function renderBody() {
       const columns = currentColumns();
+      const showSequence = showSequenceColumn();
+      const expandable = isExpandable();
+      const separateExpandColumn = expandable && isSeparateExpandColumn();
+      const customExpandedRenderer = expandedRowRenderer();
+      const hasCustomExpandedRow = typeof customExpandedRenderer === 'function';
       const extraColumns = (config.selectable === false ? 0 : 1)
-        + (config.hideSequence === true ? 0 : 1)
-        + (config.hideRowActions === true ? 0 : 1);
+        + (showSequence ? 1 : 0)
+        + (separateExpandColumn ? 1 : 0)
+        + (showRowActions() ? 1 : 0);
       if (!state.items.length) {
         $('#recordBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + extraColumns}">暂无数据</td></tr>`;
         syncAnnotationOverlay();
         return;
       }
-      $('#recordBody').innerHTML = state.items.map((item, index) => {
-        const actions = currentActions(item);
-        const selectable = isSelectable(item);
-        const checked = state.selected.has(item.id);
+      const expandColumnKey = config.expandColumnKey || columns[0]?.key;
+      const renderRow = (item, index, options = {}) => {
+        const child = options.child === true;
+        const hasChildren = options.hasChildren === true;
+        const expanded = options.expanded === true;
+        const actions = child ? [] : currentActions(item);
+        const selectable = child ? false : isSelectable(item);
+        const checked = !child && state.selected.has(item.id);
+        const expandButton = !child && expandable && (hasChildren || hasCustomExpandedRow)
+          ? `<button class="record-row-expand" type="button" data-row-expand="${escapeHtml(item.id)}" aria-label="${expanded ? '收起' : '展开'}${escapeHtml(item.customerName || item.schoolName || '记录')}" aria-expanded="${expanded}"><span class="record-row-expand-icon" aria-hidden="true"></span></button>`
+          : '';
+        const expandCell = separateExpandColumn
+          ? `<td class="record-expand-cell">${expandButton}</td>`
+          : '';
         const selectionCell = config.selectable === false
           ? ''
           : config.customSelection
             ? `<td><span class="custom-checkbox record-row-select${checked ? ' checked' : ''}${selectable ? '' : ' is-disabled'}" role="checkbox" aria-checked="${checked}" aria-label="选择数据" tabindex="${selectable ? '0' : '-1'}"${selectable ? '' : ' aria-disabled="true"'}></span></td>`
             : `<td><input type="checkbox" class="record-row-select" aria-label="选择数据" ${checked ? 'checked' : ''} ${selectable ? '' : 'disabled'}></td>`;
-        return `<tr data-id="${escapeHtml(item.id)}">
+        return `<tr class="${child ? 'record-row-child' : 'record-row-parent'}" data-id="${escapeHtml(item.id)}"${child && options.parentId ? ` data-parent-id="${escapeHtml(options.parentId)}"` : ''}>
+          ${expandCell}
           ${selectionCell}
-          ${config.hideSequence === true ? '' : `<td>${(state.page - 1) * state.pageSize + index + 1}</td>`}
+          ${showSequence ? `<td>${(state.page - 1) * state.pageSize + index + 1}</td>` : ''}
           ${columns.map((column) => {
             const cell = formatCell(item, column);
+            if (column.key === expandColumnKey && expandable && !separateExpandColumn) {
+              if (child) return `<td><span class="record-row-child-label">${cell}</span></td>`;
+              return `<td>${expandButton}${cell}</td>`;
+            }
             if (column.href) {
               const href = typeof column.href === 'function' ? column.href(item) : column.href;
               return `<td><button class="cell-link" type="button" data-cell-href="${escapeHtml(href)}" onclick="window.location.href=this.dataset.cellHref">${cell}</button></td>`;
@@ -459,12 +576,43 @@
               : '';
             return `<td><span class="record-annotation-entry"><button class="cell-link" data-row-action="view">${cell}</button>${entryAnnotation}</span></td>`;
           }).join('')}
-          ${config.hideRowActions === true ? '' : `<td><div class="cell-actions operation-actions">${actions.map((action) => {
+          ${showRowActions() && !child ? `<td><div class="cell-actions operation-actions">${actions.map((action) => {
             const isDisabled = action.disabled && action.disabled(item);
             return `<button class="btn-text ${action.danger ? 'danger' : ''}" data-row-action="${action.key}"${isDisabled ? ' disabled' : ''}>${action.label}</button>`;
-          }).join('') || '--'}</div></td>`}
+          }).join('') || '--'}</div></td>` : ''}
         </tr>`;
+      };
+      const bodyRows = state.items.map((item, index) => {
+        const children = expandable && !hasCustomExpandedRow ? expandedRowsFor(item) : [];
+        const rows = [renderRow(item, index, {
+          expanded: state.expanded.has(item.id),
+          hasChildren: children.length > 0 || hasCustomExpandedRow
+        })];
+        if (state.expanded.has(item.id) && hasCustomExpandedRow) {
+          const content = customExpandedRenderer(item);
+          if (content) {
+            rows.push(`<tr class="record-expanded-row" data-expanded-for="${escapeHtml(item.id)}"><td colspan="${columns.length + extraColumns}">${content}</td></tr>`);
+          }
+        } else if (state.expanded.has(item.id)) {
+          rows.push(...children.map((child, childIndex) => renderRow(child, childIndex, {
+            child: true,
+            parentId: item.id
+          })));
+        }
+        return rows.join('');
       }).join('');
+      const summaryRenderer = currentTab()?.summaryRow || config.summaryRow;
+      const summaryRow = typeof summaryRenderer === 'function'
+        ? summaryRenderer({
+          items: state.items,
+          columns,
+          state,
+          showSequence,
+          separateExpandColumn,
+          showActions: showRowActions()
+        }) || ''
+        : '';
+      $('#recordBody').innerHTML = bodyRows + summaryRow;
       syncAnnotationOverlay();
     }
 
@@ -508,10 +656,12 @@
 
     function collectCondition() {
       const condition = {};
-      (config.filters || []).forEach((field) => {
+      currentFilters().forEach((field) => {
         if (field.type === 'dateRange') {
           const value = datePickers.get(field.key)?.getValue();
           if (value?.startDate || value?.endDate) condition[field.conditionKey || field.key] = [value.startDate, value.endDate];
+          const labelValue = $(`#filter-${field.key}-label`)?.value;
+          if (field.labelConditionKey && labelValue) condition[field.labelConditionKey] = labelValue;
           return;
         }
         const value = $(`#filter-${field.key}`).value.trim();
@@ -529,9 +679,26 @@
             condition.status = statuses.length > 1 ? statuses : state.activeStatus;
           } else delete condition.status;
         }
-        const result = await service.list(currentResource(), { page: state.page, pageSize: state.pageSize, condition });
+        const sort = state.sort?.key && state.sort?.direction ? state.sort : undefined;
+        const result = await service.list(currentResource(), {
+          page: state.page,
+          pageSize: state.pageSize,
+          condition,
+          ...(sort ? { sort } : {})
+        });
         state.items = result.items;
         state.total = result.total;
+        const renderer = expandedRowRenderer();
+        const defaultExpanded = currentTab()?.expandedByDefault ?? config.expandedByDefault;
+        if (typeof renderer === 'function' || typeof defaultExpanded === 'function') {
+          state.expanded.clear();
+          state.items.forEach((item, index) => {
+            const shouldExpand = typeof defaultExpanded === 'function'
+              ? defaultExpanded(item, index)
+              : Boolean(defaultExpanded);
+            if (shouldExpand) state.expanded.add(item.id);
+          });
+        }
       } catch (error) {
         state.items = [];
         state.total = 0;
@@ -748,7 +915,7 @@
         const selectedItems = sourceItems.filter((item) => state.selected.has(item.id));
         if (!selectedItems.length) return toast('请选择要导出的数据', 'error');
         const columns = currentColumns();
-        const exportColumns = config.hideSequence === true ? columns : [{ key: '__sequence', label: '序号' }, ...columns];
+        const exportColumns = showSequenceColumn() ? [{ key: '__sequence', label: '序号' }, ...columns] : columns;
         const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
         const titleRow = new Array(exportColumns.length).fill('');
         titleRow[Math.floor(titleRow.length / 2)] = `${config.exportTitle || config.title}-${formatExportDateTime(new Date())}`;
@@ -923,15 +1090,39 @@
         }
         return;
       }
+      const expandButton = event.target.closest('[data-row-expand]');
+      if (expandButton) {
+        const id = expandButton.dataset.rowExpand;
+        if (state.expanded.has(id)) state.expanded.delete(id);
+        else state.expanded.add(id);
+        renderBody();
+        return;
+      }
       const rowButton = event.target.closest('[data-row-action]');
       if (rowButton) return rowAction(rowButton.dataset.rowAction, rowButton.closest('tr').dataset.id);
+      const sortButton = event.target.closest('[data-record-sort]');
+      if (sortButton) {
+        state.sort = {
+          key: sortButton.dataset.recordSort,
+          direction: sortButton.dataset.sortDirection || 'asc'
+        };
+        state.page = 1;
+        state.selected.clear();
+        return load();
+      }
       const toolbarButton = event.target.closest('[data-toolbar-action]');
       if (toolbarButton) return toolbarAction(toolbarButton.dataset.toolbarAction);
       const tabButton = event.target.closest('[data-view-tab]');
       if (tabButton) {
         state.activeTab = tabButton.dataset.viewTab;
-        state.activeStatus = currentStatusTabs()[0]?.value ?? '';
+        const nextTab = currentTab();
+        state.activeStatus = nextTab?.initialStatus ?? currentStatusTabs()[0]?.value ?? '';
+        state.condition = {};
+        state.sort = {};
+        state.expanded.clear();
+        syncActiveTabState();
         root.querySelectorAll('.operations-tab').forEach((element) => element.classList.toggle('active', element === tabButton));
+        renderFilters();
         state.page = 1;
         state.selected.clear();
         return load();
@@ -954,7 +1145,14 @@
         return load();
       }
       if (event.target.id === 'recordReset') {
-        root.querySelectorAll('.operations-filter input,.operations-filter select').forEach((element) => { element.value = ''; });
+        root.querySelectorAll('.operations-filter input,.operations-filter select').forEach((element) => {
+          if (element.classList.contains('filter-label-select')) {
+            const field = currentFilters().find((item) => `filter-${item.key}-label` === element.id);
+            element.value = field?.defaultLabelValue || '';
+            return;
+          }
+          element.value = '';
+        });
         datePickers.forEach((picker) => picker.clear(false));
         state.condition = {};
         if (state.activeStatus) {
@@ -1010,14 +1208,7 @@
       if (event.key === 'Escape' && overlay.innerHTML) closeModal();
     });
 
-    (config.filters || []).filter((field) => field.type === 'date').forEach((field) => {
-      const input = $(`#filter-${field.key}`);
-      if (input && window.DatePicker) datePickers.set(field.key, window.DatePicker.create({ input }));
-    });
-    (config.filters || []).filter((field) => field.type === 'dateRange').forEach((field) => {
-      const container = $(`#filter-wrap-${field.key}`);
-      if (container && window.DateRangePicker) datePickers.set(field.key, window.DateRangePicker.create({ container }));
-    });
+    initializeDatePickers();
     load();
     return { load, state };
   }

@@ -500,8 +500,8 @@
       goodsCode: 'SP0300025',
       goodsName: '大米(KG/--/--)',
       isNetVegetable: false,
-      category: '主食',
-      fullCategory: '主食-粮食类',
+      category: '主食（米面粉点心类）',
+      fullCategory: '主食（米面粉点心类）-粮食类',
       unit: 'KG',
       orderCount: 2,
       orderQty: 160,
@@ -521,6 +521,65 @@
       createdAt: '2026-08-03 08:00:00'
     }
   ];
+
+  const educationDistricts = [
+    '孟村回族自治县', '石油分局', '海兴县', '东光县', '南大港', '南皮县', '沧县', '献县',
+    '中捷产业园', '黄骅市', '市直属', '港城', '任丘', '盐山', '河间', '肃宁', '吴桥', '青县', '泊头市'
+  ];
+
+  const categorySales = educationDistricts.map((district, index) => {
+    const stapleQty = 180 + index * 20;
+    const oilQty = 48 + index * 4;
+    const vegetableQty = 120 + index * 15;
+    const meatBeanQty = 72 + index * 6;
+    const aquaticQty = 36 + index * 5;
+    const dairyQty = 64 + index * 8;
+    const seasoningQty = 42 + index * 3;
+    const otherQty = 24 + index * 2;
+    return {
+      id: `CATEGORY-SALE-${String(index + 1).padStart(3, '0')}`,
+      educationUnit: `${district}教育局`,
+      stapleQty,
+      oilQty,
+      vegetableQty,
+      meatBeanQty,
+      aquaticQty,
+      dairyQty,
+      seasoningQty,
+      otherQty,
+      totalQty: stapleQty + oilQty + vegetableQty + meatBeanQty + aquaticQty + dairyQty + seasoningQty + otherQty,
+      createdAt: `2026-08-${String((index % 9) + 1).padStart(2, '0')} 08:00:00`
+    };
+  });
+
+  const categorySalesSchools = educationDistricts.flatMap((district, districtIndex) => {
+    const schools = [`${district}第一中学`, `${district}实验小学`, `${district}中心幼儿园`];
+    return schools.map((schoolName, schoolIndex) => {
+      const stapleQty = 52 + districtIndex * 4 + schoolIndex * 8;
+      const oilQty = 16 + districtIndex * 2 + schoolIndex * 3;
+      const vegetableQty = 68 + districtIndex * 5 + schoolIndex * 10;
+      const meatBeanQty = 34 + districtIndex * 3 + schoolIndex * 6;
+      const aquaticQty = 22 + districtIndex * 2 + schoolIndex * 4;
+      const dairyQty = 44 + districtIndex * 4 + schoolIndex * 7;
+      const seasoningQty = 18 + districtIndex + schoolIndex * 3;
+      const otherQty = 12 + districtIndex + schoolIndex * 2;
+      return {
+        id: `CATEGORY-SCHOOL-${String(districtIndex * schools.length + schoolIndex + 1).padStart(3, '0')}`,
+        educationUnit: `${district}教育局`,
+        schoolName,
+        stapleQty,
+        oilQty,
+        vegetableQty,
+        meatBeanQty,
+        aquaticQty,
+        dairyQty,
+        seasoningQty,
+        otherQty,
+        totalQty: stapleQty + oilQty + vegetableQty + meatBeanQty + aquaticQty + dairyQty + seasoningQty + otherQty,
+        createdAt: `2026-08-${String((districtIndex % 9) + 1).padStart(2, '0')} 08:30:00`
+      };
+    });
+  });
 
   const goodsProfitStatistics = [
     {
@@ -606,6 +665,8 @@
     inventoryBalance,
     inventoryDetails,
     productSales,
+    categorySales,
+    categorySalesSchools,
     goodsProfitStatistics
   };
 })();

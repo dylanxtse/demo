@@ -58,17 +58,107 @@
     { key: 'sorter', label: '分拣员' },
     { key: 'sortingAt', label: '分拣时间' }
   ];
+
+  const customerSortingStatusMap = {
+    PENDING: ['未分拣', 'info'],
+    PARTIAL: ['部分分拣', 'danger'],
+    SORTED: ['已分拣', 'success']
+  };
+
+  function renderCustomerStatus(status) {
+    const meta = customerSortingStatusMap[status] || [status || '--', ''];
+    return `<span class="operation-status ${meta[1]}">${escapeHtml(meta[0])}</span>`;
+  }
+
+  function buildCustomerOrderRows(customer) {
+    const sortingItems = window.DemoStore?.get('sortingItems') || [];
+    const orders = window.DemoStore?.get('orders') || [];
+    const orderMap = new Map(orders.map((order) => [order.orderNo, order]));
+    const groups = new Map();
+    const addItem = (item, orderNo = item.orderNo) => {
+      const key = orderNo || item.orderId || `${customer.customerName}-${groups.size}`;
+      if (!groups.has(key)) groups.set(key, { orderNo: orderNo || '--', items: [] });
+      groups.get(key).items.push(item);
+    };
+
+    sortingItems
+      .filter((item) => item.customerName === customer.customerName && item.canteen === customer.canteen)
+      .forEach((item) => addItem(item));
+
+    orders
+      .filter((order) => order.customerName === customer.customerName && order.canteen === customer.canteen)
+      .forEach((order) => {
+        if (!groups.has(order.orderNo)) {
+          (order.items || []).forEach((item) => addItem({
+            ...item,
+            orderNo: order.orderNo,
+            orderId: order.id,
+            orderTag: order.orderTag,
+            status: Number(item.shippedQty || 0) >= Number(item.quantity || 0) ? 'SORTED' : 'PENDING',
+            orderQty: item.quantity,
+            actualQty: item.shippedQty
+          }, order.orderNo));
+        }
+      });
+
+    return [...groups.values()].map((group) => {
+      const order = orderMap.get(group.orderNo) || {};
+      const statuses = group.items.map((item) => item.status || 'PENDING');
+      const hasProgress = group.items.some((item) => ['SORTED', 'PARTIAL'].includes(item.status)
+        || Number(item.actualQty || item.shippedQty || 0) > 0);
+      const sortingStatus = statuses.length && statuses.every((status) => status === 'SORTED')
+        ? 'SORTED'
+        : hasProgress ? 'PARTIAL' : 'PENDING';
+      const productKinds = new Set(group.items.map((item) => item.category || item.goodsCode || item.goodsName).filter(Boolean));
+      const amount = order.orderAmount ?? group.items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+      const orderStatus = order.status === 'COMPLETED'
+        ? ['已完成', 'success']
+        : order.status === 'CLOSED'
+          ? ['已关闭', 'danger']
+          : ['待发货', ''];
+      const orderId = order.id || group.items[0]?.orderId || '';
+      const orderHref = `./order-detail.html?id=${encodeURIComponent(orderId)}&orderNo=${encodeURIComponent(group.orderNo || '')}`;
+      return {
+        orderNo: group.orderNo,
+        orderHref,
+        orderTag: group.items[0]?.orderTag || order.orderTag || '--',
+        productCount: productKinds.size || Number(order.productCount || 0),
+        orderAmount: Number(amount || 0).toFixed(2),
+        sortingStatus,
+        shipped: group.items.length && group.items.every((item) => item.shipped === '是') ? '已发货' : '未发货',
+        orderStatus
+      };
+    });
+  }
+
+  function renderCustomerOrderTable(customer) {
+    const rows = buildCustomerOrderRows(customer);
+    const body = rows.length
+      ? rows.map((row) => `<tr>
+          <td><button class="cell-link" type="button" data-cell-href="${escapeHtml(row.orderHref)}">${escapeHtml(row.orderNo)}</button></td>
+          <td>${escapeHtml(row.orderTag)}</td>
+          <td>${escapeHtml(row.productCount)}</td>
+          <td>${escapeHtml(row.orderAmount)}</td>
+          <td>${renderCustomerStatus(row.sortingStatus)}</td>
+          <td>${escapeHtml(row.shipped)}</td>
+          <td><span class="operation-status ${row.orderStatus[1]}">${escapeHtml(row.orderStatus[0])}</span></td>
+        </tr>`).join('')
+      : '<tr><td colspan="7" class="empty-cell">暂无订单明细</td></tr>';
+    return `<div class="sorting-customer-order-list">
+      <table class="operations-table sorting-customer-order-table">
+        <thead><tr><th>订单号</th><th>订单标签</th><th>商品种类</th><th>下单金额</th><th>分拣状态</th><th>是否发货</th><th>订单状态</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+  }
+
   const customerColumns = [
     { key: 'customerName', label: '客户名称' },
     { key: 'canteen', label: '食堂' },
     { key: 'route', label: '线路' },
-    { key: 'receiver', label: '收货人' },
-    { key: 'phone', label: '收货手机' },
-    { key: 'address', label: '收货地址' },
-    { key: 'expectedAt', label: '期望送达时间' },
-    { key: 'sortedCount', label: '已分拣数' },
-    { key: 'orderCount', label: '总数量' },
-    { key: 'progress', label: '分拣进度' },
+    { key: 'consignee', label: '收货人' },
+    { key: 'consigneePhone', label: '收货手机' },
+    { key: 'consigneeAddress', label: '收货地址' },
     { key: 'status', label: '单据状态', format: 'status' }
   ];
   window.RecordPageConfig = {
@@ -141,6 +231,12 @@
         label: '客户分拣',
         resource: 'sortingProgress',
         columns: customerColumns,
+        hideSequence: true,
+        expandableRows: true,
+        separateExpandColumn: true,
+        expandedByDefault: (item, index) => index === 0,
+        renderExpandedRow: renderCustomerOrderTable,
+        initialStatus: '',
         statusTabs: [
           { label: '未分拣', value: 'PENDING,PARTIAL' },
           { label: '已分拣', value: 'SORTED' },
@@ -148,7 +244,9 @@
         ],
         toolbar: [
           { key: 'batchSort', label: '一键分拣', primary: true, batchTransition: 'sort', message: '确定一键分拣选中客户的商品吗？', visibleStatuses: ['PENDING', 'PARTIAL', ''] },
-          { key: 'print', label: '一键打印', icon: 'supplier-purchase-print', toast: '已生成客户分拣打印预览', visibleStatuses: ['SORTED'] },
+          { key: 'batchShortage', label: '批量标记缺货', batchTransition: 'markShortage', message: '确定标记选中客户的商品为缺货？', visibleStatuses: ['PENDING', 'PARTIAL', ''] },
+          { key: 'print', label: '一键打印', icon: 'supplier-purchase-print', toast: '已生成客户分拣打印预览', visibleStatuses: [''] },
+          { key: 'printDocument', label: '打印', icon: 'supplier-purchase-print', side: true, toast: '已生成客户分拣单据打印预览' },
           { key: 'export', label: '导出', icon: 'supplier-purchase-export' }
         ],
         rowActions: [
@@ -164,7 +262,7 @@
     toolbar: [],
     statusMap: {
       PENDING: ['未分拣', 'danger'],
-      PARTIAL: ['部分分拣', 'warning'],
+      PARTIAL: ['部分分拣', 'danger'],
       SORTED: ['已分拣', 'success'],
       SHORTAGE: ['缺货', 'danger']
     }

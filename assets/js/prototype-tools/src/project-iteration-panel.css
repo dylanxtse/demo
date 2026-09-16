@@ -186,6 +186,11 @@
   transition: border-color .16s ease, color .16s ease, background .16s ease;
 }
 
+.project-iteration-annotation-visibility-toggle[hidden],
+.project-iteration-annotation-mode-host[hidden] {
+  display: none !important;
+}
+
 .project-iteration-annotation-visibility-toggle:hover,
 .project-iteration-annotation-visibility-toggle:focus-visible,
 .project-iteration-annotation-visibility-toggle[aria-pressed="true"],

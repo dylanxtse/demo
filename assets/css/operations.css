@@ -2,6 +2,7 @@
 
 .operations-tabs {
   display: flex;
+  align-items: flex-end;
   gap: 28px;
   height: 42px;
   margin: -4px 0 14px;
@@ -10,6 +11,9 @@
 
 .operations-tab {
   position: relative;
+  display: inline-flex;
+  height: 42px;
+  align-items: center;
   padding: 0 2px;
   border: 0;
   background: transparent;
@@ -782,6 +786,181 @@
   color: var(--primary);
 }
 .sorting-status-boxed .operations-status-tab.active::after { display: none; }
+
+/* 客户分拣使用“客户主行 + 订单明细”的展开列表。 */
+.sorting-module-page .record-expand-cell {
+  width: 44px;
+  min-width: 44px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.sorting-module-page .record-row-expand {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.sorting-module-page .record-row-expand:hover { background: #edf3fc; }
+.sorting-module-page .record-row-expand:focus-visible { outline: 1px solid #7ba6e8; outline-offset: 1px; }
+.sorting-module-page .record-row-expand-icon {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid #8792a3;
+  transition: transform .18s ease;
+}
+.sorting-module-page .record-row-expand[aria-expanded='true'] .record-row-expand-icon { transform: rotate(90deg); }
+.sorting-module-page .record-expanded-row > td {
+  height: auto;
+  padding: 10px 16px;
+  background: #f8fafc;
+  text-align: left;
+}
+.sorting-module-page .record-expanded-row > td:last-child {
+  position: static;
+  min-width: 0;
+  border-right: 0;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.sorting-customer-order-list { width: 100%; overflow: hidden; }
+.sorting-customer-order-table {
+  width: 100%;
+  min-width: 0 !important;
+  table-layout: fixed;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  background: #fff;
+}
+.sorting-customer-order-table th,
+.sorting-customer-order-table td {
+  height: 44px !important;
+  min-width: 0 !important;
+  padding: 0 12px !important;
+  text-align: center !important;
+  white-space: nowrap;
+}
+.sorting-customer-order-table th { background: #f2f5fa !important; color: var(--text-secondary); font-weight: 500; }
+.sorting-customer-order-table th:first-child,
+.sorting-customer-order-table td:first-child { width: 23%; }
+.sorting-customer-order-table th:nth-child(2),
+.sorting-customer-order-table td:nth-child(2) { width: 14%; }
+.sorting-customer-order-table th:nth-child(3),
+.sorting-customer-order-table td:nth-child(3) { width: 12%; }
+.sorting-customer-order-table th:nth-child(4),
+.sorting-customer-order-table td:nth-child(4) { width: 14%; }
+.sorting-customer-order-table th:nth-child(5),
+.sorting-customer-order-table td:nth-child(5) { width: 14%; }
+.sorting-customer-order-table th:nth-child(6),
+.sorting-customer-order-table td:nth-child(6) { width: 12%; }
+.sorting-customer-order-table th:nth-child(7),
+.sorting-customer-order-table td:nth-child(7) { width: 14%; }
+.sorting-customer-order-table th:last-child,
+.sorting-customer-order-table td:last-child {
+  position: static;
+  min-width: 0;
+  background: inherit;
+  box-shadow: none;
+}
+.sorting-customer-order-table .operation-status { font-size: 12px; }
+
+/* 客户分拣在常规桌面宽度下直接铺满内容区，避免横向滚动查看。 */
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th,
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td {
+  height: 40px;
+  min-width: 0 !important;
+  padding: 6px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(1),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(1) { width: 3.5%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(2),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(2) { width: 4%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(3),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(3) { width: 14%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(4),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(4) { width: 9%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(5),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(5) { width: 9%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(6),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(6) { width: 9%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(7),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(7) { width: 13%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(8),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(8) { width: 16%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(9),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(9) { width: 9%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:nth-child(10),
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:nth-child(10) { width: 13.5%; }
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) th:last-child,
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) td:last-child {
+  width: 13.5%;
+  min-width: 0 !important;
+  padding-right: 6px;
+  padding-left: 6px;
+}
+.sorting-module-page[data-active-tab="customer"] .operations-table:not(.sorting-customer-order-table) .operation-actions {
+  flex-wrap: wrap;
+  gap: 0 8px;
+  line-height: 18px;
+}
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row > td { padding: 8px 10px; }
+.sorting-module-page[data-active-tab="customer"] .sorting-customer-order-table th,
+.sorting-module-page[data-active-tab="customer"] .sorting-customer-order-table td {
+  height: 40px !important;
+  padding: 0 8px !important;
+  font-size: 12px;
+}
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th,
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(1),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(1) { width: 23% !important; }
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(2),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(2) { width: 14% !important; }
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(3),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(3) { width: 12% !important; }
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(4),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(4) { width: 14% !important; }
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(5),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(5) { width: 14% !important; }
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(6),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(6) { width: 12% !important; }
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table th:nth-child(7),
+.sorting-module-page[data-active-tab="customer"] .record-expanded-row .sorting-customer-order-table td:nth-child(7) { width: 14% !important; }
+.sorting-module-page[data-active-tab="customer"] .operations-table-wrap { overflow-x: hidden; }
+
 .sorting-detail-header {
   display: flex;
   min-height: 44px;
