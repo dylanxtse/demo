@@ -964,14 +964,16 @@
         "title": "导出",
         "items": [
           "导出当前页面全部列表信息；",
-          "导出字段和当前页面列表字段一致（不含操作项）"
+          "导出字段和当前页面列表字段一致（不含操作项）",
+          "导出列表首行显示导出区间（导出时选择的时间区间和时间类型）、导出时间（年月日时分秒）",
+          "标题显示导出的区域/学校+商品分类销量"
         ],
         "number": "3",
         "positionByScope": {
           "page": {
             "markerPosition": {
-              "x": 1532,
-              "y": 13
+              "x": 1174,
+              "y": 16
             },
             "popoverPosition": {
               "x": -383,
@@ -1051,6 +1053,60 @@
             "popoverPosition": {
               "x": 30,
               "y": 7
+            }
+          }
+        }
+      }
+    ],
+    "category-sales-detail.html::吴桥": [
+      {
+        "id": "custom-1789562789785-1",
+        "target": "custom",
+        "targetSelector": "section.page-card > div.record-table-annotation-surface:nth-of-type(5) > div.operations-table-container > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(2)",
+        "placement": "right",
+        "scope": "page",
+        "title": "学校列表",
+        "items": [
+          "列表仅显示当前区域下启用状态的学校；",
+          "金额计算：筛选条件下的订单发货金额-退货金额"
+        ],
+        "number": "1",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 293,
+              "y": -9
+            },
+            "popoverPosition": {
+              "x": 27,
+              "y": -94
+            }
+          }
+        }
+      }
+    ],
+    "category-sales-detail.html::青县": [
+      {
+        "id": "custom-1789562826567-1",
+        "target": "custom",
+        "targetSelector": "section.page-card > div.record-table-annotation-surface:nth-of-type(5) > div.operations-table-container > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(4)",
+        "placement": "right",
+        "scope": "page",
+        "title": "列表",
+        "items": [
+          "列表仅显示启用状态的学校，展开显示改学校存在的食堂销售信息；",
+          "金额计算：筛选条件下的订单发货金额-退货金额"
+        ],
+        "number": "1",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": -211,
+              "y": -29
+            },
+            "popoverPosition": {
+              "x": 38,
+              "y": -3
             }
           }
         }

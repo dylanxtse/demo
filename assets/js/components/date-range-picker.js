@@ -22,6 +22,17 @@
     panel.className = 'calendar-panel cal-dual';
     document.body.appendChild(panel);
 
+    const maxRangeDays = Number(options.maxRangeDays) > 0 ? Number(options.maxRangeDays) : 0;
+    const parseDateValue = (value) => {
+      const [year, month, day] = String(value || '').split('-').map(Number);
+      return year && month && day ? Date.UTC(year, month - 1, day) : null;
+    };
+    const dateDistance = (startDate, endDate) => {
+      const start = parseDateValue(startDate);
+      const end = parseDateValue(endDate);
+      return start == null || end == null ? 0 : Math.round(Math.abs(end - start) / 86400000);
+    };
+    const exceedsMaxRange = (startDate, endDate) => maxRangeDays > 0 && dateDistance(startDate, endDate) > maxRangeDays;
     const state = { leftYear: 0, leftMonth: 0, rightYear: 0, rightMonth: 0, startDate: startInput?.value || '', endDate: endInput?.value || '' };
 
     function renderMonth(year, month, side) {
@@ -39,6 +50,7 @@
         if (date === state.startDate) className += ' cal-start';
         if (date === state.endDate) className += ' cal-end';
         if (state.startDate && state.endDate && date > state.startDate && date < state.endDate) className += ' cal-in-range';
+        if (state.startDate && !state.endDate && exceedsMaxRange(state.startDate, date)) className += ' cal-disabled';
         cells += `<td class="${className}" data-date="${date}">${day}</td>`;
       }
       const remaining = (7 - ((firstDay.getDay() + daysInMonth) % 7)) % 7;
@@ -108,10 +120,11 @@
       if (action === 'drp-prev-year' || action === 'drp-next-year') { shiftYear(actionEl.dataset.side, action === 'drp-prev-year' ? 'prev' : 'next'); return; }
       if (action === 'drp-clear') { state.startDate = ''; state.endDate = ''; updateDisplay(); close(); emitChange(); return; }
       const day = event.target.closest('.cal-day');
-      if (!day) return;
+      if (!day || day.classList.contains('cal-disabled')) return;
       const date = day.dataset.date;
       if (!state.startDate || state.endDate) { state.startDate = date; state.endDate = ''; render(); }
       else if (date < state.startDate) { state.startDate = date; render(); }
+      else if (exceedsMaxRange(state.startDate, date)) return;
       else { state.endDate = date; updateDisplay(); close(); emitChange(); }
     }
 

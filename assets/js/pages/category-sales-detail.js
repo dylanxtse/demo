@@ -6,12 +6,31 @@
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-  const educationUnit = new URLSearchParams(window.location.search).get('region') || '';
+  const pageParams = new URLSearchParams(window.location.search);
+  const educationUnit = pageParams.get('region') || '';
   const regionName = String(educationUnit).replace(/\s*教育局\s*$/, '').trim();
   const backIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path><path d="M19 12H9"></path></svg>';
   const backAction = "window.location.href='./product-sales.html?tab=category&source=detail';";
   const pageTitle = regionName || '区域';
   document.title = `${pageTitle} - 集采企业版企业端`;
+  const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const previousDate = new Date();
+  previousDate.setDate(previousDate.getDate() - 1);
+  const passedStartDate = pageParams.get('startDate') || '';
+  const passedEndDate = pageParams.get('endDate') || '';
+  const hasPassedDateRange = Boolean(passedStartDate || passedEndDate);
+  const initialDateRange = hasPassedDateRange
+    ? [passedStartDate, passedEndDate]
+    : [formatDate(previousDate), formatDate(previousDate)];
+  const initialCondition = { educationUnit };
+  if (hasPassedDateRange) {
+    initialCondition.dateRange = initialDateRange;
+    initialCondition.dateType = pageParams.get('dateType') || 'expectedReturn';
+  }
+  const salesDateLabelOptions = [
+    { label: '期望送达/退货时间', value: 'expectedReturn' },
+    { label: '下单时间/退货时间', value: 'orderReturn' }
+  ];
   const categoryKeys = [
     'stapleQty', 'oilQty', 'vegetableQty', 'meatBeanQty',
     'aquaticQty', 'dairyQty', 'seasoningQty', 'otherQty'
@@ -80,12 +99,23 @@
     selectable: false,
     summaryRow: renderSummaryRow,
     resource: 'categorySalesSchools',
-    initialCondition: { educationUnit },
+    initialCondition,
     expandableRows: true,
     separateExpandColumn: true,
     expandedRows: buildCanteenRows,
     expandedByDefault: () => Boolean(getSchoolCanteenKeyword()),
     filters: [
+      {
+        key: 'dateRange',
+        label: '期望送达/退货时间',
+        type: 'dateRange',
+        labelConditionKey: 'dateType',
+        defaultLabelValue: 'expectedReturn',
+        initialValue: initialDateRange,
+        maxRangeDays: 365,
+        hintText: '先选开始日期，再选结束日期，最多选择一年',
+        labelOptions: salesDateLabelOptions
+      },
       { key: 'schoolCanteen', label: '学校/食堂', placeholder: '请输入' }
     ],
     columns: [

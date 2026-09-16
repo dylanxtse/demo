@@ -66,6 +66,11 @@
     { label: '期望送达/退货时间', value: 'expectedReturn' },
     { label: '下单时间/退货时间', value: 'orderReturn' }
   ];
+  const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const previousDate = new Date();
+  previousDate.setDate(previousDate.getDate() - 1);
+  const defaultSalesDateRange = [formatDate(previousDate), formatDate(previousDate)];
+  const salesDateHint = '先选开始日期，再选结束日期，最多选择一年';
   const pageParams = new URLSearchParams(window.location.search);
   const initialTab = pageParams.get('tab') === 'category' && pageParams.get('source') === 'detail'
     ? 'category'
@@ -88,6 +93,9 @@
         type: 'dateRange',
         labelConditionKey: 'dateType',
         defaultLabelValue: 'expectedReturn',
+        initialValue: defaultSalesDateRange,
+        maxRangeDays: 365,
+        hintText: salesDateHint,
         labelOptions: salesDateLabelOptions
       },
       { key: 'category', label: '分类', options: primaryCategories },
@@ -132,6 +140,9 @@
             type: 'dateRange',
             labelConditionKey: 'dateType',
             defaultLabelValue: 'expectedReturn',
+            initialValue: defaultSalesDateRange,
+            maxRangeDays: 365,
+            hintText: salesDateHint,
             labelOptions: salesDateLabelOptions
           },
           { key: 'educationUnit', label: '区域', placeholder: '请输入' },
@@ -140,7 +151,16 @@
         columns: categorySalesColumns,
         hideRowActions: false,
         rowActions: [{ key: 'view', label: '详情' }],
-        detailHref: (item) => `./category-sales-detail.html?region=${encodeURIComponent(item.educationUnit || '')}`
+        detailHref: (item, context = {}) => {
+          const params = new URLSearchParams({ region: item.educationUnit || '' });
+          const dateRange = context.condition?.dateRange;
+          if (Array.isArray(dateRange) && (dateRange[0] || dateRange[1])) {
+            if (dateRange[0]) params.set('startDate', dateRange[0]);
+            if (dateRange[1]) params.set('endDate', dateRange[1]);
+            if (context.condition?.dateType) params.set('dateType', context.condition.dateType);
+          }
+          return `./category-sales-detail.html?${params.toString()}`;
+        }
       }
     ],
     toolbar: [{ key: 'export', label: '导出' }]

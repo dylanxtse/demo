@@ -70,7 +70,8 @@
           <select class="filter-label-select" id="filter-${field.key}-label" aria-label="${escapeHtml(field.label)}">${field.labelOptions.map((option) => {
             const value = typeof option === 'string' ? option : option.value;
             const label = typeof option === 'string' ? option : option.label;
-            const selected = String(field.defaultLabelValue ?? '') === String(value) ? ' selected' : '';
+            const selectedLabelValue = state.condition[field.labelConditionKey] ?? field.defaultLabelValue ?? '';
+            const selected = String(selectedLabelValue) === String(value) ? ' selected' : '';
             return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
           }).join('')}</select>
         </label>`
@@ -223,7 +224,20 @@
       });
       currentFilters().filter((field) => field.type === 'dateRange').forEach((field) => {
         const container = $(`#filter-wrap-${field.key}`);
-        if (container && window.DateRangePicker) datePickers.set(field.key, window.DateRangePicker.create({ container }));
+        if (!container || !window.DateRangePicker) return;
+        const picker = window.DateRangePicker.create({
+          container,
+          maxRangeDays: field.maxRangeDays,
+          hintText: field.hintText
+        });
+        const configuredValue = state.condition[field.conditionKey || field.key]
+          ?? (typeof field.initialValue === 'function' ? field.initialValue() : field.initialValue);
+        if (Array.isArray(configuredValue)) {
+          picker?.setValue(configuredValue[0] || '', configuredValue[1] || '', false);
+        } else if (configuredValue && typeof configuredValue === 'object') {
+          picker?.setValue(configuredValue.startDate || '', configuredValue.endDate || '', false);
+        }
+        if (picker) datePickers.set(field.key, picker);
       });
     }
 
@@ -949,7 +963,12 @@
       if (actionKey === 'view') {
         const detailHref = currentTab()?.detailHref || config.detailHref;
         if (detailHref) {
-          window.location.href = typeof detailHref === 'function' ? detailHref(item) : detailHref;
+          const detailContext = {
+            state,
+            condition: { ...state.condition },
+            activeTab: state.activeTab
+          };
+          window.location.href = typeof detailHref === 'function' ? detailHref(item, detailContext) : detailHref;
           return;
         }
         return showDetail(item);

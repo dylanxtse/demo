@@ -882,6 +882,8 @@
 .cal-table td { height: 32px; border-radius: 4px; color: var(--text-primary); font-size: 13px; text-align: center; cursor: pointer; }
 .cal-empty { cursor: default; }
 .cal-day:hover { background: var(--primary-light); color: var(--primary); }
+.cal-day.cal-disabled,
+.cal-day.cal-disabled:hover { background: transparent; color: #b8bfca; cursor: not-allowed; }
 .cal-today { font-weight: 600; }
 .cal-start, .cal-end { background: var(--primary); color: #fff; }
 .cal-start:hover, .cal-end:hover { background: var(--primary); color: #fff; }
