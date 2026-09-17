@@ -913,7 +913,7 @@
         "title": "日期区间查询查询",
         "items": [
           "默认期望送达/退货时间，可切换为下单时间/退货时间；",
-          "默认为当前日期的前一天；"
+          "默认为最近一个月，结束日期为当前日期；"
         ],
         "number": "1",
         "positionByScope": {
@@ -962,12 +962,6 @@
         "placement": "right",
         "scope": "page",
         "title": "导出",
-        "items": [
-          "导出当前页面全部列表信息；",
-          "导出字段和当前页面列表字段一致（不含操作项）",
-          "导出列表首行显示导出区间（导出时选择的时间区间和时间类型）、导出时间（年月日时分秒）",
-          "标题显示导出的区域/学校+商品分类销量"
-        ],
         "popoverActions": [
           {
             "key": "view-category-sales-export-template",
@@ -975,12 +969,17 @@
             "className": "btn btn-sm record-annotation-demo-action record-annotation-action"
           }
         ],
+        "items": [
+          "导出当前页面全部列表信息；",
+          "导出字段和当前页面列表字段一致（不含操作项）",
+          "导出列表首行显示导出区间（导出时选择的时间区间和时间类型）、导出时间（年月日时分秒）"
+        ],
         "number": "3",
         "positionByScope": {
           "page": {
             "markerPosition": {
-              "x": 1174,
-              "y": 16
+              "x": 1545,
+              "y": 23
             },
             "popoverPosition": {
               "x": -383,
@@ -1048,7 +1047,7 @@
         "title": "日期区间查询",
         "items": [
           "默认期望送达/退货时间，可切换为下单时间/退货时间；",
-          "默认为当前日期的前一天；"
+          "默认为最近一个月，结束日期为当前日期；"
         ],
         "tab": "product",
         "number": "6",
