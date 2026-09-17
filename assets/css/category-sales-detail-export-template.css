@@ -21,8 +21,8 @@
   color: #5f6672;
 }
 .category-sales-detail-export-template-table .category-sales-detail-export-child-row td:first-child {
-  padding-left: 28px;
-  text-align: left;
+  padding-left: 16px;
+  text-align: center;
 }
 
 .category-sales-detail-export-template-table .category-sales-detail-export-school-group-even td {
