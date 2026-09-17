@@ -43,12 +43,14 @@
     expectedReturn: '期望送达/退货时间',
     orderReturn: '下单时间/退货时间'
   };
-  const previousDate = new Date();
-  previousDate.setDate(previousDate.getDate() - 1);
-  const defaultDate = formatDate(previousDate);
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date(defaultEndDate);
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+  const defaultStartDateText = formatDate(defaultStartDate);
+  const defaultEndDateText = formatDate(defaultEndDate);
   const dateTypeLabel = dateTypeLabels[params.get('dateType')] || dateTypeLabels.expectedReturn;
-  const startDate = params.get('startDate') || defaultDate;
-  const endDate = params.get('endDate') || startDate;
+  const startDate = params.get('startDate') || defaultStartDateText;
+  const endDate = params.get('endDate') || (params.get('startDate') ? startDate : defaultEndDateText);
   const statisticPeriod = `${dateTypeLabel}：${startDate}--${endDate}`;
   const exportTime = formatDateTime(new Date());
   const renderValue = (row, column) => column.key === 'educationUnit'

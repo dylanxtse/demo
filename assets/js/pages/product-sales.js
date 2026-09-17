@@ -67,9 +67,10 @@
     { label: '下单时间/退货时间', value: 'orderReturn' }
   ];
   const formatDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const previousDate = new Date();
-  previousDate.setDate(previousDate.getDate() - 1);
-  const defaultSalesDateRange = [formatDate(previousDate), formatDate(previousDate)];
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date(defaultEndDate);
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+  const defaultSalesDateRange = [formatDate(defaultStartDate), formatDate(defaultEndDate)];
   const salesDateHint = '先选开始日期，再选结束日期，最多选择一年';
   const getCategorySalesExportParams = () => {
     const dateRange = document.querySelector('#filter-wrap-dateRange');
@@ -209,6 +210,7 @@
             if (dateRange[0]) params.set('startDate', dateRange[0]);
             if (dateRange[1]) params.set('endDate', dateRange[1]);
             if (context.condition?.dateType) params.set('dateType', context.condition.dateType);
+            params.set('applyDateFilter', 'true');
           }
           return `./category-sales-detail.html?${params.toString()}`;
         }

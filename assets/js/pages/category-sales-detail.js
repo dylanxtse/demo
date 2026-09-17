@@ -18,16 +18,18 @@
     const pad = (value) => String(value).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   };
-  const previousDate = new Date();
-  previousDate.setDate(previousDate.getDate() - 1);
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date(defaultEndDate);
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
   const passedStartDate = pageParams.get('startDate') || '';
   const passedEndDate = pageParams.get('endDate') || '';
   const hasPassedDateRange = Boolean(passedStartDate || passedEndDate);
   const initialDateRange = hasPassedDateRange
     ? [passedStartDate, passedEndDate]
-    : [formatDate(previousDate), formatDate(previousDate)];
+    : [formatDate(defaultStartDate), formatDate(defaultEndDate)];
+  const applyDateFilter = pageParams.get('applyDateFilter') === 'true';
   const initialCondition = { educationUnit };
-  if (hasPassedDateRange) {
+  if (hasPassedDateRange && applyDateFilter) {
     initialCondition.dateRange = initialDateRange;
     initialCondition.dateType = pageParams.get('dateType') || 'expectedReturn';
   }
@@ -88,6 +90,7 @@
     });
     const schoolCanteen = document.querySelector('#filter-schoolCanteen')?.value?.trim();
     if (schoolCanteen) params.set('schoolCanteen', schoolCanteen);
+    params.set('applyDateFilter', String(hasPassedDateRange && applyDateFilter));
     return params;
   };
   const openCategorySalesDetailExportTemplate = (includeCanteens = true) => {

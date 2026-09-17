@@ -152,7 +152,7 @@
         return schoolRows.some((school) => school.educationUnit === item.educationUnit
           && normalize(school.schoolName).includes(keyword));
       }
-      if (['categorySales', 'productSales'].includes(resource) && key === 'dateType') {
+      if (['categorySales', 'categorySalesSchools', 'productSales'].includes(resource) && key === 'dateType') {
         return ['expectedReturn', 'orderReturn'].includes(String(value));
       }
       if (key === 'contact') {
