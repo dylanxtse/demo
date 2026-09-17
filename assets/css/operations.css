@@ -169,8 +169,11 @@
 .toolbar-dropdown-toggle { min-width: 32px; padding: 0 8px; border-left: 1px solid rgba(255,255,255,.35); border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .toolbar-dropdown-menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; display: none; min-width: 132px; padding: 4px 0; border: 1px solid var(--border-color); border-radius: 4px; background: #fff; box-shadow: 0 4px 12px rgba(25, 40, 70, .14); }
 .toolbar-dropdown.is-open .toolbar-dropdown-menu { display: block; }
+.toolbar-dropdown-hover:hover .toolbar-dropdown-menu,
+.toolbar-dropdown-hover:focus-within .toolbar-dropdown-menu { display: block; }
 .toolbar-dropdown-menu button { display: block; width: 100%; padding: 8px 12px; border: 0; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; font: inherit; white-space: nowrap; }
 .toolbar-dropdown-menu button:hover { background: var(--primary-light); color: var(--primary); }
+.category-sales-detail-page .toolbar-dropdown-menu { right: 0; left: auto; min-width: 180px; }
 
 .operations-summary {
   color: var(--text-secondary);

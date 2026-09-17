@@ -133,10 +133,15 @@
       const entryAnnotation = toolbarActionAnnotations.find((annotation) => annotation.actionKey === action.key)
         || (action.key === 'add' ? addModalAnnotation : null);
       if (!options.length || !dropdownVisible) return withEntryAnnotation(`<button class="${fullButtonClass}" type="button" data-toolbar-action="${escapeHtml(effectiveKey)}"${tooltipAttrs}>${icon}${escapeHtml(effectiveLabel)}</button>`, entryAnnotation, `${action.key}-entry`);
+      const dropdownMenu = `<div class="toolbar-dropdown-menu">${options.map((option) => `<button type="button" data-toolbar-option="${escapeHtml(option.key)}">${escapeHtml(option.label)}</button>`).join('')}</div>`;
+      if (action.hoverDropdown) return withEntryAnnotation(`<div class="toolbar-dropdown toolbar-dropdown-hover">
+        <button class="${fullButtonClass} toolbar-dropdown-main" type="button" data-toolbar-action="${escapeHtml(effectiveKey)}"${tooltipAttrs}>${icon}${escapeHtml(effectiveLabel)}</button>
+        ${dropdownMenu}
+      </div>`, entryAnnotation, `${action.key}-entry`);
       return withEntryAnnotation(`<div class="toolbar-dropdown">
         <button class="${fullButtonClass} toolbar-dropdown-main" type="button" data-toolbar-action="${escapeHtml(effectiveKey)}"${tooltipAttrs}>${icon}${escapeHtml(effectiveLabel)}</button>
         <button class="${buttonClass} toolbar-dropdown-toggle ${action.primary ? 'btn-primary' : ''}" type="button" data-toolbar-dropdown-toggle aria-label="更多操作">▾</button>
-        <div class="toolbar-dropdown-menu">${options.map((option) => `<button type="button" data-toolbar-option="${escapeHtml(option.key)}">${escapeHtml(option.label)}</button>`).join('')}</div>
+        ${dropdownMenu}
       </div>`, entryAnnotation, `${action.key}-entry`);
     };
     const toolbarHtml = toolbarActions.filter((action) => !isSideToolbarAction(action)).map((action) =>
@@ -1026,6 +1031,16 @@
         const templateWindow = window.open(templateHref, '_blank', 'noopener');
         if (!templateWindow) window.location.href = templateHref;
         return;
+      }
+      if (typeof action.execute === 'function') {
+        return action.execute({
+          state,
+          action,
+          service,
+          resource: currentResource(),
+          columns: currentColumns(),
+          toast
+        });
       }
       if (action.requiresSelection || action.validateSelection) {
         const selectedItems = state.items.filter((item) => state.selected.has(item.id));

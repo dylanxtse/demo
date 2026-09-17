@@ -29,7 +29,7 @@
     { key: 'dairyQty', label: '蛋奶类', format: 'decimal' },
     { key: 'seasoningQty', label: '调料', format: 'decimal' },
     { key: 'otherQty', label: '其他材料', format: 'decimal' },
-    { key: 'totalQty', label: '销量合计', format: 'decimal' }
+    { key: 'totalQty', label: '销量合计（元）', format: 'decimal' }
   ];
 
   const productSummaryKeys = new Set([
@@ -43,10 +43,10 @@
   const sumSummaryValue = (items, key) => items
     .reduce((total, item) => total + Number(item[key] || 0), 0)
     .toFixed(2);
-  const renderSalesSummaryRow = (items, columns, summaryKeys, showSequence, showActions) => {
+  const renderSalesSummaryRow = (items, columns, summaryKeys, showSequence, showActions, summaryLabel = '合计') => {
     const leading = showSequence ? '<td></td>' : '';
     const cells = columns.map((column, index) => {
-      if (index === 0) return '<td class="record-summary-label">合计</td>';
+      if (index === 0) return `<td class="record-summary-label">${summaryLabel}</td>`;
       if (summaryKeys.has(column.key)) return `<td>${sumSummaryValue(items, column.key)}</td>`;
       return `<td>${column.key === 'actualRank' ? '--' : ''}</td>`;
     }).join('');
@@ -56,7 +56,7 @@
   const renderProductSummaryRow = ({ items, columns, showSequence, showActions }) =>
     renderSalesSummaryRow(items, columns, productSummaryKeys, showSequence, showActions);
   const renderCategorySummaryRow = ({ items, columns, showSequence, showActions }) =>
-    renderSalesSummaryRow(items, columns, categorySummaryKeys, showSequence, showActions);
+    renderSalesSummaryRow(items, columns, categorySummaryKeys, showSequence, showActions, '合计（元）');
 
   const primaryCategories = [
     '主食（米面粉点心类）', '食油', '果蔬', '肉（豆）制品',
@@ -71,6 +71,56 @@
   previousDate.setDate(previousDate.getDate() - 1);
   const defaultSalesDateRange = [formatDate(previousDate), formatDate(previousDate)];
   const salesDateHint = '先选开始日期，再选结束日期，最多选择一年';
+  const getCategorySalesExportParams = () => {
+    const dateRange = document.querySelector('#filter-wrap-dateRange');
+    const startDate = dateRange?.querySelector('[data-date-start]')?.value || defaultSalesDateRange[0];
+    const endDate = dateRange?.querySelector('[data-date-end]')?.value || startDate || defaultSalesDateRange[1];
+    const dateType = document.querySelector('#filter-dateRange-label')?.value || 'expectedReturn';
+    const params = new URLSearchParams({ dateType, startDate, endDate });
+    const region = document.querySelector('#filter-educationUnit')?.value?.trim();
+    const school = document.querySelector('#filter-schoolName')?.value?.trim();
+    if (region) params.set('region', region);
+    if (school) params.set('school', school);
+    return params;
+  };
+  const openCategorySalesExportTemplate = () => {
+    const templateUrl = `./category-sales-export-template.html?${getCategorySalesExportParams().toString()}`;
+    const templateWindow = window.open(templateUrl, '_blank', 'noopener');
+    if (!templateWindow) window.location.href = templateUrl;
+  };
+  const categorySalesDateAnnotation = {
+    id: 'custom-1789559390858-1',
+    target: 'custom',
+    targetSelector: '[aria-label="商品销量"]',
+    tab: 'category',
+    placement: 'right',
+    scope: 'page'
+  };
+  const categorySalesSchoolAnnotation = {
+    id: 'custom-1789559533309-2',
+    target: 'custom',
+    targetSelector: 'section.page-card > div.operations-filter:nth-of-type(3)',
+    tab: 'category',
+    placement: 'right',
+    scope: 'page'
+  };
+  const categorySalesExportAnnotation = {
+    id: 'custom-1789559610289-3',
+    target: 'custom',
+    targetSelector: 'section.page-card > div.operations-toolbar:nth-of-type(4)',
+    tab: 'category',
+    placement: 'right',
+    scope: 'page',
+    title: '导出',
+    popoverActions: [{
+      key: 'view-category-sales-export-template',
+      label: '查看模版',
+      className: 'btn btn-sm record-annotation-demo-action record-annotation-action'
+    }],
+    onAction: ({ key }) => {
+      if (key === 'view-category-sales-export-template') openCategorySalesExportTemplate();
+    }
+  };
   const pageParams = new URLSearchParams(window.location.search);
   const initialTab = pageParams.get('tab') === 'category' && pageParams.get('source') === 'detail'
     ? 'category'
@@ -86,6 +136,7 @@
     selectable: false,
     resource: 'productSales',
     summaryRow: renderProductSummaryRow,
+    annotations: [categorySalesDateAnnotation, categorySalesSchoolAnnotation, categorySalesExportAnnotation],
     filters: [
       {
         key: 'dateRange',

@@ -709,6 +709,12 @@
   display: block;
 }
 
+.order-module-page.category-sales-detail-page .operations-field .filter-label,
+.order-module-page.category-sales-detail-page .operations-field .filter-label-select-wrap {
+  width: 156px;
+  flex: 0 0 156px;
+}
+
 .order-module-page.category-sales-detail-page .record-page-detail-header {
   margin: -16px -16px 16px;
 }

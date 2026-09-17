@@ -1,0 +1,34 @@
+.category-sales-export-template-block + .category-sales-export-template-block {
+  margin-top: 28px;
+}
+
+.category-sales-export-template-variant-title {
+  padding: 0 0 10px;
+  color: #263c68;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  text-align: left;
+}
+
+.category-sales-detail-export-template-table .category-sales-detail-export-parent-row td {
+  background: #fff;
+  color: var(--register-text);
+  font-weight: 600;
+}
+.category-sales-detail-export-template-table .category-sales-detail-export-child-row td {
+  background: #fbfcfe;
+  color: #5f6672;
+}
+.category-sales-detail-export-template-table .category-sales-detail-export-child-row td:first-child {
+  padding-left: 28px;
+  text-align: left;
+}
+
+.category-sales-detail-export-template-table .category-sales-detail-export-school-group-even td {
+  background: #fff !important;
+}
+
+.category-sales-detail-export-template-table .category-sales-detail-export-school-group-odd td {
+  background: #f7f9fc !important;
+}
