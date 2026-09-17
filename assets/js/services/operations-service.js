@@ -590,9 +590,14 @@
       const result = await this.list(resource, { ...query, page: 1, pageSize: Number.MAX_SAFE_INTEGER });
       const selectedColumns = columns.filter((column) => column.key && column.key !== 'actions');
       const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+      const getColumnValue = (item, column) => typeof column.exportValue === 'function'
+        ? column.exportValue(item)
+        : typeof column.value === 'function'
+          ? column.value(item)
+          : item[column.key];
       return [
         selectedColumns.map((column) => escape(column.label)).join(','),
-        ...result.items.map((item) => selectedColumns.map((column) => escape(item[column.key])).join(','))
+        ...result.items.map((item) => selectedColumns.map((column) => escape(getColumnValue(item, column))).join(','))
       ].join('\n');
     },
 

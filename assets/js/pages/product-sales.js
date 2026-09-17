@@ -19,18 +19,76 @@
     </span>`;
   };
 
-  const categorySalesColumns = [
-    { key: 'educationUnit', label: '区域', render: (item) => formatEducationUnit(item.educationUnit) },
-    { key: 'stapleQty', label: '主食（米面粉点心类）', format: 'decimal' },
-    { key: 'oilQty', label: '食油', format: 'decimal' },
-    { key: 'vegetableQty', label: '果蔬', format: 'decimal' },
-    { key: 'meatBeanQty', label: '肉（豆）制品', format: 'decimal' },
-    { key: 'aquaticQty', label: '水产品', format: 'decimal' },
-    { key: 'dairyQty', label: '蛋奶类', format: 'decimal' },
-    { key: 'seasoningQty', label: '调料', format: 'decimal' },
-    { key: 'otherQty', label: '其他材料', format: 'decimal' },
-    { key: 'totalQty', label: '销量合计（元）', format: 'decimal' }
-  ];
+  const categoryLevelDefinitions = {
+    1: [
+      { key: 'staple', label: '主食（米面粉点心类）', sourceKey: 'stapleQty', ratio: 1 },
+      { key: 'oil', label: '食油', sourceKey: 'oilQty', ratio: 1 },
+      { key: 'vegetable', label: '果蔬', sourceKey: 'vegetableQty', ratio: 1 },
+      { key: 'meat-bean', label: '肉（豆）制品', sourceKey: 'meatBeanQty', ratio: 1 },
+      { key: 'aquatic', label: '水产品', sourceKey: 'aquaticQty', ratio: 1 },
+      { key: 'dairy', label: '蛋奶类', sourceKey: 'dairyQty', ratio: 1 },
+      { key: 'seasoning', label: '调料', sourceKey: 'seasoningQty', ratio: 1 },
+      { key: 'other', label: '其他材料', sourceKey: 'otherQty', ratio: 1 }
+    ],
+    2: [
+      { key: 'grain', label: '粮食类', sourceKey: 'stapleQty', ratio: 1 },
+      { key: 'oil', label: '食油二级', sourceKey: 'oilQty', ratio: 1 },
+      { key: 'leaf', label: '叶菜类', sourceKey: 'vegetableQty', ratio: 0.25 },
+      { key: 'root', label: '根茎类', sourceKey: 'vegetableQty', ratio: 0.25 },
+      { key: 'fruit', label: '茄果类', sourceKey: 'vegetableQty', ratio: 0.25 },
+      { key: 'clean', label: '净菜类', sourceKey: 'vegetableQty', ratio: 0.25 },
+      { key: 'meat', label: '肉（豆）制品二级', sourceKey: 'meatBeanQty', ratio: 1 },
+      { key: 'freshwater', label: '淡水鱼类', sourceKey: 'aquaticQty', ratio: 0.5 },
+      { key: 'aquatic-other', label: '水产品二级', sourceKey: 'aquaticQty', ratio: 0.5 },
+      { key: 'dairy', label: '蛋奶类二级', sourceKey: 'dairyQty', ratio: 1 },
+      { key: 'seasoning', label: '调味品二级', sourceKey: 'seasoningQty', ratio: 1 },
+      { key: 'other', label: '其他二级', sourceKey: 'otherQty', ratio: 1 }
+    ],
+    3: [
+      { key: 'rice', label: '米类', sourceKey: 'stapleQty', ratio: 0.55 },
+      { key: 'flour', label: '面类', sourceKey: 'stapleQty', ratio: 0.45 },
+      { key: 'peanut-oil', label: '花生油', sourceKey: 'oilQty', ratio: 0.4 },
+      { key: 'soybean-oil', label: '豆油', sourceKey: 'oilQty', ratio: 0.6 },
+      { key: 'leaf', label: '叶菜类', sourceKey: 'vegetableQty', ratio: 0.2 },
+      { key: 'root', label: '根茎类', sourceKey: 'vegetableQty', ratio: 0.2 },
+      { key: 'fruit', label: '茄果类', sourceKey: 'vegetableQty', ratio: 0.2 },
+      { key: 'clean', label: '净菜类', sourceKey: 'vegetableQty', ratio: 0.4 },
+      { key: 'meat', label: '肉类', sourceKey: 'meatBeanQty', ratio: 0.6 },
+      { key: 'bean', label: '豆制品', sourceKey: 'meatBeanQty', ratio: 0.4 },
+      { key: 'freshwater', label: '淡水鱼类', sourceKey: 'aquaticQty', ratio: 0.6 },
+      { key: 'aquatic-other', label: '其他水产品', sourceKey: 'aquaticQty', ratio: 0.4 },
+      { key: 'milk', label: '乳制品', sourceKey: 'dairyQty', ratio: 0.6 },
+      { key: 'egg', label: '蛋类', sourceKey: 'dairyQty', ratio: 0.4 },
+      { key: 'seasoning', label: '调味品', sourceKey: 'seasoningQty', ratio: 1 },
+      { key: 'other', label: '其他材料', sourceKey: 'otherQty', ratio: 1 }
+    ]
+  };
+  const getCategoryLevelDefinitions = (level) => categoryLevelDefinitions[level] || categoryLevelDefinitions[1];
+  const getCategoryStatValue = (item, definition) => Number(
+    (Number(item?.[definition.sourceKey] || 0) * definition.ratio).toFixed(2)
+  );
+  const getCategorySalesColumns = ({ state } = {}) => {
+    const level = Number(state?.viewState?.categoryLevel) || 1;
+    const definitions = getCategoryLevelDefinitions(level);
+    const categoryColumns = definitions.map((definition) => ({
+      key: `category-${level}-${definition.key}`,
+      label: definition.label,
+      format: 'decimal',
+      value: (item) => getCategoryStatValue(item, definition)
+    }));
+    return [
+      { key: 'educationUnit', label: '区域', render: (item) => formatEducationUnit(item.educationUnit) },
+      ...categoryColumns,
+      {
+        key: `category-${level}-totalQty`,
+        label: '销量合计（元）',
+        format: 'decimal',
+        value: (item) => Number(categoryColumns
+          .reduce((total, column) => total + Number(column.value(item) || 0), 0)
+          .toFixed(2))
+      }
+    ];
+  };
 
   const productSummaryKeys = new Set([
     'orderCount', 'orderQty', 'orderAmount', 'shippedQty', 'shippedAmount',
@@ -40,14 +98,16 @@
     'stapleQty', 'oilQty', 'vegetableQty', 'meatBeanQty',
     'aquaticQty', 'dairyQty', 'seasoningQty', 'otherQty', 'totalQty'
   ]);
-  const sumSummaryValue = (items, key) => items
-    .reduce((total, item) => total + Number(item[key] || 0), 0)
+  const sumSummaryValue = (items, column) => items
+    .reduce((total, item) => total + Number(
+      typeof column.value === 'function' ? column.value(item) : item[column.key] || 0
+    ), 0)
     .toFixed(2);
   const renderSalesSummaryRow = (items, columns, summaryKeys, showSequence, showActions, summaryLabel = '合计') => {
     const leading = showSequence ? '<td></td>' : '';
     const cells = columns.map((column, index) => {
       if (index === 0) return `<td class="record-summary-label">${summaryLabel}</td>`;
-      if (summaryKeys.has(column.key)) return `<td>${sumSummaryValue(items, column.key)}</td>`;
+      if (summaryKeys.has(column.key) || typeof column.value === 'function') return `<td>${sumSummaryValue(items, column)}</td>`;
       return `<td>${column.key === 'actualRank' ? '--' : ''}</td>`;
     }).join('');
     const actions = showActions ? '<td>--</td>' : '';
@@ -62,6 +122,53 @@
     '主食（米面粉点心类）', '食油', '果蔬', '肉（豆）制品',
     '水产品', '蛋奶类', '调料', '其他材料'
   ];
+  const getCategorySalesRegionOptions = () => {
+    const rows = window.DemoStore?.get?.('categorySales') || window.MockOperations?.categorySales || [];
+    const seen = new Set();
+    return rows.map((row) => {
+      const value = String(row?.educationUnit || '').trim();
+      return {
+        value,
+        label: value.replace(/\s*教育局\s*$/, '').trim()
+      };
+    }).filter((option) => {
+      if (!option.value || !option.label || seen.has(option.label)) return false;
+      seen.add(option.label);
+      return true;
+    });
+  };
+  const categoryLevelOptions = [
+    { value: 1, label: '一级分类' },
+    { value: 2, label: '二级分类' },
+    { value: 3, label: '三级分类' }
+  ];
+  const renderCategoryLevelSwitcher = ({ state } = {}) => {
+    const selectedLevel = Number(state?.viewState?.categoryLevel) || 1;
+    return `<div class="operations-filter-extra category-level-switch-row">
+      <div class="category-level-switch" role="group" aria-label="切换分类层级">
+        ${categoryLevelOptions.map((option) => `<button class="category-level-switch-button${selectedLevel === option.value ? ' is-active' : ''}" type="button" data-record-filter-extra="category-level" data-category-level="${option.value}" aria-pressed="${selectedLevel === option.value}">${option.label}</button>`).join('')}
+      </div>
+    </div>`;
+  };
+  const handleCategoryLevelAction = ({ action, element, state, load }) => {
+    if (action !== 'category-level') return;
+    const nextLevel = Number(element.dataset.categoryLevel);
+    if (!categoryLevelOptions.some((option) => option.value === nextLevel)) return;
+    if (!state.viewState) state.viewState = {};
+    if (Number(state.viewState.categoryLevel) === nextLevel) return;
+    state.viewState.categoryLevel = nextLevel;
+    const host = element.closest('[data-operations-filter-extra-host]');
+    host?.querySelectorAll('[data-category-level]').forEach((button) => {
+      const active = Number(button.dataset.categoryLevel) === nextLevel;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    state.page = 1;
+    state.selected.clear();
+    state.expanded.clear();
+    state.sort = {};
+    return load();
+  };
   const salesDateLabelOptions = [
     { label: '期望送达/退货时间', value: 'expectedReturn' },
     { label: '下单时间/退货时间', value: 'orderReturn' }
@@ -76,7 +183,7 @@
     const dateRange = document.querySelector('#filter-wrap-dateRange');
     const startDate = dateRange?.querySelector('[data-date-start]')?.value || defaultSalesDateRange[0];
     const endDate = dateRange?.querySelector('[data-date-end]')?.value || startDate || defaultSalesDateRange[1];
-    const dateType = document.querySelector('#filter-dateRange-label')?.value || 'expectedReturn';
+    const dateType = document.querySelector('#filter-dateRange-label')?.value || 'orderReturn';
     const params = new URLSearchParams({ dateType, startDate, endDate });
     const region = document.querySelector('#filter-educationUnit')?.value?.trim();
     const school = document.querySelector('#filter-schoolName')?.value?.trim();
@@ -130,7 +237,9 @@
   window.RecordPageConfig = {
     title: '商品销量',
     pageClass: 'order-module-page product-sales-page',
+    tabsToolbarSameRow: true,
     initialTab,
+    initialViewState: { categoryLevel: 1 },
     hideSequence: false,
     hideRowActions: true,
     showSelectionSummary: false,
@@ -144,7 +253,7 @@
         label: '期望送达/退货时间',
         type: 'dateRange',
         labelConditionKey: 'dateType',
-        defaultLabelValue: 'expectedReturn',
+        defaultLabelValue: 'orderReturn',
         initialValue: defaultSalesDateRange,
         maxRangeDays: 365,
         hintText: salesDateHint,
@@ -184,6 +293,9 @@
         key: 'category',
         label: '商品分类销量',
         resource: 'categorySales',
+        toolbarInFilterExtra: true,
+        filterExtra: renderCategoryLevelSwitcher,
+        onFilterExtraAction: handleCategoryLevelAction,
         summaryRow: renderCategorySummaryRow,
         filters: [
           {
@@ -191,20 +303,22 @@
             label: '期望送达/退货时间',
             type: 'dateRange',
             labelConditionKey: 'dateType',
-            defaultLabelValue: 'expectedReturn',
+            defaultLabelValue: 'orderReturn',
             initialValue: defaultSalesDateRange,
             maxRangeDays: 365,
             hintText: salesDateHint,
             labelOptions: salesDateLabelOptions
           },
-          { key: 'educationUnit', label: '区域', placeholder: '请输入' },
+          { key: 'educationUnit', label: '区域', type: 'searchSelect', placeholder: '请选择', options: getCategorySalesRegionOptions },
           { key: 'schoolName', label: '学校', placeholder: '请输入' }
         ],
-        columns: categorySalesColumns,
+        columns: getCategorySalesColumns,
         hideRowActions: false,
         rowActions: [{ key: 'view', label: '详情' }],
         detailHref: (item, context = {}) => {
           const params = new URLSearchParams({ region: item.educationUnit || '' });
+          const categoryLevel = Number(context.state?.viewState?.categoryLevel) || 1;
+          if ([1, 2, 3].includes(categoryLevel)) params.set('categoryLevel', String(categoryLevel));
           const dateRange = context.condition?.dateRange;
           if (Array.isArray(dateRange) && (dateRange[0] || dateRange[1])) {
             if (dateRange[0]) params.set('startDate', dateRange[0]);

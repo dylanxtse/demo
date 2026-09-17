@@ -121,6 +121,177 @@
   flex: 1;
 }
 
+.operations-search-select {
+  position: relative;
+  width: 0;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.operations-search-select-input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 30px;
+  background: #fff;
+  cursor: text;
+}
+
+.operations-search-select-input:focus {
+  outline: 2px solid rgba(2, 73, 196, .14);
+  border-color: var(--primary);
+}
+
+.operations-search-select-arrow {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  color: var(--text-tertiary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.operations-search-select-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.operations-search-select-options {
+  position: absolute;
+  z-index: 9999;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  display: none;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 0;
+  border: 1px solid #d9dee8;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(27 42 67 / 12%);
+}
+
+.operations-search-select.is-open .operations-search-select-options {
+  display: block;
+}
+
+.operations-search-select-option {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.operations-search-select-option:hover,
+.operations-search-select-option[aria-selected="true"] {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.operations-search-select-empty {
+  padding: 8px 12px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.operations-filter-extra {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.operations-filter-extra-layout.has-toolbar-placement {
+  display: flex;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.operations-filter-extra-layout.has-toolbar-placement[hidden] {
+  display: none !important;
+}
+
+.operations-filter-extra-layout.has-toolbar-placement > [data-operations-filter-extra-content] {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+.operations-filter-extra-layout.has-toolbar-placement > [data-operations-filter-extra-content] > .operations-filter-extra {
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+}
+
+.operations-filter-extra-layout.has-toolbar-placement > [data-operations-toolbar-slot] {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.operations-filter-extra-layout.has-toolbar-placement > [data-operations-toolbar-slot] > .operations-toolbar {
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+}
+
+.category-level-switch-row {
+  gap: 12px;
+}
+
+.category-level-switch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.category-level-switch-button {
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-right: 1px solid var(--border-color);
+  background: #fff;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.category-level-switch-button:last-child { border-right: 0; }
+
+.category-level-switch-button:hover,
+.category-level-switch-button.is-active {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.category-level-switch-button.is-active {
+  font-weight: 500;
+}
+
+.category-level-switch-button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(2, 73, 196, .2);
+  outline-offset: -2px;
+}
+
 /* 日期输入框控件 - 与订单管理页面期望送达时间样式一致 */
 .operations-field > .operations-date-control {
   position: relative;
@@ -184,6 +355,30 @@
   overflow: auto;
   border: 1px solid var(--border-color);
   background: #fff;
+}
+
+/* 汇总区独立于纵向滚动区，避免用 tbody 的 sticky 行与数据行发生覆盖。 */
+.operations-summary-wrap {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-top: 1px solid var(--border-light);
+  background: #fafafa;
+}
+
+.operations-summary-wrap[hidden] { display: none !important; }
+
+.operations-summary-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.operations-summary-table .record-summary-row > td {
+  height: 44px;
+  background: #fafafa;
+  color: #55627a;
+  font-weight: 600;
 }
 
 /* 企业端普通列表统一参与页面 flex 高度计算，避免多行数据把分页撑出 content-area。 */

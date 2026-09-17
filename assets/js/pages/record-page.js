@@ -59,11 +59,33 @@
       condition: typeof config.initialCondition === 'function'
         ? (config.initialCondition() || {})
         : { ...(config.initialCondition || {}) },
+      viewState: {
+        ...(config.initialViewState || {}),
+        ...(initialTabConfig?.initialViewState || {})
+      },
       filterExpanded: false,
       pagination: null,
       activeTab: initialTabKey,
       activeStatus: initialTabConfig?.initialStatus ?? initialTabConfig?.statusTabs?.[0]?.value ?? config.statusTabs?.[0]?.value ?? '',
       sort: { ...(config.initialSort || {}) }
+    };
+    const filterControlId = (field) => field.type === 'searchSelect'
+      ? `filter-${field.key}-display`
+      : `filter-${field.key}`;
+    const getFilterOptions = (field) => {
+      const configured = typeof field.options === 'function' ? field.options() : field.options;
+      const seen = new Set();
+      return (Array.isArray(configured) ? configured : [])
+        .map((option) => {
+          const value = typeof option === 'string' ? option : option?.value ?? option?.label ?? '';
+          const label = typeof option === 'string' ? option : option?.label ?? option?.value ?? '';
+          return { value: String(value ?? ''), label: String(label ?? '') };
+        })
+        .filter((option) => {
+          if (!option.value || seen.has(option.value)) return false;
+          seen.add(option.value);
+          return true;
+        });
     };
     const renderFilterLabel = (field) => field.labelOptions
       ? `<label class="filter-label filter-label-select-wrap" for="filter-${field.key}-label">
@@ -75,11 +97,24 @@
             return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
           }).join('')}</select>
         </label>`
-      : `<label class="filter-label" for="filter-${field.key}">${field.label}</label>`;
+      : `<label class="filter-label" for="${filterControlId(field)}">${field.label}</label>`;
+    const renderSearchSelect = (field) => {
+      const value = String(state.condition[field.key] ?? field.defaultValue ?? '');
+      const selected = getFilterOptions(field).find((option) => option.value === value);
+      const displayValue = selected?.label || '';
+      return `<div class="operations-search-select" data-search-select="${escapeHtml(field.key)}" data-search-select-label="${escapeHtml(displayValue)}">
+        <input type="hidden" id="filter-${escapeHtml(field.key)}" value="${escapeHtml(value)}" data-search-select-value>
+        <input class="filter-input operations-search-select-input" id="filter-${escapeHtml(field.key)}-display" type="text" value="${escapeHtml(displayValue)}" placeholder="${escapeHtml(field.placeholder || '请输入')}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="filter-${escapeHtml(field.key)}-options" data-search-select-input>
+        <span class="operations-search-select-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3.75 5.8 8 10.04l4.24-4.24" stroke="currentColor" stroke-width="1.3"/></svg></span>
+        <div class="operations-search-select-options" id="filter-${escapeHtml(field.key)}-options" role="listbox" aria-label="${escapeHtml(field.label)}选项" aria-hidden="true" data-search-select-options></div>
+      </div>`;
+    };
     const renderFilter = (field) => `
       <div class="operations-field">
         ${renderFilterLabel(field)}
-        ${field.options
+        ${field.type === 'searchSelect'
+          ? renderSearchSelect(field)
+          : field.options
           ? `<select class="filter-select" id="filter-${field.key}"><option value="">全部</option>${field.options.map((option) => {
             const value = typeof option === 'string' ? option : option.value;
             const label = typeof option === 'string' ? option : option.label;
@@ -96,6 +131,13 @@
               : `<input class="filter-input" id="filter-${field.key}" type="${field.type || 'text'}" placeholder="${field.placeholder || '请输入'}">`}
       </div>`;
     const filterHtml = currentFilters().map(renderFilter).join('');
+    const resolveFilterExtra = (tab = initialTabConfig) => {
+      const configured = tab?.filterExtra ?? config.filterExtra;
+      return typeof configured === 'function'
+        ? configured({ state, tab, config })
+        : configured || '';
+    };
+    const filterExtraHtml = resolveFilterExtra();
     const tableHeaderAnnotations = annotations.filter((annotation) => annotation.target === 'table-header');
     const filterAnnotations = annotations.filter((annotation) => annotation.target === 'filter');
     const addModalAnnotation = annotations.find((annotation) => annotation.target === 'add-modal');
@@ -153,10 +195,32 @@
     const legacyToolbarHtml = toolbarActions.map((action) =>
       `<button class="btn ${action.primary ? 'btn-primary' : ''}" data-toolbar-action="${action.key}">${action.label}</button>`
     ).join('');
+    const standardTabsHtml = config.tabs
+      ? `<div class="operations-tabs">${config.tabs.map((tab, index) => `<button class="operations-tab ${index === 0 ? 'active' : ''}" data-view-tab="${tab.key}">${tab.label}</button>`).join('')}</div>`
+      : '';
+    const standardToolbarHtml = `<div class="operations-toolbar"${hasConfiguredToolbar ? '' : ' hidden'}>
+          <div class="operations-toolbar-main">${toolbarHtml}</div>
+          <div class="operations-toolbar-side">${toolbarSideHtml}</div>
+        </div>`;
+    const toolbarPlacementForTab = (tab) => Boolean(tab?.toolbarInFilterExtra ?? config.toolbarInFilterExtra);
+    const initialToolbarInFilterExtra = toolbarPlacementForTab(initialTabConfig);
+    const hasFilterExtraToolbarPlacement = Boolean(
+      config.toolbarInFilterExtra || config.tabs?.some((tab) => tab.toolbarInFilterExtra)
+    );
+    const tabsToolbarInline = config.tabsToolbarSameRow && config.tabs;
+    const tabsAndToolbarHtml = tabsToolbarInline
+      ? `<div class="operations-tabs-toolbar-row">${standardTabsHtml}<div data-operations-toolbar-slot="tabs">${initialToolbarInFilterExtra ? '' : standardToolbarHtml}</div></div>`
+      : standardTabsHtml;
+    const filterExtraToolbarSlot = hasFilterExtraToolbarPlacement
+      ? `<div data-operations-toolbar-slot="filter-extra">${initialToolbarInFilterExtra ? standardToolbarHtml : ''}</div>`
+      : '';
+    const toolbarAfterFilterHtml = !tabsToolbarInline && !initialToolbarInFilterExtra
+      ? standardToolbarHtml
+      : '';
     const standardContent = `
       <section class="page-card operations-page ${escapeHtml(config.pageClass || '')}" aria-label="${escapeHtml(config.title)}">
         ${config.pageHeader || ''}
-        ${config.tabs ? `<div class="operations-tabs">${config.tabs.map((tab, index) => `<button class="operations-tab ${index === 0 ? 'active' : ''}" data-view-tab="${tab.key}">${tab.label}</button>`).join('')}</div>` : ''}
+        ${tabsAndToolbarHtml}
         <div class="operations-status-row"><div class="operations-status-tabs" id="recordStatusTabs"></div></div>
         <div class="operations-filter filter-section">
           <div class="operations-filter-main">
@@ -167,16 +231,18 @@
               <button class="btn btn-sm" id="recordReset">重置</button>
             </div>
           </div>
+          <div class="operations-filter-extra-layout${hasFilterExtraToolbarPlacement ? ' has-toolbar-placement' : ''}" data-operations-filter-extra-host>
+            <div data-operations-filter-extra-content>${filterExtraHtml}</div>
+            ${filterExtraToolbarSlot}
+          </div>
           ${filterAnnotations.length ? `<div class="record-annotation-corner record-filter-annotation-corner ${filterAnnotations[0].placement === 'left' ? 'is-left' : 'is-right'}">${filterAnnotations.map(renderAnnotationMarker).join('')}</div>` : ''}
         </div>
-        <div class="operations-toolbar"${hasConfiguredToolbar ? '' : ' hidden'}>
-          <div class="operations-toolbar-main">${toolbarHtml}</div>
-          <div class="operations-toolbar-side">${toolbarSideHtml}</div>
-        </div>
+        ${toolbarAfterFilterHtml}
         <div class="record-table-annotation-surface">
           ${tableHeaderAnnotations.length ? `<div class="record-annotation-corner record-table-annotation-corner ${tableHeaderAnnotations[0].placement === 'left' ? 'is-left' : 'is-right'}">${tableHeaderAnnotations.map(renderAnnotationMarker).join('')}</div>` : ''}
           <div class="operations-table-container">
-            <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
+            <div class="operations-table-wrap" data-record-table-scroll><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
+            <div class="operations-summary-wrap" data-record-summary-scroll hidden><table class="operations-table operations-summary-table"><tbody id="recordSummary"></tbody></table></div>
             <div class="pagination" id="recordPagination"></div>
           </div>
         </div>
@@ -189,6 +255,7 @@
         <div class="operations-filter">
           <div class="operations-filter-grid">${filterHtml}</div>
           <div class="operations-filter-actions"><button class="btn btn-primary" id="recordQuery">查询</button><button class="btn" id="recordReset">重置</button></div>
+          <div data-operations-filter-extra-host>${filterExtraHtml}</div>
         </div>
         <div class="operations-toolbar"${hasConfiguredToolbar ? '' : ' hidden'}>${legacyToolbarHtml}<span class="toolbar-spacer"></span></div>
         <div class="operations-table-wrap"><table class="operations-table"><thead id="recordHead"></thead><tbody id="recordBody"></tbody></table></div>
@@ -199,6 +266,41 @@
     const root = window.AppShell.mount({ title: config.title, content });
     const $ = (selector) => root.querySelector(selector);
     const pageElement = root.querySelector('.operations-page');
+    const recordTableWrap = root.querySelector('[data-record-table-scroll]');
+    const recordSummaryWrap = root.querySelector('[data-record-summary-scroll]');
+    const recordTable = recordTableWrap?.querySelector('.operations-table');
+    const recordSummaryTable = recordSummaryWrap?.querySelector('.operations-summary-table');
+    const syncSummaryLayout = () => {
+      const summaryHost = $('#recordSummary');
+      if (!recordSummaryWrap || !recordSummaryTable || !recordTableWrap || !recordTable) return;
+      const hasSummary = Boolean(summaryHost?.children.length);
+      recordSummaryWrap.hidden = !hasSummary;
+      if (!hasSummary) return;
+      const tableWidth = Math.max(recordTableWrap.scrollWidth, recordTable.getBoundingClientRect().width);
+      const viewportWidth = recordTableWrap.clientWidth;
+      recordSummaryWrap.style.width = `${viewportWidth}px`;
+      recordSummaryTable.style.width = `${tableWidth}px`;
+      recordSummaryTable.style.minWidth = `${tableWidth}px`;
+      recordSummaryWrap.scrollLeft = recordTableWrap.scrollLeft;
+    };
+    recordTableWrap?.addEventListener('scroll', () => {
+      if (recordSummaryWrap) recordSummaryWrap.scrollLeft = recordTableWrap.scrollLeft;
+    }, { passive: true });
+    window.addEventListener('resize', syncSummaryLayout);
+    function syncToolbarPlacement() {
+      const toolbar = root.querySelector('.operations-toolbar');
+      const filterExtraHost = root.querySelector('[data-operations-filter-extra-host]');
+      const filterExtraContent = filterExtraHost?.querySelector('[data-operations-filter-extra-content]');
+      const filterToolbarSlot = filterExtraHost?.querySelector('[data-operations-toolbar-slot="filter-extra"]');
+      const tabsToolbarSlot = root.querySelector('[data-operations-toolbar-slot="tabs"]');
+      const shouldUseFilterExtra = toolbarPlacementForTab(currentTab());
+      const target = shouldUseFilterExtra ? filterToolbarSlot : tabsToolbarSlot;
+      if (toolbar && target && toolbar.parentElement !== target) target.append(toolbar);
+      if (filterExtraHost) {
+        const hasFilterExtra = Boolean(filterExtraContent?.children.length || (filterExtraContent?.textContent || '').trim());
+        filterExtraHost.hidden = !shouldUseFilterExtra && !hasFilterExtra;
+      }
+    }
     const syncActiveTabState = () => {
       if (pageElement && config.tabs?.length) {
         pageElement.dataset.activeTab = state.activeTab || '';
@@ -206,6 +308,7 @@
           element.classList.toggle('active', element.dataset.viewTab === state.activeTab);
         });
       }
+      syncToolbarPlacement();
     };
     syncActiveTabState();
     const overlay = $('#recordOverlay');
@@ -252,6 +355,7 @@
       datePickers.forEach((picker) => picker?.destroy?.());
       datePickers.clear();
       grid.innerHTML = currentFilters().map(renderFilter).join('');
+      renderFilterExtra();
       initializeDatePickers();
       updateFilterLayout();
       syncAnnotationOverlay();
@@ -362,6 +466,88 @@
       return active?.filters || config.filters || [];
     }
 
+    function renderFilterExtra() {
+      const host = root.querySelector('[data-operations-filter-extra-host]');
+      if (!host) return;
+      const content = host.querySelector('[data-operations-filter-extra-content]');
+      if (content) content.innerHTML = resolveFilterExtra(currentTab());
+      else host.innerHTML = resolveFilterExtra(currentTab());
+      syncToolbarPlacement();
+    }
+
+    function getSearchSelectField(wrapper) {
+      const key = wrapper?.dataset.searchSelect;
+      return currentFilters().find((field) => field.type === 'searchSelect' && field.key === key) || null;
+    }
+
+    function getSearchSelectValue(wrapper) {
+      return wrapper?.querySelector('[data-search-select-value]')?.value || '';
+    }
+
+    function getSearchSelectLabel(field, value) {
+      if (!value) return '';
+      return getFilterOptions(field).find((option) => option.value === String(value))?.label || String(value);
+    }
+
+    function syncSearchSelect(wrapper, value, label) {
+      const hidden = wrapper?.querySelector('[data-search-select-value]');
+      const input = wrapper?.querySelector('[data-search-select-input]');
+      if (hidden) hidden.value = value || '';
+      if (input) {
+        input.value = label || '';
+        input.title = label || '';
+      }
+      if (wrapper) {
+        wrapper.dataset.searchSelectLabel = label || '';
+        wrapper.classList.remove('is-searching');
+      }
+    }
+
+    function closeSearchSelect(wrapper, restore = true) {
+      if (!wrapper) return;
+      const field = getSearchSelectField(wrapper);
+      if (restore && field) {
+        const value = getSearchSelectValue(wrapper);
+        syncSearchSelect(wrapper, value, getSearchSelectLabel(field, value));
+      }
+      wrapper.classList.remove('is-open', 'is-searching');
+      wrapper.querySelector('[data-search-select-input]')?.setAttribute('aria-expanded', 'false');
+      wrapper.querySelector('[data-search-select-options]')?.setAttribute('aria-hidden', 'true');
+    }
+
+    function closeSearchSelects(except) {
+      root.querySelectorAll('.operations-search-select.is-open').forEach((wrapper) => {
+        if (wrapper !== except) closeSearchSelect(wrapper);
+      });
+    }
+
+    function renderSearchSelectOptions(wrapper, query = '') {
+      const field = getSearchSelectField(wrapper);
+      const optionsHost = wrapper?.querySelector('[data-search-select-options]');
+      if (!field || !optionsHost) return;
+      const keyword = String(query || '').trim().toLocaleLowerCase();
+      const options = [{ value: '', label: '全部' }, ...getFilterOptions(field)]
+        .filter((option) => !keyword
+          || option.label.toLocaleLowerCase().includes(keyword)
+          || option.value.toLocaleLowerCase().includes(keyword));
+      const selectedValue = getSearchSelectValue(wrapper);
+      optionsHost.innerHTML = options.length
+        ? options.map((option) => `<button type="button" class="operations-search-select-option" role="option" data-search-select-option="${escapeHtml(option.value)}" data-search-select-label="${escapeHtml(option.label)}" aria-selected="${String(option.value === selectedValue)}">${escapeHtml(option.label)}</button>`).join('')
+        : '<div class="operations-search-select-empty">暂无匹配项</div>';
+    }
+
+    function openSearchSelect(input) {
+      const wrapper = input?.closest('[data-search-select]');
+      if (!wrapper) return;
+      closeSearchSelects(wrapper);
+      wrapper.classList.add('is-open');
+      input.setAttribute('aria-expanded', 'true');
+      wrapper.querySelector('[data-search-select-options]')?.setAttribute('aria-hidden', 'false');
+      const selectedLabel = wrapper.dataset.searchSelectLabel || '';
+      const query = input.value === selectedLabel ? '' : input.value;
+      renderSearchSelectOptions(wrapper, query);
+    }
+
     function currentTab() {
       return config.tabs?.find((tab) => tab.key === state.activeTab);
     }
@@ -393,7 +579,10 @@
 
     function currentColumns() {
       const active = config.tabs?.find((tab) => tab.key === state.activeTab);
-      return active?.columns || config.columns;
+      const configured = active?.columns ?? config.columns;
+      return typeof configured === 'function'
+        ? configured({ state, tab: active, config }) || []
+        : configured || [];
     }
 
     function currentToolbar() {
@@ -455,7 +644,7 @@
         const display = window.DomUtils?.formatProductDisplay?.(item) || item[column.key] || '--';
         return `<span class="product-display-text" title="${escapeHtml(display)}">${escapeHtml(display)}</span>`;
       }
-      const value = item[column.key];
+      const value = typeof column.value === 'function' ? column.value(item) : item[column.key];
       if (column.editableNumber) {
         const inputValue = column.blankZero && Number(value || 0) === 0 ? '' : (value ?? '');
         return `<input class="quantity-input record-inline-input" data-inline-field="${column.key}" type="number" min="0" value="${escapeHtml(inputValue)}" placeholder="${escapeHtml(column.placeholder || '请输入')}" aria-label="${escapeHtml(column.label)}">`;
@@ -553,6 +742,9 @@
         + (showRowActions() ? 1 : 0);
       if (!state.items.length) {
         $('#recordBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + extraColumns}">暂无数据</td></tr>`;
+        const summaryHost = $('#recordSummary');
+        if (summaryHost) summaryHost.innerHTML = '';
+        syncSummaryLayout();
         syncAnnotationOverlay();
         return;
       }
@@ -631,7 +823,14 @@
           showActions: showRowActions()
         }) || ''
         : '';
-      $('#recordBody').innerHTML = bodyRows + summaryRow;
+      const summaryHost = $('#recordSummary');
+      if (summaryHost) {
+        $('#recordBody').innerHTML = bodyRows;
+        summaryHost.innerHTML = summaryRow;
+      } else {
+        $('#recordBody').innerHTML = bodyRows + summaryRow;
+      }
+      syncSummaryLayout();
       syncAnnotationOverlay();
     }
 
@@ -683,7 +882,7 @@
           if (field.labelConditionKey && labelValue) condition[field.labelConditionKey] = labelValue;
           return;
         }
-        const value = $(`#filter-${field.key}`).value.trim();
+        const value = $(`#filter-${field.key}`)?.value?.trim?.() || '';
         if (value) condition[field.key] = value;
       });
       return condition;
@@ -941,6 +1140,7 @@
         const rows = selectedItems.map((item) => exportColumns.map((column) => {
           if (column.key === '__sequence') return sourceItems.findIndex((entry) => entry.id === item.id) + 1;
           if (typeof column.exportValue === 'function') return column.exportValue(item);
+          if (typeof column.value === 'function') return column.value(item);
           return item[column.key];
         }));
         csv = [titleRow, exportColumns.map((column) => column.label), ...rows]
@@ -1068,6 +1268,43 @@
     }
 
     root.addEventListener('click', (event) => {
+      const filterExtraButton = event.target.closest('[data-record-filter-extra]');
+      if (filterExtraButton) {
+        const handler = currentTab()?.onFilterExtraAction || config.onFilterExtraAction;
+        if (typeof handler === 'function') {
+          return handler({
+            action: filterExtraButton.dataset.recordFilterExtra,
+            element: filterExtraButton,
+            state,
+            tab: currentTab(),
+            load,
+            renderFilterExtra,
+            currentFilters,
+            currentColumns
+          });
+        }
+        return;
+      }
+      const searchSelectOption = event.target.closest('[data-search-select-option]');
+      if (searchSelectOption) {
+        const wrapper = searchSelectOption.closest('[data-search-select]');
+        if (wrapper) {
+          syncSearchSelect(
+            wrapper,
+            searchSelectOption.dataset.searchSelectOption || '',
+            searchSelectOption.dataset.searchSelectLabel || searchSelectOption.textContent.trim()
+          );
+          closeSearchSelect(wrapper, false);
+        }
+        return;
+      }
+      const searchSelect = event.target.closest('[data-search-select]');
+      if (searchSelect) {
+        const input = searchSelect.querySelector('[data-search-select-input]');
+        if (input && event.target.closest('[data-search-select-input]')) openSearchSelect(input);
+      } else {
+        closeSearchSelects();
+      }
       if (event.target.closest('[data-record-close]')) return closeModal();
       const filterToggle = event.target.closest('[data-operations-filter-toggle]');
       if (filterToggle) {
@@ -1150,6 +1387,7 @@
       if (tabButton) {
         state.activeTab = tabButton.dataset.viewTab;
         const nextTab = currentTab();
+        state.viewState = { ...state.viewState, ...(nextTab?.initialViewState || {}) };
         state.activeStatus = nextTab?.initialStatus ?? currentStatusTabs()[0]?.value ?? '';
         state.condition = {};
         state.sort = {};
@@ -1187,6 +1425,10 @@
           }
           element.value = '';
         });
+        root.querySelectorAll('[data-search-select]').forEach((wrapper) => {
+          syncSearchSelect(wrapper, '', '');
+          closeSearchSelect(wrapper, false);
+        });
         datePickers.forEach((picker) => picker.clear(false));
         state.condition = {};
         if (state.activeStatus) {
@@ -1197,6 +1439,26 @@
         state.selected.clear();
         return load();
       }
+    });
+
+    root.addEventListener('focusin', (event) => {
+      const input = event.target.closest('[data-search-select-input]');
+      if (input) openSearchSelect(input);
+    });
+
+    root.addEventListener('input', (event) => {
+      const input = event.target.closest('[data-search-select-input]');
+      if (!input) return;
+      const wrapper = input.closest('[data-search-select]');
+      if (!wrapper) return;
+      const selectedLabel = wrapper.dataset.searchSelectLabel || '';
+      if (input.value !== selectedLabel) {
+        const hidden = wrapper.querySelector('[data-search-select-value]');
+        if (hidden) hidden.value = '';
+        wrapper.classList.add('is-searching');
+      }
+      if (!wrapper.classList.contains('is-open')) openSearchSelect(input);
+      renderSearchSelectOptions(wrapper, input.value);
     });
 
     root.addEventListener('change', (event) => {
@@ -1227,6 +1489,24 @@
     });
 
     root.addEventListener('keydown', (event) => {
+      const searchInput = event.target.closest('[data-search-select-input]');
+      if (searchInput) {
+        const wrapper = searchInput.closest('[data-search-select]');
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeSearchSelect(wrapper);
+          return;
+        }
+        if (event.key === 'Enter' && wrapper?.classList.contains('is-open')) {
+          const firstOption = wrapper.querySelector('[data-search-select-option]');
+          if (firstOption) {
+            event.preventDefault();
+            syncSearchSelect(wrapper, firstOption.dataset.searchSelectOption || '', firstOption.dataset.searchSelectLabel || firstOption.textContent.trim());
+            closeSearchSelect(wrapper, false);
+            return;
+          }
+        }
+      }
       const customCheckbox = config.customSelection && event.target.closest('.custom-checkbox');
       if (customCheckbox && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();

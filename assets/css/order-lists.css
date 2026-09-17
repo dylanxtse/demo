@@ -552,82 +552,6 @@
   outline-offset: 2px;
 }
 
-/* 分类销量按教育局分行，分类列采用紧凑矩阵布局。 */
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table {
-  min-width: 1240px;
-}
-
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(1),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(1) {
-  width: 150px;
-  min-width: 150px;
-}
-
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(3),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(3),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(4),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(4),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(5),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(5),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(6),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(6),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(7),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(7),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(8),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(8),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(9),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(9),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(10),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(10) {
-  width: 105px;
-  min-width: 105px;
-}
-
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(2),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(2) {
-  width: 180px;
-  min-width: 180px;
-}
-
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-child(2) {
-  position: sticky;
-  top: 0;
-  left: auto;
-  z-index: 1;
-  background: #fafafa;
-  box-shadow: none;
-}
-
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table tbody td:nth-child(2) {
-  position: static;
-  left: auto;
-  z-index: auto;
-  box-shadow: none;
-}
-
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:last-child,
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:last-child {
-  width: 70px;
-  min-width: 70px;
-}
-
-/* 销量统计两个页签统一显示序号，并在新增序号后保持各业务列宽。 */
-.order-module-page.product-sales-page .operations-table tbody tr.record-summary-row,
-.order-module-page.product-sales-page .operations-table tbody tr.record-summary-row td {
-  position: sticky;
-  bottom: 0;
-  z-index: 6;
-  background: #fafafa !important;
-  color: #55627a;
-  font-weight: 600;
-  box-shadow: 0 -1px 0 var(--border-light);
-}
-
-.order-module-page.product-sales-page .operations-table tbody tr.record-summary-row td:last-child,
-.order-module-page.product-sales-page .operations-table tbody tr.record-summary-row td:nth-child(-n+3) {
-  background: #fafafa !important;
-}
-
 .order-module-page.product-sales-page[data-active-tab="product"] .operations-table {
   min-width: 1795px;
 }
@@ -691,19 +615,179 @@
   background: #fafafa;
 }
 
+/* 分类销量表统一列宽：底部合计使用同一套列网格，不再依赖 tbody 行定位。 */
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table {
-  min-width: 1290px;
+  min-width: 1234px;
+  table-layout: fixed;
 }
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th,
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td {
+  min-width: 0;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(1),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(1) { width: 44px; min-width: 44px; }
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(1) {
+  width: 44px;
+  min-width: 44px;
+}
+
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(2),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(2) { width: 150px; min-width: 150px; }
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(3),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(3) { width: 180px; min-width: 180px; }
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(n+4):nth-child(-n+11),
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(n+4):nth-child(-n+11) { width: 105px; min-width: 105px; }
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(2) {
+  width: 150px;
+  min-width: 150px;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(n+3):not(:nth-last-child(2)):not(:last-child),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(n+3):not(:nth-last-child(2)):not(:last-child) {
+  width: 105px;
+  min-width: 105px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-last-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-last-child(2) {
+  position: sticky;
+  right: 70px;
+  z-index: 7;
+  width: 130px !important;
+  min-width: 130px !important;
+  max-width: 130px !important;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.18);
+  text-overflow: ellipsis;
+}
+
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:last-child,
-.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:last-child { width: 70px; min-width: 70px; }
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 7;
+  width: 70px !important;
+  min-width: 70px !important;
+  max-width: 70px !important;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.18);
+  text-overflow: ellipsis;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(1),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 7;
+  background: #fff;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table th:nth-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table td:nth-child(2) {
+  position: sticky;
+  left: 44px;
+  z-index: 7;
+  background: #fff;
+  box-shadow: 5px 0 8px -8px rgba(0, 0, 0, 0.3);
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-child(1),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-last-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:last-child {
+  top: 0;
+  z-index: 8;
+  background: #fafafa;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table tbody tr:hover td:nth-child(1),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table tbody tr:hover td:nth-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table tbody tr:hover td:nth-last-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table tbody tr:hover td:last-child {
+  background: #f5f7fa;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-summary-table .record-summary-row > td {
+  z-index: 6;
+  background: #fafafa;
+  color: #55627a;
+  font-weight: 600;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-summary-table .record-summary-row > td:nth-child(1),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-summary-table .record-summary-row > td:nth-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-summary-table .record-summary-row > td:nth-last-child(2),
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-summary-table .record-summary-row > td:last-child {
+  z-index: 12;
+}
+
+/* 商品销量页将分类页签与导出操作放在同一行。 */
+.order-module-page.product-sales-page .operations-tabs-toolbar-row {
+  display: flex;
+  min-width: 0;
+  height: 42px;
+  align-items: flex-end;
+  gap: 24px;
+  margin: -4px 0 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.order-module-page.product-sales-page .operations-tabs-toolbar-row .operations-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  border-bottom: 0;
+}
+
+.order-module-page.product-sales-page .operations-tabs-toolbar-row .operations-toolbar {
+  flex: 0 0 auto;
+  min-height: 42px;
+  margin: 0;
+  padding: 0 0 6px;
+}
+
+/* 分类层级切换组与筛选栅格第一列等宽，组内按钮按标注统一为 107px。 */
+.order-module-page.product-sales-page[data-active-tab="category"] .category-level-switch,
+.order-module-page.category-sales-detail-page .category-level-switch {
+  --category-level-button-width: 107px;
+  width: calc(var(--category-level-button-width) * 3);
+  max-width: 100%;
+  flex: 0 1 calc(var(--category-level-button-width) * 3);
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .category-level-switch-button,
+.order-module-page.category-sales-detail-page .category-level-switch-button {
+  width: var(--category-level-button-width);
+  flex: 1 1 var(--category-level-button-width);
+  min-width: 0;
+  padding-right: 8px;
+  padding-left: 8px;
+  text-align: center;
+}
+
+@media (max-width: 1200px) {
+  .order-module-page.product-sales-page[data-active-tab="category"] .category-level-switch,
+  .order-module-page.category-sales-detail-page .category-level-switch {
+    width: min(calc(var(--category-level-button-width) * 3), 100%);
+    flex-basis: min(calc(var(--category-level-button-width) * 3), 100%);
+  }
+}
+
+@media (max-width: 900px) {
+  .order-module-page.product-sales-page[data-active-tab="category"] .category-level-switch,
+  .order-module-page.category-sales-detail-page .category-level-switch {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .order-module-page.product-sales-page[data-active-tab="category"] .category-level-switch-button,
+  .order-module-page.category-sales-detail-page .category-level-switch-button {
+    width: auto;
+    flex-basis: 0;
+  }
+}
 
 .order-module-page.category-sales-detail-page .operations-filter {
   display: block;
@@ -720,19 +804,8 @@
 }
 
 .order-module-page.category-sales-detail-page .operations-table {
-  min-width: 1270px;
+  min-width: 1264px;
   table-layout: fixed;
-}
-
-.order-module-page.category-sales-detail-page .operations-table tbody tr.record-summary-row,
-.order-module-page.category-sales-detail-page .operations-table tbody tr.record-summary-row td {
-  position: sticky;
-  bottom: 0;
-  z-index: 6;
-  background: #fafafa !important;
-  color: #55627a;
-  font-weight: 600;
-  box-shadow: 0 -1px 0 var(--border-light);
 }
 
 .order-module-page.category-sales-detail-page .operations-table th,
@@ -772,6 +845,86 @@
 .order-module-page.category-sales-detail-page .operations-table td:nth-child(10) { width: 105px; min-width: 105px; }
 .order-module-page.category-sales-detail-page .operations-table th:nth-child(11),
 .order-module-page.category-sales-detail-page .operations-table td:nth-child(11) { width: 105px; min-width: 105px; }
+
+/* 详情页切换二、三级分类后，新增统计列保持统一宽度。 */
+.order-module-page.category-sales-detail-page .operations-table th:nth-child(n+3),
+.order-module-page.category-sales-detail-page .operations-table td:nth-child(n+3) {
+  width: 105px;
+  min-width: 105px;
+}
+
+/* 详情页横向滚动时固定展开列和学校名称列。 */
+.order-module-page.category-sales-detail-page .operations-table th:nth-child(1),
+.order-module-page.category-sales-detail-page .operations-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 7;
+  background: #fff;
+}
+
+.order-module-page.category-sales-detail-page .operations-table th:nth-child(2),
+.order-module-page.category-sales-detail-page .operations-table td:nth-child(2) {
+  position: sticky;
+  left: 44px;
+  z-index: 7;
+  background: #fff;
+  box-shadow: 5px 0 8px -8px rgba(0, 0, 0, 0.3);
+}
+
+.order-module-page.category-sales-detail-page .operations-table thead th:nth-child(1),
+.order-module-page.category-sales-detail-page .operations-table thead th:nth-child(2) {
+  z-index: 8;
+  background: #fafafa;
+}
+
+.order-module-page.category-sales-detail-page .operations-table tbody tr:hover td:nth-child(1),
+.order-module-page.category-sales-detail-page .operations-table tbody tr:hover td:nth-child(2) {
+  background: #f5f7fa;
+}
+
+/* 详情页将销量合计固定在最右侧。 */
+.order-module-page.category-sales-detail-page .operations-table th:last-child,
+.order-module-page.category-sales-detail-page .operations-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 7;
+  background: #fff;
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.18);
+}
+
+.order-module-page.category-sales-detail-page .operations-table thead th:last-child {
+  position: sticky;
+  top: 0;
+  right: 0;
+  z-index: 8;
+  background: #fafafa;
+}
+
+.order-module-page.category-sales-detail-page .operations-table tbody tr:hover td:last-child {
+  background: #f5f7fa;
+}
+
+.order-module-page.category-sales-detail-page .operations-table th:last-child,
+.order-module-page.category-sales-detail-page .operations-table td:last-child {
+  width: 130px !important;
+  min-width: 130px !important;
+  max-width: 130px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-module-page.category-sales-detail-page .operations-summary-table .record-summary-row > td {
+  z-index: 6;
+  background: #fafafa;
+  color: #55627a;
+  font-weight: 600;
+}
+
+.order-module-page.category-sales-detail-page .operations-summary-table .record-summary-row > td:nth-child(1),
+.order-module-page.category-sales-detail-page .operations-summary-table .record-summary-row > td:nth-child(2),
+.order-module-page.category-sales-detail-page .operations-summary-table .record-summary-row > td:last-child {
+  z-index: 12;
+}
 
 .order-module-page.category-sales-detail-page .operations-table td:nth-child(2) {
   overflow: hidden;
