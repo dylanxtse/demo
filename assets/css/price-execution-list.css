@@ -526,6 +526,15 @@
   table-layout: fixed;
 }
 
+.education-price-execution-page .price-data-table .price-bid-col {
+  width: 142px;
+  min-width: 142px;
+}
+
+.education-price-execution-page .price-data-table .img-cell .product-img {
+  margin-inline: auto;
+}
+
 
 .price-product-name {
   display: block;

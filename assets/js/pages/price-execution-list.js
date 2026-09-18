@@ -445,7 +445,7 @@
 
   function renderPurchaseHead() {
     const priceHeaders = isEducationPage
-      ? '<th class="price-current-col">当前执行价格</th><th>中标价</th>'
+      ? '<th class="price-current-col">当前执行价格</th><th class="price-bid-col">中标价</th>'
       : '<th class="price-current-col">当前执行价格</th><th>手动订价 <span class="price-help-icon" title="手动订价说明" aria-label="手动订价说明">?</span></th><th>中标价</th><th>协议价</th><th>近一次采购价</th><th>供应商报价</th><th>市场价</th>';
     return `<tr>
       <th class="price-seq-col">序号</th><th class="price-image-col">图片</th><th class="price-code-col">商品编号</th>
@@ -465,7 +465,7 @@
 
   function renderPurchaseRow(row, index) {
     const priceCells = isEducationPage
-      ? `<td class="price-current-col">${renderCurrentPrice(row)}</td><td>${renderExecutionBidPrice(row)}</td>`
+      ? `<td class="price-current-col">${renderCurrentPrice(row)}</td><td class="price-bid-col">${renderExecutionBidPrice(row)}</td>`
       : `<td class="price-current-col">${renderCurrentPrice(row)}</td><td>${renderPrice(row.manualPrice)}</td><td>${renderExecutionBidPrice(row)}</td><td>${renderPrice(row.agreementPrice)}</td><td>${renderPrice(row.recentPrice)}</td><td>${renderPrice(row.supplierQuote)}</td><td>${renderPrice(row.marketPrice)}</td>`;
     const supplier = isEducationPage ? currentExecutionSupplier(row) : row.supplier;
     return `<tr>
