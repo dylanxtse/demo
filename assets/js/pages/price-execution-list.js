@@ -10,15 +10,11 @@
       executionDate: selectedDate,
       rows: getPurchaseExportRows()
     });
-    try {
-      window.sessionStorage.setItem(exportKey, exportPayload);
-    } catch {
-      try { window.localStorage.setItem(exportKey, exportPayload); } catch {}
-    }
+    try { window.localStorage?.setItem(exportKey, exportPayload); } catch {}
+    try { window.sessionStorage?.setItem(exportKey, exportPayload); } catch {}
     const params = new URLSearchParams();
     if (selectedDate) params.set('executionDate', selectedDate);
     params.set('exportKey', exportKey);
-    params.set('exportData', exportPayload);
     const query = params.toString();
     const templateUrl = `./education-price-execution-export-template.html${query ? `?${query}` : ''}`;
     const templateWindow = window.open(templateUrl, '_blank', 'noopener');
