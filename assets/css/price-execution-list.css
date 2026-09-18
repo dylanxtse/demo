@@ -1,6 +1,8 @@
 .price-execution-page {
   min-width: 0;
+  min-height: 0;
   gap: 0;
+  padding: 24px;
 }
 
 .price-mode-tabs {
@@ -38,14 +40,14 @@
   display: flex;
   align-items: flex-start;
   gap: 24px;
-  padding: 16px 0 10px;
+  padding: 10px 0 8px;
   flex-shrink: 0;
 }
 
 .price-filter-fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(230px, 1fr));
-  gap: 14px 34px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 64px;
   flex: 1;
   min-width: 0;
 }
@@ -55,13 +57,169 @@
 }
 
 .price-filter-group .filter-label {
-  width: 68px;
+  width: 96px;
 }
 
 .price-filter-group .filter-input,
 .price-filter-group .filter-select {
-  width: min(250px, calc(100% - 76px));
-  min-width: 148px;
+  width: min(288px, calc(100% - 104px));
+  min-width: 160px;
+}
+
+.price-category-group {
+  position: relative;
+  z-index: 20;
+}
+
+.price-category-picker {
+  position: relative;
+  width: min(288px, calc(100% - 104px));
+  min-width: 160px;
+}
+
+.price-category-trigger {
+  display: flex;
+  width: 100%;
+  height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  outline: none;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.price-category-picker.is-open .price-category-trigger,
+.price-category-trigger:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(2, 73, 196, 0.12);
+}
+
+.price-category-value {
+  min-width: 0;
+  overflow: hidden;
+  color: #4b5563;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price-category-value.is-placeholder {
+  color: #9aa1ad;
+}
+
+.price-category-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 10px 8px 10px 10px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(31, 43, 67, 0.18);
+}
+
+.price-category-menu[hidden] {
+  display: none;
+}
+
+.price-category-tree {
+  min-width: 0;
+}
+
+.price-category-row {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.price-category-row.is-selected {
+  background: #f1f4fa;
+}
+
+.price-category-toggle {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #747b86;
+  font-family: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.price-category-toggle.is-expanded {
+  color: var(--primary);
+}
+
+.price-category-toggle.is-empty {
+  cursor: default;
+}
+
+.price-category-option {
+  min-width: 0;
+  flex: 1;
+  padding: 7px 10px 7px 0;
+  border: 0;
+  background: transparent;
+  color: #242a33;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.price-category-option:hover,
+.price-category-option:focus-visible {
+  color: var(--primary);
+  outline: none;
+}
+
+.price-category-children .price-category-row {
+  padding-left: 30px;
+}
+
+.price-execution-page {
+  overflow: visible;
+}
+
+/* 执行周期日期框复用订单期望送达日期的控件结构与图标位置。 */
+.price-execution-date-control {
+  position: relative;
+  width: min(288px, calc(100% - 104px));
+  min-width: 160px;
+}
+
+.price-execution-date-control .filter-input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+.price-execution-date-control .date-range-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .price-filter-actions {
@@ -104,6 +262,14 @@
   justify-content: center;
 }
 
+.price-toolbar .btn[data-action="export"] {
+  min-width: auto;
+  padding: 0 8px;
+  border-color: transparent;
+  background: transparent;
+  color: #444b55;
+}
+
 .price-toolbar .sales-only-action[hidden] {
   display: none;
 }
@@ -119,6 +285,7 @@
 .price-table-container {
   display: flex;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
@@ -129,8 +296,11 @@
 
 .price-table-wrapper {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .price-table-wrapper::-webkit-scrollbar {
@@ -144,25 +314,47 @@
 }
 
 .price-data-table {
-  min-width: 1760px;
-  table-layout: auto;
+  min-width: 1810px;
+  table-layout: fixed;
+  --price-seq-left: 0px;
+  --price-image-left: 58px;
+  --price-code-left: 134px;
+  --price-name-left: 262px;
 }
 
 .price-data-table th,
 .price-data-table td {
-  height: 48px;
-  padding: 6px 12px;
+  height: 96px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e7eaf0;
   border-right: 1px solid #f0f2f5;
   text-align: center;
   white-space: nowrap;
 }
 
 .price-data-table th {
-  height: 46px;
-  background: #f7f8fb;
+  height: 74px;
+  padding: 8px 12px;
+  background: #edf2fa;
   color: #5f6672;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.price-help-icon {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #aeb6c2;
+  border-radius: 50%;
+  color: #8c96a5;
+  font-size: 10px;
+  line-height: 1;
+  vertical-align: 1px;
 }
 
 .price-data-table td {
@@ -171,7 +363,7 @@
 }
 
 .price-data-table tbody tr:nth-child(even) {
-  background: #fbfcfe;
+  background: #f4f6fb;
 }
 
 .price-data-table tbody tr:nth-child(odd) td {
@@ -179,7 +371,7 @@
 }
 
 .price-data-table tbody tr:nth-child(even) td {
-  background: #fbfcfe;
+  background: #f4f6fb;
 }
 
 .price-data-table tbody tr:hover {
@@ -191,12 +383,85 @@
   background: #f3f7ff;
 }
 
+/* 表头使用浅蓝灰底，首行保持白底，拉开两者的视觉层次。 */
+.price-data-table tbody tr:first-child td {
+  background: #fff;
+}
+
+.price-data-table tbody tr:first-child:hover td {
+  background: #f3f7ff;
+}
+
+/* 横向滚动时固定序号、图片、编号和商品名称，保持当前商品定位。 */
+.price-data-table th.price-seq-col,
+.price-data-table td.price-seq-col,
+.price-data-table th.price-image-col,
+.price-data-table td.price-image-col,
+.price-data-table th.price-code-col,
+.price-data-table td.price-code-col,
+.price-data-table th.price-name-col,
+.price-data-table td.price-name-col {
+  position: sticky;
+  background: #fff;
+}
+
+.price-data-table th.price-seq-col,
+.price-data-table th.price-image-col,
+.price-data-table th.price-code-col,
+.price-data-table th.price-name-col {
+  top: 0;
+  z-index: 4;
+  background: #edf2fa;
+}
+
+.price-data-table td.price-seq-col,
+.price-data-table td.price-image-col,
+.price-data-table td.price-code-col,
+.price-data-table td.price-name-col {
+  z-index: 2;
+}
+
+.price-data-table .price-seq-col {
+  left: var(--price-seq-left);
+}
+
+.price-data-table .price-image-col {
+  left: var(--price-image-left);
+}
+
+.price-data-table .price-code-col {
+  left: var(--price-code-left);
+}
+
+.price-data-table .price-name-col {
+  left: var(--price-name-left);
+  box-shadow: 4px 0 6px -6px rgba(31, 43, 67, 0.45);
+}
+
+.price-data-table tbody tr:nth-child(even) td.price-seq-col,
+.price-data-table tbody tr:nth-child(even) td.price-image-col,
+.price-data-table tbody tr:nth-child(even) td.price-code-col,
+.price-data-table tbody tr:nth-child(even) td.price-name-col {
+  background: #f4f6fb;
+}
+
+.price-data-table tbody tr:hover td.price-seq-col,
+.price-data-table tbody tr:hover td.price-image-col,
+.price-data-table tbody tr:hover td.price-code-col,
+.price-data-table tbody tr:hover td.price-name-col {
+  background: #f3f7ff;
+}
+
+.price-data-table[data-price-table-mode="sales"] {
+  --price-name-left: 394px;
+}
+
 .price-data-table th:last-child {
   position: sticky;
   top: 0;
   right: auto;
   z-index: 1;
-  background: #f7f8fb;
+  background: #edf2fa;
   box-shadow: none;
 }
 
@@ -217,21 +482,26 @@
 }
 
 .price-data-table .price-code-col {
-  width: 132px;
-  min-width: 132px;
+  width: 128px;
+  min-width: 128px;
   color: #566273;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 
 .price-data-table .price-name-col {
-  width: 300px;
-  min-width: 300px;
-  text-align: left;
+  width: 284px;
+  min-width: 284px;
+  text-align: center;
 }
 
 .price-data-table .price-category-col {
-  width: 245px;
-  min-width: 245px;
-  text-align: left;
+  width: 138px;
+  min-width: 138px;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.45;
 }
 
 .price-data-table .price-unit-col {
@@ -240,9 +510,9 @@
 }
 
 .price-data-table .price-partner-col {
-  width: 190px;
-  min-width: 190px;
-  text-align: left;
+  width: 132px;
+  min-width: 132px;
+  text-align: center;
 }
 
 .price-data-table .price-current-col {
@@ -250,21 +520,21 @@
   min-width: 142px;
 }
 
-.price-image-placeholder {
-  display: inline-flex;
-  width: 36px;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #edf0f4;
-  border-radius: 4px;
-  background: #f7f8fa;
-  color: #b5bbc5;
-  font-size: 10px;
+.education-price-execution-page .price-data-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
 }
 
+
 .price-product-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   line-height: 1.5;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .price-product-main {
@@ -564,6 +834,11 @@
 }
 
 @media (max-width: 1280px) {
+  .price-execution-page {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
   .price-filter-fields {
     grid-template-columns: repeat(2, minmax(230px, 1fr));
   }
@@ -574,6 +849,10 @@
 }
 
 @media (max-width: 860px) {
+  .price-execution-page {
+    padding: 20px 16px 16px;
+  }
+
   .price-query-panel,
   .price-toolbar {
     flex-wrap: wrap;

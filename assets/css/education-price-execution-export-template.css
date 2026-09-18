@@ -1,0 +1,161 @@
+.education-price-execution-export-template-page {
+  min-width: 320px;
+  min-height: 100vh;
+  padding-bottom: 92px;
+  background: #fff;
+}
+
+.education-price-execution-export-template-page .supplier-register-header {
+  background: #fff;
+}
+
+.education-price-execution-export-template-section {
+  border-bottom: 0;
+}
+
+.education-price-execution-export-template-inner {
+  width: calc(100% - 64px);
+  max-width: none;
+  margin: 0 0 0 32px;
+  padding: 32px 0 24px;
+}
+
+.education-price-execution-export-template-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--register-border);
+  border-radius: 4px;
+}
+
+.education-price-execution-export-template-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  color: var(--register-text);
+  font-size: 14px;
+  table-layout: auto;
+}
+
+.education-price-execution-export-template-table th,
+.education-price-execution-export-template-table td {
+  height: 48px;
+  padding: 0 16px;
+  border-right: 1px solid var(--register-border);
+  border-bottom: 1px solid var(--register-border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.education-price-execution-export-template-table th {
+  background: #f7f8fb;
+  color: #5f6672;
+  font-weight: 600;
+}
+
+.education-price-execution-export-template-table .education-price-execution-export-template-title-row th {
+  height: 54px;
+  padding: 0 16px;
+  background: #f3f6fc;
+  color: #263c68;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.education-price-execution-export-template-table .education-price-execution-export-template-meta-row th {
+  height: 34px;
+  padding: 0 16px;
+  background: #f3f6fc;
+  color: #5f6672;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.education-price-execution-export-template-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 24px;
+  white-space: nowrap;
+}
+
+.education-price-execution-export-template-meta span {
+  text-align: center;
+}
+
+.education-price-execution-export-template-table th:first-child,
+.education-price-execution-export-template-table td:first-child {
+  min-width: 72px;
+}
+
+.education-price-execution-export-template-table th:nth-child(2),
+.education-price-execution-export-template-table td:nth-child(2) {
+  min-width: 150px;
+}
+
+.education-price-execution-export-template-table th:nth-child(3),
+.education-price-execution-export-template-table td:nth-child(3) {
+  min-width: 230px;
+}
+
+.education-price-execution-export-template-table th:nth-child(4),
+.education-price-execution-export-template-table td:nth-child(4) {
+  min-width: 190px;
+}
+
+.education-price-execution-export-template-table th:nth-child(n + 5),
+.education-price-execution-export-template-table td:nth-child(n + 5) {
+  min-width: 124px;
+}
+
+.education-price-execution-export-template-table td {
+  background: #fff;
+}
+
+.education-price-execution-export-template-table tbody tr:nth-child(even) td {
+  background: #fbfcfe;
+}
+
+.education-price-execution-export-template-table th:last-child,
+.education-price-execution-export-template-table td:last-child {
+  border-right: 0;
+}
+
+.education-price-execution-export-template-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.education-price-execution-export-template-actions {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+  background: rgba(255, 255, 255, .96);
+  border-top: 1px solid var(--register-border);
+  box-shadow: 0 -4px 12px rgba(25, 40, 70, .06);
+}
+
+.education-price-execution-export-template-actions .register-demo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .education-price-execution-export-template-inner {
+    width: calc(100% - 28px);
+    margin-left: 14px;
+    padding-top: 22px;
+  }
+
+  .education-price-execution-export-template-actions {
+    min-height: 76px;
+  }
+}

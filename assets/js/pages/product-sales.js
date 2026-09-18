@@ -7,6 +7,12 @@
     .replace(/'/g, '&#039;');
 
   const formatEducationUnit = (value) => escapeHtml(String(value || '').replace(/\s*教育局\s*$/, '').trim());
+  const defaultOperatingEnterpriseName = '产品部学校食材集采供应链有限公司';
+  const getOperatingEnterpriseName = () => {
+    const session = window.DemoStore?.getSession?.();
+    const company = window.DemoStore?.get?.('companies')?.find((item) => item.id === session?.companyId);
+    return company?.name || defaultOperatingEnterpriseName;
+  };
 
   const renderActualRankHeader = (column, state) => {
     const direction = state?.sort?.key === column.key ? state.sort.direction : '';
@@ -184,7 +190,9 @@
     const startDate = dateRange?.querySelector('[data-date-start]')?.value || defaultSalesDateRange[0];
     const endDate = dateRange?.querySelector('[data-date-end]')?.value || startDate || defaultSalesDateRange[1];
     const dateType = document.querySelector('#filter-dateRange-label')?.value || 'orderReturn';
-    const params = new URLSearchParams({ dateType, startDate, endDate });
+    const params = new URLSearchParams({ dateType, startDate, endDate, enterpriseName: getOperatingEnterpriseName() });
+    const categoryLevel = document.querySelector('[data-category-level].is-active')?.dataset.categoryLevel;
+    if (categoryLevel) params.set('categoryLevel', categoryLevel);
     const region = document.querySelector('#filter-educationUnit')?.value?.trim();
     const school = document.querySelector('#filter-schoolName')?.value?.trim();
     if (region) params.set('region', region);
@@ -195,6 +203,85 @@
     const templateUrl = `./category-sales-export-template.html?${getCategorySalesExportParams().toString()}`;
     const templateWindow = window.open(templateUrl, '_blank', 'noopener');
     if (!templateWindow) window.location.href = templateUrl;
+  };
+  const categorySalesDateTypeLabels = {
+    expectedReturn: '期望送达/退货时间',
+    orderReturn: '下单时间/退货时间'
+  };
+  const formatExportDateTime = (date) => {
+    const pad = (value) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  };
+  const getCategorySalesExportMeta = (state) => {
+    const condition = state?.condition || {};
+    const dateType = condition.dateType
+      || document.querySelector('#filter-dateRange-label')?.value
+      || 'orderReturn';
+    const range = Array.isArray(condition.dateRange) ? condition.dateRange : defaultSalesDateRange;
+    const startDate = range[0] || defaultSalesDateRange[0];
+    const endDate = range[1] || startDate || defaultSalesDateRange[1];
+    const dateTypeLabel = categorySalesDateTypeLabels[dateType] || categorySalesDateTypeLabels.orderReturn;
+    return {
+      enterpriseName: getOperatingEnterpriseName(),
+      period: `${dateTypeLabel}：${startDate}--${endDate}`,
+      exportTime: formatExportDateTime(new Date())
+    };
+  };
+  const exportCategorySalesStatistics = async ({ state, service, resource, columns, toast }) => {
+    let rows = state.items || [];
+    if (state.total > rows.length) {
+      const result = await service.list(resource, {
+        page: 1,
+        pageSize: state.total,
+        condition: state.condition
+      });
+      rows = result.items || [];
+    }
+
+    const exportColumns = [{ key: '__sequence', label: '序号' }, ...columns];
+    const meta = getCategorySalesExportMeta(state);
+    const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const getColumnValue = (item, column, index) => {
+      if (column.key === '__sequence') return index + 1;
+      if (typeof column.exportValue === 'function') return column.exportValue(item);
+      if (typeof column.value === 'function') return column.value(item);
+      return item[column.key];
+    };
+    const formatValue = (item, column, index) => {
+      const value = getColumnValue(item, column, index);
+      if (column.key === 'educationUnit') return String(value || '').replace(/\s*教育局\s*$/, '').trim();
+      if (column.format === 'decimal' || column.format === 'money') return Number(value || 0).toFixed(2);
+      return value ?? '';
+    };
+    const dataRows = rows.map((item, index) => exportColumns.map((column) => formatValue(item, column, index)));
+    const summaryRow = new Array(exportColumns.length).fill('');
+    summaryRow[1] = '合计（元）';
+    exportColumns.slice(2).forEach((column, columnIndex) => {
+      const total = rows.reduce((sum, item) => sum + Number(getColumnValue(item, column, 0) || 0), 0);
+      summaryRow[columnIndex + 2] = total.toFixed(2);
+    });
+    const titleRow = new Array(exportColumns.length).fill('');
+    titleRow[0] = '商品分类销量统计';
+    const metaRow = new Array(exportColumns.length).fill('');
+    metaRow[0] = `单位：${meta.enterpriseName}    ${meta.period}    导出时间：${meta.exportTime}`;
+    const csv = [
+      titleRow,
+      metaRow,
+      exportColumns.map((column) => column.label),
+      ...dataRows,
+      summaryRow
+    ].map((row) => row.map(csvCell).join(',')).join('\r\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '商品分类销量统计.csv';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast?.('导出成功');
   };
   const categorySalesDateAnnotation = {
     id: 'custom-1789559390858-1',
@@ -207,7 +294,7 @@
   const categorySalesSchoolAnnotation = {
     id: 'custom-1789559533309-2',
     target: 'custom',
-    targetSelector: 'section.page-card > div.operations-filter:nth-of-type(3)',
+    targetSelector: '.product-sales-page .operations-filter',
     tab: 'category',
     placement: 'right',
     scope: 'page'
@@ -215,7 +302,7 @@
   const categorySalesExportAnnotation = {
     id: 'custom-1789559610289-3',
     target: 'custom',
-    targetSelector: 'section.page-card > div.operations-toolbar:nth-of-type(4)',
+    targetSelector: '.product-sales-page .operations-toolbar',
     tab: 'category',
     placement: 'right',
     scope: 'page',
@@ -230,6 +317,10 @@
     }
   };
   const pageParams = new URLSearchParams(window.location.search);
+  const requestedCategoryLevel = Number(pageParams.get('categoryLevel'));
+  const initialCategoryLevel = categoryLevelOptions.some((option) => option.value === requestedCategoryLevel)
+    ? requestedCategoryLevel
+    : 1;
   const initialTab = pageParams.get('tab') === 'category' && pageParams.get('source') === 'detail'
     ? 'category'
     : 'product';
@@ -239,7 +330,7 @@
     pageClass: 'order-module-page product-sales-page',
     tabsToolbarSameRow: true,
     initialTab,
-    initialViewState: { categoryLevel: 1 },
+    initialViewState: { categoryLevel: initialCategoryLevel },
     hideSequence: false,
     hideRowActions: true,
     showSelectionSummary: false,
@@ -293,6 +384,7 @@
         key: 'category',
         label: '商品分类销量',
         resource: 'categorySales',
+        toolbar: [{ key: 'export', label: '导出', execute: exportCategorySalesStatistics }],
         toolbarInFilterExtra: true,
         filterExtra: renderCategoryLevelSwitcher,
         onFilterExtraAction: handleCategoryLevelAction,

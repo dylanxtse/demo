@@ -27,10 +27,11 @@
   defaultStartDate.setDate(defaultStartDate.getDate() - 30);
   const defaultStartDateText = formatDate(defaultStartDate);
   const defaultEndDateText = formatDate(defaultEndDate);
-  const dateTypeLabel = dateTypeLabels[params.get('dateType')] || dateTypeLabels.expectedReturn;
+  const dateTypeLabel = dateTypeLabels.orderReturn;
   const startDate = params.get('startDate') || defaultStartDateText;
   const endDate = params.get('endDate') || (params.get('startDate') ? startDate : defaultEndDateText);
   const statisticPeriod = `${dateTypeLabel}：${startDate}--${endDate}`;
+  const operatingEnterpriseName = params.get('enterpriseName')?.trim() || '产品部学校食材集采供应链有限公司';
   const exportTime = formatDateTime(new Date());
   const schoolKeyword = String(params.get('schoolCanteen') || '').trim().toLocaleLowerCase();
   const columns = [
@@ -97,7 +98,7 @@
         <table class="category-sales-export-template-table category-sales-detail-export-template-table">
           <thead>
             <tr class="category-sales-export-template-title-row"><th colspan="${columns.length}"><div class="category-sales-export-template-title">商品分类销量统计（${esc(regionName)}）</div></th></tr>
-            <tr class="category-sales-export-template-meta-row"><th colspan="${columns.length}"><div class="category-sales-export-template-meta"><span>${esc(statisticPeriod)}</span><span>导出时间：${esc(exportTime)}</span></div></th></tr>
+            <tr class="category-sales-export-template-meta-row"><th colspan="${columns.length}"><div class="category-sales-export-template-meta"><span>单位：${esc(operatingEnterpriseName)}</span><span>${esc(statisticPeriod)}</span><span>导出时间：${esc(exportTime)}</span></div></th></tr>
             <tr class="category-sales-export-template-column-row">${columns.map((column) => `<th>${esc(column.label)}</th>`).join('')}</tr>
           </thead>
           <tbody>

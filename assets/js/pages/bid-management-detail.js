@@ -56,37 +56,32 @@
     return suppliers.find((item) => item.id === id) || { id, name: fallbackName || id };
   }
 
-  const supplierRows = (bid.supplierIds || []).map((id, index) => {
-    const supplier = findSupplier(id, bid.supplierNames?.[index]);
-    const isWinner = Boolean(bid.winnerSupplier && bid.winnerSupplier === supplier.name);
-    return {
-      id,
-      name: supplier.name,
-      status: isOpened ? '已参与报价' : bid.status === '待开标' ? '报价中' : '待报价',
-      result: isWinner ? '中标' : isOpened ? '未中标' : '--'
-    };
-  });
-
   // The open-bid screenshot contains two concrete quote results. Keep these as
   // demo records so opened bids never render an empty quote panel.
   const quoteSeeds = {
     'BID-002': [
-      { supplierId: 'SUP-004', total: '2000.00', rank: 1, result: '中标' },
-      { supplierId: 'SUP-003', total: '2500.00', rank: 2, result: '未中标' }
+      { supplierId: 'SUP-004', total: '2000.00' },
+      { supplierId: 'SUP-003', total: '2500.00' }
     ],
     'BID-007': [
-      { supplierId: 'SUP-004', total: '2000.00', rank: 1, result: '中标' },
-      { supplierId: 'SUP-003', total: '2500.00', rank: 2, result: '未中标' }
+      { supplierId: 'SUP-004', total: '2000.00' },
+      { supplierId: 'SUP-003', total: '2000.00' }
     ]
   };
 
   const defaultQuoteSeeds = (bid.supplierIds || []).map((supplierId, index) => ({
     supplierId,
-    total: (2000 + index * 500).toFixed(2),
-    rank: index + 1,
-    result: index === 0 ? '中标' : '未中标'
+    total: (2000 + index * 500).toFixed(2)
   }));
-  const quoteRows = (quoteSeeds[bid.id] || defaultQuoteSeeds).map((item) => {
+
+  function quoteAmount(value) {
+    const text = String(value ?? '').replace(/,/g, '').trim();
+    if (!text) return null;
+    const amount = Number(text);
+    return Number.isFinite(amount) ? amount : null;
+  }
+
+  const rawQuoteRows = (quoteSeeds[bid.id] || defaultQuoteSeeds).map((item) => {
     const supplier = findSupplier(item.supplierId);
     return {
       ...item,
@@ -96,7 +91,60 @@
       ip: '124.238.62.232',
       quoteStatus: '已报价'
     };
-  }).sort((left, right) => left.rank - right.rank);
+  });
+
+  const pricedRows = rawQuoteRows
+    .map((row) => ({ row, amount: quoteAmount(row.total) }))
+    .filter((item) => item.amount !== null)
+    .sort((left, right) => left.amount - right.amount);
+  const lowestAmount = pricedRows[0]?.amount ?? null;
+  const lowestRows = lowestAmount === null
+    ? []
+    : pricedRows.filter((item) => item.amount === lowestAmount);
+  const rankBySupplier = new Map();
+  let previousAmount = null;
+  let currentRank = 0;
+  pricedRows.forEach(({ row, amount }, index) => {
+    if (index === 0 || amount !== previousAmount) currentRank = index + 1;
+    rankBySupplier.set(row.supplierId, currentRank);
+    previousAmount = amount;
+  });
+  const quoteRows = rawQuoteRows.map((row) => {
+    const amount = quoteAmount(row.total);
+    const isLowest = amount !== null && amount === lowestAmount;
+    const result = !isOpened
+      ? '--'
+      : lowestRows.length > 1 && isLowest
+        ? '未推荐'
+        : lowestRows.length === 1 && isLowest
+          ? '中标'
+          : '未中标';
+    return {
+      ...row,
+      rank: rankBySupplier.get(row.supplierId) ?? '--',
+      result
+    };
+  }).sort((left, right) => {
+    const leftAmount = quoteAmount(left.total);
+    const rightAmount = quoteAmount(right.total);
+    if (leftAmount === null && rightAmount === null) return 0;
+    if (leftAmount === null) return 1;
+    if (rightAmount === null) return -1;
+    return leftAmount - rightAmount;
+  });
+
+  const recommendedSupplierName = quoteRows.find((row) => row.result === '中标')?.name || '';
+  const supplierRows = (bid.supplierIds || []).map((id, index) => {
+    const supplier = findSupplier(id, bid.supplierNames?.[index]);
+    const quote = quoteRows.find((row) => row.supplierId === id);
+    const isWinner = Boolean(recommendedSupplierName && recommendedSupplierName === supplier.name);
+    return {
+      id,
+      name: supplier.name,
+      status: isOpened ? '已参与报价' : bid.status === '待开标' ? '报价中' : '待报价',
+      result: isWinner ? '中标' : isOpened ? quote?.result === '未推荐' ? '未推荐' : '未中标' : '--'
+    };
+  });
 
   const products = service.get('products') || [];
   const normalizeCategory = (value) => String(value || '').replace(/（三级）|\(三级\)/g, '').trim();

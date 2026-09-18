@@ -11,6 +11,7 @@
       { name: '指导价格' },
       { name: '商品限价' },
       { name: '商品价格' },
+      { name: '价格执行清单', href: './education-price-execution-list.html' },
       { name: '采购竞价', children: [
         { name: '竞价管理', href: './bid-management.html' },
         { name: '竞价规则管理', href: './bid-rules-management.html' },

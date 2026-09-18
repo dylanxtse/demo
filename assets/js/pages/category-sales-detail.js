@@ -5,6 +5,12 @@
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+  const defaultOperatingEnterpriseName = '产品部学校食材集采供应链有限公司';
+  const getOperatingEnterpriseName = () => {
+    const session = window.DemoStore?.getSession?.();
+    const company = window.DemoStore?.get?.('companies')?.find((item) => item.id === session?.companyId);
+    return company?.name || defaultOperatingEnterpriseName;
+  };
 
   const pageParams = new URLSearchParams(window.location.search);
   const categoryLevelOptions = [
@@ -183,7 +189,8 @@
       region: educationUnit,
       dateType,
       startDate,
-      endDate
+      endDate,
+      enterpriseName: getOperatingEnterpriseName()
     });
     const schoolCanteen = document.querySelector('#filter-schoolCanteen')?.value?.trim();
     if (schoolCanteen) params.set('schoolCanteen', schoolCanteen);

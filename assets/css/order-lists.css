@@ -693,6 +693,17 @@
   box-shadow: 5px 0 8px -8px rgba(0, 0, 0, 0.3);
 }
 
+/* 分类销量数据较少时，列表区不再纵向撑满，合计紧跟最后一条数据显示。 */
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table-wrap,
+.order-module-page.category-sales-detail-page .operations-table-wrap {
+  flex: 0 1 auto;
+}
+
+.order-module-page.product-sales-page[data-active-tab="category"] .operations-table-container > .pagination,
+.order-module-page.category-sales-detail-page .operations-table-container > .pagination {
+  margin-top: auto;
+}
+
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-child(1),
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-child(2),
 .order-module-page.product-sales-page[data-active-tab="category"] .operations-table thead th:nth-last-child(2),

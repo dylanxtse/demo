@@ -633,7 +633,9 @@
           "支持新增公告，维护标题、正文、发布时间、失效时间、强制弹框、接收对象及附件；学校和供应商接收对象支持多选、全选。",
           "支持预览、强制弹窗、撤回、编辑、删除和批量删除等操作。",
           "供应商端和学校端仅展示允许查看的公告，支持查看详情和下载附件。"
-        ]
+        ],
+        "number": "1",
+        "muted": true
       },
       {
         "id": "notice-force-popup-education",
@@ -646,7 +648,9 @@
           "公告开启“强制弹框”后，必须设置失效时间；发布后，符合接收对象范围的用户登录系统时会强制显示公告弹窗。",
           "列表中的“强制弹窗”操作可重新设置并发送当前公告的强制展示，确认后提示已发送。",
           "达到失效时间后不再强制弹出，公告仍可按接收权限在公告列表中查看。"
-        ]
+        ],
+        "number": "2",
+        "muted": true
       },
       {
         "id": "custom-1787673987937-1",
@@ -932,7 +936,7 @@
       {
         "id": "custom-1789559533309-2",
         "target": "custom",
-        "targetSelector": "section.page-card > div.operations-filter:nth-of-type(3)",
+        "targetSelector": ".product-sales-page .operations-filter",
         "tab": "category",
         "placement": "right",
         "scope": "page",
@@ -957,7 +961,7 @@
       {
         "id": "custom-1789559610289-3",
         "target": "custom",
-        "targetSelector": "section.page-card > div.operations-toolbar:nth-of-type(4)",
+        "targetSelector": ".product-sales-page .operations-toolbar",
         "tab": "category",
         "placement": "right",
         "scope": "page",
@@ -978,8 +982,8 @@
         "positionByScope": {
           "page": {
             "markerPosition": {
-              "x": 1545,
-              "y": 23
+              "x": -12,
+              "y": 18
             },
             "popoverPosition": {
               "x": -383,
@@ -991,7 +995,7 @@
       {
         "id": "custom-1789559713839-4",
         "target": "custom",
-        "targetSelector": "section.page-card > div.record-table-annotation-surface:nth-of-type(5) > div.operations-table-container > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(2)",
+        "targetSelector": ".product-sales-page .record-table-annotation-surface .operations-table > thead > tr > th:nth-child(2)",
         "tab": "category",
         "placement": "right",
         "scope": "page",
@@ -1016,7 +1020,7 @@
       {
         "id": "custom-1789561764494-1",
         "target": "custom",
-        "targetSelector": "section.page-card > div.record-table-annotation-surface:nth-of-type(5) > div.operations-table-container > div.operations-table-wrap:nth-of-type(1) > table.operations-table > thead > tr > th:nth-of-type(2)",
+        "targetSelector": ".product-sales-page .record-table-annotation-surface .operations-table > thead > tr > th:nth-child(2)",
         "placement": "right",
         "scope": "page",
         "title": "列表",
@@ -1114,6 +1118,92 @@
             "popoverPosition": {
               "x": 38,
               "y": -3
+            }
+          }
+        }
+      }
+    ],
+    "price-execution-list.html::priceExecutionPage": [
+      {
+        "id": "custom-1789692772698-1",
+        "target": "custom",
+        "targetSelector": "div.page-card:nth-of-type(1) > section.price-query-panel > div.price-filter-fields:nth-of-type(1) > div.filter-group:nth-of-type(5) > label.filter-label",
+        "placement": "right",
+        "scope": "page",
+        "title": "有无执行价格",
+        "items": [
+          "新增查询项，默认选中全部"
+        ],
+        "number": "1",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": 394,
+              "y": -2
+            }
+          }
+        },
+        "deleted": true
+      },
+      {
+        "id": "custom-1789692829295-2",
+        "target": "custom",
+        "targetSelector": "#priceFilter-executionDate",
+        "placement": "right",
+        "scope": "page",
+        "title": "执行日期",
+        "items": [
+          "新增查询项，默认选中当前日期"
+        ],
+        "number": "1",
+        "deleted": true
+      }
+    ],
+    "education-price-execution-list.html::priceExecutionPage": [
+      {
+        "id": "custom-1789694063789-2",
+        "target": "custom",
+        "targetSelector": "[data-action=\"export\"]",
+        "placement": "right",
+        "scope": "page",
+        "title": "导出",
+        "popoverActions": [
+          {
+            "key": "view-price-execution-export-template",
+            "label": "查看模版",
+            "className": "btn btn-sm record-annotation-demo-action record-annotation-action"
+          }
+        ],
+        "items": [
+          "调整导出模版"
+        ],
+        "number": "1",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": -23,
+              "y": 2
+            }
+          }
+        }
+      },
+      {
+        "id": "custom-1789695394423-2",
+        "target": "custom",
+        "targetSelector": "div.page-card:nth-of-type(1) > div.price-table-container:nth-of-type(2) > div.price-table-wrapper:nth-of-type(1) > table.data-table > thead > tr > th:nth-of-type(10)",
+        "placement": "right",
+        "scope": "page",
+        "title": "中标价",
+        "items": [
+          "中标价移动到协议价前；筛选执行日期时，此字段回显筛选执行日期的中标价格，无值显示为空",
+          "供应商/采购员改为供应商"
+        ],
+        "number": "2",
+        "positionByScope": {
+          "page": {
+            "markerPosition": {
+              "x": -160,
+              "y": -33
             }
           }
         }

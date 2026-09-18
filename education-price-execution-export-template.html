@@ -3,23 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商品分类销量统计</title>
+  <title>价格执行清单导出模版</title>
   <link rel="stylesheet" href="./assets/css/supplier-invite.css?v=20260815-8">
-  <link rel="stylesheet" href="./assets/css/category-sales-export-template.css?v=20260918-2">
-  <link rel="stylesheet" href="./assets/css/category-sales-detail-export-template.css?v=20260917-6">
-  <link rel="stylesheet" href="./assets/js/prototype-tools/src/components.css?v=20260916-10">
+  <link rel="stylesheet" href="./assets/css/education-price-execution-export-template.css">
+  <link rel="stylesheet" href="./assets/js/prototype-tools/src/components.css?v=20260824-9">
   <link rel="stylesheet" href="./assets/js/prototype-tools/src/project-iteration-panel.css?v=20260823-60">
   <script src="./assets/js/prototype-tools/src/prototype-tools-theme.js?v=20260824-9"></script>
 </head>
 <body>
-  <div id="categorySalesDetailExportTemplateApp"></div>
+  <div id="priceExecutionExportTemplateApp"></div>
   <script src="./assets/js/data/project-iteration-records.js?v=20260826-1"></script>
   <script src="./assets/js/prototype-tools/src/project-iteration-panel.js?v=20260823-50"></script>
   <script src="./assets/js/config/annotation-data-loader.js?v=20260822-1"></script>
   <script src="./assets/js/prototype-tools/src/annotation-overlay.js?v=20260916-1"></script>
-  <script src="./assets/js/pages/category-sales-detail-export-template.js?v=20260918-3"></script>
+  <script src="./assets/js/utils/business-rules.js"></script>
+  <script src="./assets/js/utils/storage.js"></script>
+  <script src="./assets/js/services/repository.js"></script>
+  <script src="./assets/js/data/mock-dataset.js"></script>
+  <script src="./assets/js/services/product-service.js"></script>
+  <script src="./assets/js/services/price-execution-service.js?v=20260918-5"></script>
+  <script src="./assets/js/pages/education-price-execution-export-template.js?v=20260918-6"></script>
   <script>
-    const annotationRoot = document.getElementById('categorySalesDetailExportTemplateApp');
+    const annotationRoot = document.getElementById('priceExecutionExportTemplateApp');
     window.AnnotationOverlay?.mount(annotationRoot, []);
     window.ProjectIterationPanel?.mount({
       records: window.ProjectIterationData?.records || [],
