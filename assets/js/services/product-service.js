@@ -64,7 +64,8 @@
       responsible: product.responsible || '管理员',
       source: product.source || '平台添加',
       addTime: window.BusinessRules.normalizeDateTime(product.addTime || window.BusinessRules.now()),
-      shelfLife: product.shelfLife === false || product.shelfLife == null ? '' : product.shelfLife
+      shelfLife: product.shelfLife === false || product.shelfLife == null ? '' : product.shelfLife,
+      modificationRecords: Array.isArray(product.modificationRecords) ? product.modificationRecords : []
     }));
   }
 

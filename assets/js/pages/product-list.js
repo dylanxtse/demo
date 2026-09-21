@@ -2,13 +2,26 @@
   const isSupplierProductPage = document.body.dataset.userEnd === 'supplier';
   const downloadIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   const addIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-  const categoryIcon = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
+  const fallbackDistrictOptions = [
+    '孟村回族自治县', '石油分局', '海兴县', '东光县', '南大港', '南皮县', '沧县', '献县',
+    '中捷产业园', '黄骅市', '市直属', '港城', '任丘', '盐山', '河间', '肃宁', '吴桥', '青县', '泊头市'
+  ];
+  const categorySales = window.DemoStore?.get?.('categorySales');
+  const districtSource = Array.isArray(categorySales) && categorySales.length
+    ? categorySales
+    : (window.MockOperations?.categorySales || []);
+  const districtOptions = [...new Set(districtSource
+    .map((row) => String(row?.educationUnit || row?.district || '').replace(/\s*教育局\s*$/, '').trim())
+    .filter(Boolean))];
+  if (!districtOptions.length) districtOptions.push(...fallbackDistrictOptions);
+  const districtOptionMarkup = districtOptions
+    .map((district) => `<option value="${window.DomUtils.escapeHtml(district)}">${window.DomUtils.escapeHtml(district)}</option>`)
+    .join('');
 
   const pageContent = `
     <div class="page-card product-list-page">
       <div class="workspace-grid">
         <section class="category-panel">
-          ${isSupplierProductPage ? '' : `<button class="btn btn-sm btn-blue category-edit-btn" type="button" data-action="edit-category">${categoryIcon}编辑商品分类</button>`}
           <div class="category-tree">
             <div class="category-filter">
               <label class="filter-label" for="categorySearch">商品分类</label>
@@ -36,7 +49,7 @@
                 </div>
                 ${isSupplierProductPage ? '' : `<div class="filter-group">
                   <label class="filter-label" for="purchaseTypeFilter">采购类型</label>
-                  <select class="filter-select" id="purchaseTypeFilter"><option>全部</option><option>供应商送货</option><option>市场自采</option><option>企业自加工</option></select>
+                  <select class="filter-select" id="purchaseTypeFilter"><option>全部</option><option>供应商送货</option><option>市场自采</option></select>
                 </div>`}
                 <div class="filter-group">
                   <label class="filter-label" for="sourceFilter">商品来源</label>
@@ -44,8 +57,8 @@
                 </div>
                 ${isSupplierProductPage ? '' : `
                 <div class="filter-group">
-                  <label class="filter-label" for="netVegetableFilter">是否净菜</label>
-                  <select class="filter-select" id="netVegetableFilter"><option>全部</option><option>净菜</option><option>非净菜</option></select>
+                  <label class="filter-label" for="districtFilter">区县</label>
+                  <select class="filter-select" id="districtFilter"><option value="">全部</option>${districtOptionMarkup}</select>
                 </div>`}
               </div>
               <div class="action-controls">
@@ -56,7 +69,7 @@
           </div>
 
           <div class="action-bar">
-            <div class="action-main">
+            ${isSupplierProductPage ? `<div class="action-main">
               <button class="btn btn-primary btn-sm btn-action" type="button" data-action="add-product">${addIcon}添加商品</button>
               <button id="supplierImportInfoBtn" class="btn btn-sm btn-action btn-blue ${isSupplierProductPage ? 'btn-disabled' : ''}" type="button" ${isSupplierProductPage ? 'disabled' : ''}>导入商品信息</button>
               <button id="supplierImportImageBtn" class="btn btn-sm btn-action btn-blue ${isSupplierProductPage ? 'btn-disabled' : ''}" type="button" ${isSupplierProductPage ? 'disabled' : ''}>导入商品图片</button>
@@ -64,7 +77,7 @@
               ${isSupplierProductPage ? '' : '<button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchShelfBtn" type="button" disabled>批量上架</button>'}
               ${isSupplierProductPage ? '' : '<button class="btn btn-sm btn-action btn-blue btn-disabled" id="batchUnshelfBtn" type="button" disabled>批量下架</button>'}
               <button class="btn btn-danger btn-sm btn-action btn-disabled" id="batchDeleteBtn" type="button" disabled>批量删除</button>
-            </div>
+            </div>` : ''}
             ${isSupplierProductPage ? '' : `<div class="action-controls"><button class="btn btn-sm btn-fixed" type="button">${downloadIcon}导出</button></div>`}
           </div>
 
@@ -181,7 +194,6 @@
           <div class="tree-node-header ${node.selected ? 'selected' : ''}" data-tree-node="${path}">
             <span class="tree-arrow">${node.children ? '▶' : ''}</span>
             <span class="tree-label">${window.DomUtils.escapeHtml(node.name)}</span>
-            <div class="tree-actions"><button class="tree-action-btn" type="button" data-action="add-category">+</button></div>
           </div>
           ${node.children ? `
             <div class="tree-children">
@@ -239,7 +251,7 @@
           <td class="action-cell"><div class="operation-actions">
             ${isSupplierProductPage ? '' : `<button class="btn-text" type="button" data-row-action="status" data-code="${safe.code}">${nextAction}</button>`}
             <button class="btn-text ${editDisabled ? 'disabled' : ''}" type="button" data-row-action="edit" data-code="${safe.code}" ${editDisabled ? 'disabled' : ''}>编辑</button>
-            <button class="btn-text danger" type="button" data-row-action="delete" data-code="${safe.code}">删除</button>
+            ${isSupplierProductPage ? `<button class="btn-text danger" type="button" data-row-action="delete" data-code="${safe.code}">删除</button>` : ''}
           </div></td>
         </tr>
       `;
@@ -276,14 +288,15 @@
     const status = value('statusFilter');
     const purchaseType = isSupplierProductPage ? '全部' : value('purchaseTypeFilter');
     const source = value('sourceFilter');
-    const netVegetable = isSupplierProductPage ? '全部' : value('netVegetableFilter');
+    const district = isSupplierProductPage ? '' : value('districtFilter');
     const result = state.products.filter((product) => (
       (!nameOrCode || `${product.name} ${product.code}`.toLowerCase().includes(nameOrCode)) &&
       (!brand || product.brand.toLowerCase().includes(brand)) &&
       (status === '全部' || window.BusinessRules.statusLabel('products', product.status) === status) &&
       (purchaseType === '全部' || product.purchaseType === purchaseType) &&
       (source === '全部' || product.source === source) &&
-      (isSupplierProductPage || netVegetable === '全部' || (netVegetable === '净菜' && product.isNetVegetable) || (netVegetable === '非净菜' && !product.isNetVegetable))
+      (!district || !String(product.district || product.region || product.educationUnit || '').replace(/\s*教育局\s*$/, '').trim()
+        || String(product.district || product.region || product.educationUnit || '').replace(/\s*教育局\s*$/, '').trim() === district)
     ));
     state.filteredProducts = result;
     state.total = result.length;
@@ -295,7 +308,7 @@
     ['productNameFilter', 'brandFilter'].forEach((id) => { document.getElementById(id).value = ''; });
     ['statusFilter', 'sourceFilter'].forEach((id) => { document.getElementById(id).value = '全部'; });
     if (!isSupplierProductPage) document.getElementById('purchaseTypeFilter').value = '全部';
-    if (!isSupplierProductPage) document.getElementById('netVegetableFilter').value = '全部';
+    if (!isSupplierProductPage) document.getElementById('districtFilter').value = '';
     filterProducts(true);
   }
 
@@ -401,11 +414,6 @@
       if (action === 'query') filterProducts(true);
       if (action === 'reset') resetFilters();
       if (action === 'add-product') navigateToProductForm();
-      if (action === 'edit-category') window.alert('编辑商品分类');
-      if (action === 'add-category') {
-        event.stopPropagation();
-        window.alert('新增子分类');
-      }
       if (action === 'close-unshelf-modal' || action === 'cancel-unshelf') closeUnshelfModal();
       if (action === 'confirm-unshelf') confirmUnshelf();
       if (action === 'toggle-row') {
@@ -426,7 +434,7 @@
       }
 
       const treeNode = event.target.closest('[data-tree-node]');
-      if (treeNode && action !== 'add-category') {
+      if (treeNode) {
         const node = getNodeByPath(treeNode.dataset.treeNode.split('-').map(Number));
         if (node) {
           state.tree.forEach((item) => { item.selected = false; });

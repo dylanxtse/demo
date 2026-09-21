@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="./assets/css/variables.css">
   <link rel="stylesheet" href="./assets/css/layout.css">
   <link rel="stylesheet" href="./assets/js/prototype-tools/src/components.css?v=20260824-9">
-  <link rel="stylesheet" href="./assets/css/product-form.css">
+  <link rel="stylesheet" href="./assets/css/product-form.css?v=20260921-12">
 </head>
 <body>
   <div id="app"></div>
@@ -125,22 +125,12 @@
             <span class="field-error"></span>
           </div>
 
-          <div class="form-field standalone-switch-field net-vegetable-switch-field">
-            <label class="field-label" for="isNetVegetable">是否净菜</label>
-            <label class="switch-control">
-              <input class="switch-input" id="isNetVegetable" name="isNetVegetable" type="checkbox">
-              <span class="switch-slider" aria-hidden="true"></span>
-            </label>
-            <span class="field-error"></span>
-          </div>
-
-          <div class="procurement-row net-vegetable-procurement-row">
+          <div class="procurement-row">
           <div class="form-field" role="group" aria-labelledby="purchaseTypeLabel">
             <span class="field-label required" id="purchaseTypeLabel">采购类型</span>
             <div class="radio-group">
               <label class="radio-option purchase-type-option" data-purchase-type="供应商送货"><input type="radio" name="purchaseType" value="供应商送货" checked>供应商送货</label>
               <label class="radio-option purchase-type-option" data-purchase-type="市场自采"><input type="radio" name="purchaseType" value="市场自采">市场自采</label>
-              <label class="radio-option purchase-type-option" data-purchase-type="企业自加工"><input type="radio" name="purchaseType" value="企业自加工">企业自加工</label>
             </div>
             <span class="field-error" data-error-for="purchaseType"></span>
           </div>
@@ -308,6 +298,11 @@
             <button class="btn" type="button" data-action="cancel">取消</button>
           </div>
         </div>
+
+        <section class="product-change-records" id="productChangeRecords" hidden aria-labelledby="productChangeRecordsTitle">
+          <h2 id="productChangeRecordsTitle">修改记录</h2>
+          <div class="detail-timeline" id="productChangeTimeline"></div>
+        </section>
       </form>
     </div>
   </template>
@@ -323,9 +318,9 @@
   <script src="./assets/js/utils/business-rules.js"></script>
   <script src="./assets/js/utils/storage.js"></script>
   <script src="./assets/js/services/repository.js"></script><script src="./assets/js/data/mock-dataset.js"></script>
-  <script src="./assets/js/utils/validator.js"></script>
+  <script src="./assets/js/utils/validator.js?v=20260921-1"></script>
 
   <script src="./assets/js/services/product-service.js?v=20260824-2"></script>
-  <script src="./assets/js/pages/product-form.js?v=20260824-3"></script>
+  <script src="./assets/js/pages/product-form.js?v=20260921-12"></script>
 </body>
 </html>

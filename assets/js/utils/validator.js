@@ -10,14 +10,15 @@
   };
 
   window.ProductValidator = {
-    validate(data) {
+    validate(data, { marketPriceRequired = true } = {}) {
       const errors = {};
       Object.entries(rules).forEach(([field, rule]) => {
         if (data.isNetVegetable && ['defaultSupplier', 'responsible'].includes(field)) return;
         const value = String(data[field] ?? '').trim();
-        if (rule.required && (!value || value === '请选择')) {
+        const required = rule.required && (field !== 'marketPrice' || marketPriceRequired);
+        if (required && (!value || value === '请选择')) {
           errors[field] = `${rule.label}不能为空`;
-        } else if (rule.number && (!Number.isFinite(Number(value)) || Number(value) < rule.minimum)) {
+        } else if (rule.number && value && (!Number.isFinite(Number(value)) || Number(value) < rule.minimum)) {
           errors[field] = `${rule.label}必须是大于或等于${rule.minimum}的数字`;
         }
       });

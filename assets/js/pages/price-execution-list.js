@@ -178,7 +178,7 @@
   function optionList(field, placeholder) {
     let values;
     if (field === 'priceType') values = priceTypeOptions[state.mode];
-    else if (field === 'purchaseType') values = ['企业自加工', '供应商送货', '市场自采'];
+    else if (field === 'purchaseType') values = ['供应商送货', '市场自采'];
     else if (field === 'customerType') values = ['学校', '幼儿园', '机关单位'];
     else if (field === 'executionPriceStatus') values = ['有', '无'];
     else values = uniqueValues(field);
