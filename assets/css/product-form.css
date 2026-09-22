@@ -964,11 +964,12 @@
 }
 
 .product-attachment-preview-modal { width: min(760px, calc(100vw - 48px)); }
+.product-attachment-preview-modal .product-change-modal-header h2 { font-size: 14px; }
 .product-attachment-preview-section { margin-bottom: 18px; }
 .product-attachment-preview-section h3 {
   margin: 0 0 8px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 20px;
 }
@@ -1085,7 +1086,7 @@
   min-width: 0;
   overflow: hidden;
   color: #7b8797;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 22px;
   text-align: left;
   text-overflow: ellipsis;
