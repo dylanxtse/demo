@@ -446,6 +446,7 @@
       customerId: first.customerId || '',
       customerType: first.customerType || '',
       orders: orders.map((order) => ({
+        id: order.id,
         orderNo: order.orderNo || order.id || '--',
         expectedAt: dateTimeKey(order.expectedAt) || '--',
         productCount: order.productCount ?? orderItems(order).length,
@@ -470,6 +471,7 @@
 
   function mergeOrderSnapshot(order) {
     return {
+      orderId: order.id || '',
       orderNo: order.orderNo || order.id || '--',
       customerName: order.customerName || '--',
       canteen: order.canteen || '--',
@@ -478,6 +480,7 @@
       source: order.source || '--',
       status: order.status || '--',
       orderAmount: order.orderAmount,
+      remark: order.remark || '',
       productCount: order.productCount ?? orderItems(order).length,
       items: orderItems(order).map((line) => {
         const quantity = lineQuantity(line);
@@ -495,8 +498,10 @@
   }
 
   function renderBatchMergeGroups(groups) {
-    return groups.map((group) => `
+    if (!groups.length) return '<div class="order-batch-merge-empty">暂无待合单的订单组，请取消本次操作。</div>';
+    return groups.map((group, index) => `
       <section class="order-batch-merge-group">
+        <div class="order-batch-merge-group-title"><span>合单组</span><button class="btn-text danger order-batch-merge-remove" type="button" data-batch-merge-remove="${index}">删除</button></div>
         <div class="order-batch-merge-meta">
           <div><span>客户名称：</span><strong>${escapeHtml(group.customerName)}</strong></div>
           <div><span>食堂：</span><strong>${escapeHtml(group.canteen)}</strong></div>
@@ -507,13 +512,14 @@
         </div>
         <div class="order-batch-merge-table-wrap">
           <table class="operations-table order-batch-merge-table">
-            <thead><tr><th>订单号</th><th>期望送达时间</th><th>下单商品数</th><th>下单金额</th></tr></thead>
-            <tbody>${group.orders.map((order) => `
+            <thead><tr><th>订单号</th><th>期望送达时间</th><th>下单商品数</th><th>下单金额</th><th>操作</th></tr></thead>
+            <tbody>${group.orders.map((order, orderIndex) => `
               <tr>
                 <td>${escapeHtml(order.orderNo)}</td>
                 <td>${escapeHtml(order.expectedAt)}</td>
                 <td>${escapeHtml(order.productCount)}</td>
                 <td>¥${money(order.orderAmount)}</td>
+                <td><button class="btn-text danger order-batch-merge-order-remove" type="button" data-batch-merge-remove-order="${index}:${orderIndex}" ${group.orders.length <= 2 ? 'disabled' : ''} title="${group.orders.length <= 2 ? '订单组内仅剩两笔订单，只能整组删除' : '删除该订单，不参与本次合单'}">删除</button></td>
               </tr>
             `).join('')}</tbody>
           </table>
@@ -522,40 +528,319 @@
     `).join('');
   }
 
-  function openBatchMergeModal(plan, selectedCount) {
-    const { groups } = plan;
-    const mergeableCount = groups.reduce((total, group) => total + group.orderIds.length, 0);
+  function orderDisplayNo(order) {
+    if (typeof order === 'string') return order;
+    return order?.orderNo || order?.id || '--';
+  }
+
+  function mergeOrderFingerprint(order) {
+    return JSON.stringify({
+      id: order?.id || '',
+      status: order?.status || '',
+      isMerged: order?.isMerged || '',
+      isMergeParent: Boolean(order?.isMergeParent),
+      mergeOrderId: order?.mergeOrderId || '',
+      customerId: order?.customerId || '',
+      customerName: order?.customerName || '',
+      canteen: order?.canteen || '',
+      orderTag: order?.orderTag || '',
+      expectedAt: order?.expectedAt || '',
+      source: order?.source || '',
+      purchaseOrderNo: order?.purchaseOrderNo || '',
+      purchaseOrderId: order?.purchaseOrderId || '',
+      purchaseOrderGenerated: Boolean(order?.purchaseOrderGenerated),
+      items: orderItems(order).map((line) => ({
+        productId: lineProductId(line),
+        unit: lineUnit(line),
+        price: linePriceKey(line),
+        quantity: lineQuantity(line),
+        purchaseOrderNo: line?.purchaseOrderNo || '',
+        purchaseOrderId: line?.purchaseOrderId || '',
+        purchaseStatus: line?.purchaseStatus || '',
+        allocationPurchaseOrderNo: line?.allocation?.purchaseOrderNo || '',
+        allocationStatus: line?.allocation?.status || ''
+      }))
+    });
+  }
+
+  function sameOrderSet(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    const rightIds = new Set(right);
+    return left.every((id) => rightIds.has(id));
+  }
+
+  function planFailureReason(plan, orderId, fallback) {
+    const excluded = plan?.excluded?.find((item) => item.order?.id === orderId);
+    return excluded?.reasons?.join('、') || fallback;
+  }
+
+  function failuresForOrderIds(orderIds, orders, plan, fallback) {
+    return orderIds.map((id) => ({
+      order: orders.find((item) => item?.id === id) || { id },
+      reason: planFailureReason(plan, id, fallback)
+    }));
+  }
+
+  async function revalidateBatchMergeGroup(group) {
+    const firstRead = await Promise.all(group.orderIds.map((id) => service.get('orders', id)));
+    if (firstRead.some((order) => !order)) {
+      return {
+        ok: false,
+        failures: failuresForOrderIds(group.orderIds, firstRead.filter(Boolean), null, '订单在合单前已不存在或被删除')
+      };
+    }
+
+    const firstPlan = buildBatchMergeGroups(firstRead);
+    if (!firstPlan.groups.some((candidate) => sameOrderSet(candidate.orderIds, group.orderIds))) {
+      return {
+        ok: false,
+        failures: failuresForOrderIds(group.orderIds, firstRead, firstPlan, '订单在确认后发生变化，已无法按原分组合单')
+      };
+    }
+
+    const secondRead = await Promise.all(group.orderIds.map((id) => service.get('orders', id)));
+    if (secondRead.some((order) => !order)) {
+      return {
+        ok: false,
+        failures: failuresForOrderIds(group.orderIds, secondRead.filter(Boolean), null, '订单在合单校验期间已不存在或被删除')
+      };
+    }
+    if (secondRead.some((order, index) => mergeOrderFingerprint(order) !== mergeOrderFingerprint(firstRead[index]))) {
+      return {
+        ok: false,
+        failures: secondRead.map((order) => ({ order, reason: '订单在合单校验期间发生变化，请刷新后重试' }))
+      };
+    }
+
+    const secondPlan = buildBatchMergeGroups(secondRead);
+    const latestGroup = secondPlan.groups.find((candidate) => sameOrderSet(candidate.orderIds, group.orderIds));
+    if (!latestGroup) {
+      return {
+        ok: false,
+        failures: failuresForOrderIds(group.orderIds, secondRead, secondPlan, '订单在确认后发生变化，已无法按原分组合单')
+      };
+    }
+    return {
+      ok: true,
+      group: latestGroup,
+      snapshots: secondRead.map((order) => ({ order, fingerprint: mergeOrderFingerprint(order) }))
+    };
+  }
+
+  async function rollbackBatchMerge(parent, updatedSnapshots, mergeId) {
+    await Promise.all(updatedSnapshots.map(async ({ order }) => {
+      const current = await service.get('orders', order.id);
+      if (!current || current.mergeOrderId !== mergeId) return;
+      await service.update('orders', order.id, {
+        status: order.status,
+        isMerged: order.isMerged || '否',
+        mergeOrderId: order.mergeOrderId || '',
+        mergeParentOrderId: order.mergeParentOrderId || '',
+        mergeParentOrderNo: order.mergeParentOrderNo || '',
+        mergeParentSnapshot: order.mergeParentSnapshot || null,
+        operationLogs: Array.isArray(order.operationLogs) ? order.operationLogs : []
+      });
+    }));
+    if (parent?.id) {
+      const currentParent = await service.get('orders', parent.id);
+      if (currentParent && currentParent.mergeOrderId === mergeId) {
+        await service.update('orders', parent.id, { status: 'REVOKED' });
+      }
+    }
+  }
+
+  async function executeBatchMergeGroup(group, mergeId) {
+    const validation = await revalidateBatchMergeGroup(group);
+    if (!validation.ok) return { success: false, failures: validation.failures };
+
+    let parent = null;
+    const updatedSnapshots = [];
+    try {
+      parent = await createMergedParentOrder(validation.group, mergeId);
+      if (!parent) throw new Error('合单父订单创建失败');
+      const mergedAt = window.BusinessRules?.now?.() || new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const parentSnapshot = mergeOrderSnapshot(parent);
+
+      for (const snapshot of validation.snapshots) {
+        const current = await service.get('orders', snapshot.order.id);
+        if (!current || mergeOrderFingerprint(current) !== snapshot.fingerprint) {
+          throw new Error('订单在合单过程中发生变化，请刷新后重试');
+        }
+        const updated = await service.update('orders', snapshot.order.id, {
+          status: 'MERGED',
+          isMerged: '是',
+          mergeOrderId: mergeId,
+          mergeParentOrderId: parent.id,
+          mergeParentOrderNo: parent.orderNo || '',
+          mergeParentSnapshot: parentSnapshot,
+          operationLogs: [
+            ...(Array.isArray(current.operationLogs) ? current.operationLogs : []),
+            {
+              action: '订单合并',
+              operator: '系统',
+              createdAt: mergedAt,
+              desc: `系统 订单合并 ${parent.orderNo || ''}`.trim(),
+              parentOrderId: parent.id,
+              parentOrderNo: parent.orderNo || '',
+              parentSnapshot
+            }
+          ]
+        });
+        if (!updated) throw new Error('订单已不存在或无法更新');
+        updatedSnapshots.push(snapshot);
+      }
+      return { success: true, group: validation.group, parent };
+    } catch (error) {
+      try {
+        await rollbackBatchMerge(parent, updatedSnapshots, mergeId);
+      } catch (rollbackError) {
+        // 回滚失败时仍展示本次合单结果，避免覆盖原始并发错误。
+      }
+      return {
+        success: false,
+        failures: validation.snapshots.map(({ order }) => ({
+          order,
+          reason: error.message || '合单过程中发生变化，未完成合单'
+        }))
+      };
+    }
+  }
+
+  function addBatchMergeSkipped(result, order, reason) {
+    const id = typeof order === 'string' ? order : order?.id || order?.orderNo || orderDisplayNo(order);
+    let skipped = result.skippedOrders.find((item) => item.id === id);
+    if (!skipped) {
+      skipped = { id, orderNo: orderDisplayNo(order), reasons: [] };
+      result.skippedOrders.push(skipped);
+    }
+    if (reason && !skipped.reasons.includes(reason)) skipped.reasons.push(reason);
+  }
+
+  async function executeBatchMerge(selectedIds) {
+    const result = { selectedCount: selectedIds.length, successfulGroups: [], skippedOrders: [] };
+    const latestOrders = await Promise.all(selectedIds.map((id) => service.get('orders', id)));
+    latestOrders.forEach((order, index) => {
+      if (!order) addBatchMergeSkipped(result, selectedIds[index], '订单在合单前已不存在或被删除');
+    });
+    const existingOrders = latestOrders.filter(Boolean);
+    const plan = buildBatchMergeGroups(existingOrders);
+    plan.excluded.forEach(({ order, reasons }) => {
+      reasons.forEach((reason) => addBatchMergeSkipped(result, order, reason));
+    });
+
+    const mergeTime = Date.now();
+    for (const [index, group] of plan.groups.entries()) {
+      const mergeId = `MERGE-${mergeTime}-${String(index + 1).padStart(2, '0')}`;
+      const outcome = await executeBatchMergeGroup(group, mergeId);
+      if (outcome.success) {
+        result.successfulGroups.push({
+          parentOrderNo: orderDisplayNo(outcome.parent),
+          customerName: outcome.group.customerName,
+          canteen: outcome.group.canteen,
+          orderNos: outcome.group.orderNos,
+          orderCount: outcome.group.orderIds.length,
+          orderAmount: outcome.group.orderAmount
+        });
+      } else {
+        outcome.failures.forEach(({ order, reason }) => addBatchMergeSkipped(result, order, reason));
+      }
+    }
+    return result;
+  }
+
+  function openBatchMergeResultModal(result) {
+    const mergedOrderCount = result.successfulGroups.reduce((total, group) => total + group.orderCount, 0);
+    const successHtml = result.successfulGroups.length
+      ? `<div class="order-batch-merge-result-section"><h4>合单成功</h4><div class="order-batch-merge-result-table-wrap"><table class="operations-table order-batch-merge-result-table"><thead><tr><th>合并订单号</th><th>客户名称</th><th>食堂</th><th>合并订单金额</th><th>原订单号</th></tr></thead><tbody>${result.successfulGroups.map((group) => `
+          <tr><td>${escapeHtml(group.parentOrderNo)}</td><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(group.orderAmount)}</td><td>${escapeHtml(group.orderNos.join('、'))}</td></tr>`).join('')}</tbody></table></div></div>`
+      : '<div class="order-batch-merge-result-empty">本次没有成功生成合单。</div>';
     const body = `
-      <div class="order-batch-merge-summary">已选择 <strong>${selectedCount}</strong> 笔订单，<strong>${mergeableCount}</strong> 笔可合单订单，共生成 <strong>${groups.length}</strong> 组合单。</div>
-      <div class="order-batch-merge-groups">${renderBatchMergeGroups(groups)}</div>
+      <div class="order-batch-merge-result-summary">已选择 <strong>${result.selectedCount}</strong> 笔订单，失败 <strong>${result.skippedOrders.length}</strong> 笔，成功 <strong>${mergedOrderCount}</strong> 笔，合成 <strong>${result.successfulGroups.length}</strong> 笔合并订单。</div>
+      ${successHtml}
     `;
     modal(
-      '合单确认',
+      '合单结果',
       body,
+      '<button class="btn btn-primary" type="button" data-modal-close>关闭</button>',
+      false,
+      'order-batch-merge-result-modal'
+    );
+  }
+
+  function openBatchMergeModal(plan, selectedCount, selectedIds) {
+    let activeGroups = [...plan.groups];
+    const activeOrderIds = new Set(selectedIds);
+    const renderModalBody = () => {
+      const mergeableCount = activeGroups.reduce((total, group) => total + group.orderIds.length, 0);
+      return `
+        <div class="order-batch-merge-summary" id="batchMergeSummary">已选择 <strong>${activeOrderIds.size}</strong> 笔订单，<strong>${mergeableCount}</strong> 笔可合单订单，共生成 <strong>${activeGroups.length}</strong> 组合单。</div>
+        <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups)}</div>
+      `;
+    };
+    modal(
+      '合单确认',
+      renderModalBody(),
       '<button class="btn" type="button" data-modal-close>取消</button><button class="btn btn-primary" type="button" id="confirmBatchMerge">确认合单</button>',
       true,
       'order-batch-merge-modal'
     );
+    const refreshBatchMergeModal = () => {
+      const body = overlay.querySelector('.operations-modal-body');
+      if (!body) return;
+      body.innerHTML = renderModalBody();
+      const confirmButton = $('#confirmBatchMerge');
+      if (confirmButton) confirmButton.disabled = activeGroups.length === 0;
+    };
     $('#confirmBatchMerge').onclick = async () => {
+      const confirmButton = $('#confirmBatchMerge');
+      confirmButton.disabled = true;
+      confirmButton.textContent = '合单中...';
       try {
-        const mergeTime = Date.now();
-        await Promise.all(groups.map(async (group, index) => {
-          const mergeId = `MERGE-${mergeTime}-${String(index + 1).padStart(2, '0')}`;
-          await createMergedParentOrder(group, mergeId);
-          await Promise.all(group.orderIds.map((id) => service.update('orders', id, {
-            status: 'MERGED',
-            isMerged: '是',
-            mergeOrderId: mergeId
-          })));
-        }));
+        const result = await executeBatchMerge([...activeOrderIds]);
         state.selected.clear();
         closeModal();
-        toast(`合单成功，共生成${groups.length}组`);
         await load();
+        openBatchMergeResultModal(result);
       } catch (error) {
-        toast(error.message || '合单失败', 'error');
+        state.selected.clear();
+        closeModal();
+        await load();
+        openBatchMergeResultModal({
+          selectedCount,
+          successfulGroups: [],
+          skippedOrders: [{ id: 'batch-merge-error', orderNo: '本次合单', reasons: [error.message || '合单失败'] }]
+        });
       }
     };
+    overlay.querySelector('.operations-modal-body')?.addEventListener('click', (event) => {
+      const removeOrderButton = event.target.closest('[data-batch-merge-remove-order]');
+      if (removeOrderButton) {
+        const [groupIndex, orderIndex] = removeOrderButton.dataset.batchMergeRemoveOrder.split(':').map(Number);
+        const group = activeGroups[groupIndex];
+        const removedId = group?.orderIds?.[orderIndex];
+        if (!group || group.orders.length <= 2 || !removedId) return;
+        group.orderIds.splice(orderIndex, 1);
+        group.orderNos.splice(orderIndex, 1);
+        group.orders.splice(orderIndex, 1);
+        group.mergeSourceOrderIds.splice(orderIndex, 1);
+        group.mergeSourceOrderNos.splice(orderIndex, 1);
+        group.mergeSourceOrderSnapshots.splice(orderIndex, 1);
+        activeOrderIds.delete(removedId);
+        if (group.orderIds.length < 2) {
+          group.orderIds.forEach((id) => activeOrderIds.delete(id));
+          activeGroups.splice(groupIndex, 1);
+        }
+        refreshBatchMergeModal();
+        return;
+      }
+      const removeButton = event.target.closest('[data-batch-merge-remove]');
+      if (!removeButton) return;
+      const groupIndex = Number(removeButton.dataset.batchMergeRemove);
+      const [removedGroup] = activeGroups.splice(groupIndex, 1);
+      if (!removedGroup) return;
+      removedGroup.orderIds.forEach((id) => activeOrderIds.delete(id));
+      refreshBatchMergeModal();
+    });
   }
 
   async function createMergedParentOrder(group, mergeId) {
@@ -617,7 +902,7 @@
       const plan = buildBatchMergeGroups(orders);
       const mergeableCount = plan.groups.reduce((total, group) => total + group.orderIds.length, 0);
       if (mergeableCount < 2) return toast('所选订单中没有至少两笔符合合单规则的订单', 'error');
-      openBatchMergeModal(plan, orders.length);
+      openBatchMergeModal(plan, orders.length, ids);
     } catch (error) {
       toast(error.message || '合单校验失败', 'error');
     }
@@ -640,12 +925,28 @@
     if (!isMergeParent(parent) || !isReadyForShipping(parent)) throw new Error('当前合并订单不可取消合并');
     const sourceOrders = mergeSourceOrders(parent);
     if (sourceOrders.length < 2) throw new Error('未找到合并前的原订单');
+    const cancelledAt = window.BusinessRules?.now?.() || new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const parentSnapshot = mergeOrderSnapshot(parent);
     await Promise.all(sourceOrders.map((source) => service.update('orders', source.id, {
       status: 'READY_FOR_SHIPPING',
       isMerged: '否',
-      mergeOrderId: ''
+      mergeOrderId: '',
+      mergeParentOrderId: parent.id,
+      mergeParentOrderNo: parent.orderNo || '',
+      mergeParentSnapshot: parentSnapshot,
+      operationLogs: [
+        ...(Array.isArray(source.operationLogs) ? source.operationLogs : []),
+        {
+          action: '订单取消合并',
+          operator: '当前用户',
+          createdAt: cancelledAt,
+          desc: `当前用户 订单取消合并 ${parent.orderNo || ''}`.trim(),
+          parentOrderId: parent.id,
+          parentOrderNo: parent.orderNo || '',
+          parentSnapshot
+        }
+      ]
     })));
-    const cancelledAt = window.BusinessRules?.now?.() || new Date().toISOString().slice(0, 19).replace('T', ' ');
     const operationLogs = [...(Array.isArray(parent.operationLogs) ? parent.operationLogs : []), {
       action: '取消合并',
       operator: '当前用户',

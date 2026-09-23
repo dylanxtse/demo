@@ -290,11 +290,24 @@
 }
 
 .order-batch-merge-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   background: #f7f9fc;
   color: var(--text-primary);
   font-weight: 500;
+}
+
+.order-batch-merge-group-title .order-batch-merge-remove {
+  margin-left: auto;
+}
+
+.order-batch-merge-empty {
+  padding: 36px 16px;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .order-batch-merge-meta {
@@ -347,6 +360,80 @@
   padding: 6px 10px;
   text-align: center;
 }
+
+.order-batch-merge-order-remove {
+  min-width: 40px;
+}
+
+.order-batch-merge-order-remove:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.order-batch-merge-result-modal {
+  width: min(1200px, calc(100vw - 48px));
+}
+
+.order-batch-merge-result-summary {
+  margin-bottom: 18px;
+  color: var(--text-secondary);
+  line-height: 22px;
+}
+
+.order-batch-merge-result-summary strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.order-batch-merge-result-section + .order-batch-merge-result-section {
+  margin-top: 18px;
+}
+
+.order-batch-merge-result-section h4 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.order-batch-merge-result-table-wrap {
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.order-batch-merge-result-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.order-batch-merge-result-table th,
+.order-batch-merge-result-table td {
+  height: 38px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.order-batch-merge-result-table td:last-child {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.order-batch-merge-result-table th:nth-child(1),
+.order-batch-merge-result-table td:nth-child(1) { width: 21%; }
+.order-batch-merge-result-table th:nth-child(2),
+.order-batch-merge-result-table td:nth-child(2) { width: 16%; }
+.order-batch-merge-result-table th:nth-child(3),
+.order-batch-merge-result-table td:nth-child(3) { width: 13%; }
+.order-batch-merge-result-table th:nth-child(4),
+.order-batch-merge-result-table td:nth-child(4) { width: 16%; }
+.order-batch-merge-result-table th:nth-child(5),
+.order-batch-merge-result-table td:nth-child(5) { width: 34%; }
+
+.order-batch-merge-result-empty { color: var(--text-tertiary); }
 
 @media (max-width: 760px) {
   .order-batch-merge-meta {

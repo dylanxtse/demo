@@ -997,6 +997,16 @@
   white-space: nowrap;
 }
 
+.order-merge-snapshot-meta > div:last-child {
+  grid-column: 1 / -1;
+}
+
+.order-merge-snapshot-meta > div:last-child strong {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .order-merge-snapshot-table {
   width: 100%;
   border-collapse: collapse;

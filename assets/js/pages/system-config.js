@@ -289,6 +289,7 @@
 
   function autoMergeSnapshot(order) {
     return {
+      orderId: order.id || '',
       orderNo: order.orderNo || order.id || '--',
       customerName: order.customerName || '--',
       canteen: order.canteen || '--',
@@ -297,6 +298,7 @@
       source: order.source || '--',
       status: order.status || '--',
       orderAmount: order.orderAmount,
+      remark: order.remark || '',
       productCount: order.productCount ?? autoMergeItems(order).length,
       items: autoMergeItems(order).map((line) => {
         const quantity = autoMergeQuantity(line);

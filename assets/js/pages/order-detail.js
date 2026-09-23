@@ -50,27 +50,126 @@
     return order?.isMergeParent === true || order?.isMergeParent === 'true' || order?.isMergeParent === '是';
   }
 
+  function findMergeParent(order, log = {}) {
+    const orders = window.DemoStore?.get('orders') || window.MockOperations?.orders || [];
+    const parentId = log.parentOrderId || log.mergeParentOrderId || order?.mergeParentOrderId;
+    const parentNo = log.parentOrderNo || log.mergeParentOrderNo || order?.mergeParentOrderNo;
+    if (parentId) {
+      const parent = orders.find((item) => item.id === parentId);
+      if (parent) return parent;
+    }
+    if (parentNo) {
+      const parent = orders.find((item) => item.orderNo === parentNo);
+      if (parent) return parent;
+    }
+    return orders.find((item) => isMergeParent(item) && (
+      (order?.mergeOrderId && item.mergeOrderId === order.mergeOrderId)
+      || (Array.isArray(item.mergeSourceOrderIds) && item.mergeSourceOrderIds.includes(order?.id))
+      || (Array.isArray(item.mergeSourceOrderNos) && item.mergeSourceOrderNos.includes(order?.orderNo))
+    )) || null;
+  }
+
+  function buildOrderSnapshot(order) {
+    if (!order) return null;
+    const lines = Array.isArray(order.items) ? order.items : [];
+    return {
+      orderId: order.id || '',
+      orderNo: order.orderNo || order.id || '--',
+      customerName: order.customerName || '--',
+      canteen: order.canteen || '--',
+      orderTag: order.orderTag || '--',
+      expectedAt: order.expectedAt || '--',
+      source: order.source || '--',
+      status: order.status || '--',
+      orderAmount: order.orderAmount,
+      remark: order.remark || '',
+      productCount: order.productCount ?? lines.length,
+      items: lines.map((line) => {
+        const quantity = line.quantity ?? line.orderQty ?? 0;
+        const unitPrice = line.unitPrice ?? line.orderPrice ?? 0;
+        return {
+          goodsName: line.goodsName || line.productName || '--',
+          goodsCode: line.goodsCode || line.productId || line.productCode || '--',
+          unit: line.unit || line.measurementUnit || '--',
+          unitPrice,
+          quantity,
+          subtotal: line.subtotal ?? quantity * Number(unitPrice || 0)
+        };
+      })
+    };
+  }
+
+  function getOrderOperationLogs(order, sourceLogs) {
+    const logs = Array.isArray(sourceLogs)
+      ? sourceLogs.filter((log) => log && (log.action || log.desc)).map((log) => ({ ...log }))
+      : [];
+    if (isMergeParent(order)) return logs;
+    const parent = findMergeParent(order);
+    if (!parent) return logs;
+    const parentSnapshot = order.mergeParentSnapshot || buildOrderSnapshot(parent);
+    const hasMergeLog = logs.some((log) => log.action === '订单合并');
+    const hasCancelLog = logs.some((log) => log.action === '订单取消合并');
+    if (!hasMergeLog && (order.mergeOrderId || order.isMerged === '是' || parent.status === 'REVOKED')) {
+      const mergeLog = {
+        action: '订单合并',
+        operator: parent.creator || '系统',
+        createdAt: parent.createdAt || '',
+        desc: `${parent.creator || '系统'} 订单合并 ${parent.orderNo || ''}`.trim(),
+        parentOrderId: parent.id,
+        parentOrderNo: parent.orderNo || '',
+        parentSnapshot
+      };
+      const cancelIndex = logs.findIndex((log) => log.action === '订单取消合并');
+      if (cancelIndex >= 0) logs.splice(cancelIndex, 0, mergeLog);
+      else logs.push(mergeLog);
+    }
+    if (parent.status === 'REVOKED' && !hasCancelLog) {
+      logs.push({
+        action: '订单取消合并',
+        operator: '当前用户',
+        createdAt: parent.mergeCancelledAt || '',
+        desc: `当前用户 订单取消合并 ${parent.orderNo || ''}`.trim(),
+        parentOrderId: parent.id,
+        parentOrderNo: parent.orderNo || '',
+        parentSnapshot
+      });
+    }
+    return logs;
+  }
+
   function renderOperationLogs(logs, order) {
-    if (!logs || !logs.length) return '<span class="detail-empty">--</span>';
-    return logs.map((log, index) => `
+    const displayLogs = getOrderOperationLogs(order, logs);
+    if (!displayLogs.length) return '<span class="detail-empty">--</span>';
+    return displayLogs.map((log, index) => `
       <div class="detail-timeline-item">
         <div class="detail-timeline-node"></div>
         <div class="detail-timeline-content">
           <span class="detail-timeline-action">${escapeHtml(log.action)}</span>
           <span class="detail-timeline-desc">${escapeHtml(log.desc)}</span>
           ${isMergeParent(order) && index === 0 ? '<button class="detail-timeline-link" type="button" data-action="view-merge-snapshot">查看详情</button>' : ''}
+          ${!isMergeParent(order) && (log.action === '订单合并' || log.action === '订单取消合并' || log.parentOrderId || log.parentOrderNo) ? `<button class="detail-timeline-link" type="button" data-action="view-merge-parent" data-merge-log-index="${index}">查看详情</button>` : ''}
         </div>
       </div>
     `).join('');
   }
 
   function getMergeSnapshotOrders(order) {
-    if (Array.isArray(order?.mergeSourceOrderSnapshots) && order.mergeSourceOrderSnapshots.length) {
-      return order.mergeSourceOrderSnapshots;
-    }
     const sourceNumbers = Array.isArray(order?.mergeSourceOrderNos) ? order.mergeSourceOrderNos : [];
     const sourceIds = Array.isArray(order?.mergeSourceOrderIds) ? order.mergeSourceOrderIds : [];
     const sourceOrders = window.DemoStore?.get('orders') || window.MockOperations?.orders || [];
+
+    if (Array.isArray(order?.mergeSourceOrderSnapshots) && order.mergeSourceOrderSnapshots.length) {
+      return order.mergeSourceOrderSnapshots.map((snapshot) => {
+        const source = sourceOrders.find((item) => (
+          (snapshot.orderId && item.id === snapshot.orderId)
+          || (snapshot.orderNo && item.orderNo === snapshot.orderNo)
+        ));
+        return {
+          ...snapshot,
+          remark: snapshot.remark ?? source?.remark ?? ''
+        };
+      });
+    }
     return sourceOrders.filter((source) => sourceNumbers.includes(source.orderNo) || sourceIds.includes(source.id));
   }
 
@@ -97,6 +196,7 @@
             ${snapshotInfoItem('单据状态', status)}
             ${snapshotInfoItem('商品种类数', snapshot.productCount ?? lines.length)}
             ${snapshotInfoItem('下单金额', `¥${money(snapshot.orderAmount)}`)}
+            ${snapshotInfoItem('备注', snapshot.remark)}
           </div>
           <table class="order-merge-snapshot-table">
             <thead><tr><th>商品</th><th>商品编号</th><th>计量单位</th><th>单价</th><th>下单数量</th><th>下单小计</th></tr></thead>
@@ -119,6 +219,24 @@
         <section class="operations-modal is-detail order-merge-snapshot-modal" role="dialog" aria-modal="true" aria-label="合并订单详情">
           <header class="operations-modal-header"><h3>合并订单详情</h3><button type="button" data-action="close-merge-snapshot" aria-label="关闭">×</button></header>
           <div class="operations-modal-body"><div class="order-merge-snapshot-list">${renderMergeSnapshotBody(order)}</div></div>
+          <footer class="operations-modal-footer"><button class="btn" type="button" data-action="close-merge-snapshot">关闭</button></footer>
+        </section>
+      </div>`;
+  }
+
+  function openMergeParentModal(order, log) {
+    const overlay = document.getElementById('orderMergeSnapshotOverlay');
+    if (!overlay) return;
+    const parent = findMergeParent(order, log);
+    const snapshot = log?.parentSnapshot || order?.mergeParentSnapshot || buildOrderSnapshot(parent);
+    const body = snapshot
+      ? renderMergeSnapshotBody({ mergeSourceOrderSnapshots: [snapshot] })
+      : '<div class="detail-empty">暂无合并父订单信息</div>';
+    overlay.innerHTML = `
+      <div class="operations-modal-backdrop" data-merge-snapshot-backdrop>
+        <section class="operations-modal is-detail order-merge-snapshot-modal" role="dialog" aria-modal="true" aria-label="合并父订单详情">
+          <header class="operations-modal-header"><h3>合并父订单详情</h3><button type="button" data-action="close-merge-snapshot" aria-label="关闭">×</button></header>
+          <div class="operations-modal-body"><div class="order-merge-snapshot-list">${body}</div></div>
           <footer class="operations-modal-footer"><button class="btn" type="button" data-action="close-merge-snapshot">关闭</button></footer>
         </section>
       </div>`;
@@ -271,6 +389,13 @@
       }
       if (event.target.closest('[data-action="view-merge-snapshot"]')) {
         openMergeSnapshotModal(order);
+        return;
+      }
+      const viewParent = event.target.closest('[data-action="view-merge-parent"]');
+      if (viewParent) {
+        const logs = getOrderOperationLogs(order, order.operationLogs);
+        const log = logs[Number(viewParent.dataset.mergeLogIndex)];
+        openMergeParentModal(order, log);
         return;
       }
       if (event.target.closest('[data-action="close-merge-snapshot"]') || event.target.matches('[data-merge-snapshot-backdrop]')) closeMergeSnapshotModal();
