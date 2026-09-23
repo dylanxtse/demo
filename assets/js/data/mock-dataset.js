@@ -46,7 +46,7 @@
 /* 订单、分拣、出入库及库存业务资料 */
 (function () {
   const orders = [
-    { id: 'ORD-20260730-001', orderNo: 'DD202607300100001', customerName: '第一实验学校', canteen: '第一食堂', customerType: '学校', orderTag: '营养餐', orderAmount: 2860.5, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0, expectedAt: '2026-07-31 07:30', status: 'PENDING', receiptStatus: '待收货', productCount: 18, warehouse: '中心仓', supplement: '否', remark: '上午七点半前送达', route: '东城一线', driver: '张师傅', source: '客户下单', creator: '王采购', createdAt: '2026-07-30 09:18:22', items: [
+    { id: 'ORD-20260730-001', orderNo: 'DD202607300100001', customerName: '第一实验学校', canteen: '第一食堂', customerType: '学校', orderTag: '学生-营养餐', orderAmount: 2860.5, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0, expectedAt: '2026-07-31 07:30', status: 'PENDING', receiptStatus: '待收货', productCount: 18, warehouse: '中心仓', supplement: '否', remark: '上午七点半前送达', route: '东城一线', driver: '张师傅', source: '客户下单', creator: '王采购', createdAt: '2026-07-30 09:18:22', items: [
       { goodsName: '大白菜', isNetVegetable: false, goodsCode: 'SP0300019', unit: '斤', brand: '--', spec: '散装', unitPrice: 1.5, quantity: 80, subtotal: 120, shippedQty: 0, shippedAmount: 0, returnQty: 0, returnAmount: 0, reconciliationQty: 0, reconciliationAmount: 0, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-30', inspectionImages: [{ name: '验货照片1.jpg' }, { name: '验货照片2.jpg' }], inspectionVideos: [] },
       { goodsName: '鸡蛋', isNetVegetable: false, goodsCode: 'SP0300020', unit: '斤', brand: '农家', spec: '500g/份', unitPrice: 5.8, quantity: 35, subtotal: 203, shippedQty: 35, shippedAmount: 203, returnQty: 0, returnAmount: 0, reconciliationQty: 0, reconciliationAmount: 0, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-29', inspectionImages: [{ name: '鸡蛋验货.jpg' }], inspectionVideos: [{ name: '开箱验货.mp4' }] },
       { goodsName: '土豆', isNetVegetable: false, goodsCode: 'SP0300040', unit: '斤', brand: '农家优选', spec: '500g/份', unitPrice: 6.8, quantity: 50, subtotal: 340, shippedQty: 0, shippedAmount: 0, returnQty: 0, returnAmount: 0, reconciliationQty: 0, reconciliationAmount: 0, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-30', inspectionImages: [], inspectionVideos: [] }
@@ -54,7 +54,7 @@
       { action: '创建', desc: '王采购 创建订单 2026-07-30 09:18:22' },
       { action: '提交审核', desc: '王采购 提交审核 2026-07-30 09:19:05' }
     ] },
-    { id: 'ORD-20260729-012', orderNo: 'DD202607290200012', customerName: '阳光幼儿园', canteen: '园区食堂', customerType: '幼儿园', orderTag: '普通餐', orderAmount: 1568, shippingAmount: 1520, returnAmount: 48, reconciliationAmount: 1472, expectedAt: '2026-07-30 08:00', status: 'CONFIRMED', receiptStatus: '未收货', productCount: 12, warehouse: '中心仓', supplement: '否', remark: '', route: '南城二线', driver: '李师傅', source: '平台添加', creator: '管理员', createdAt: '2026-07-29 14:36:10', items: [
+    { id: 'ORD-20260729-012', orderNo: 'DD202607290200012', customerName: '阳光幼儿园', canteen: '园区食堂', customerType: '幼儿园', orderTag: '学生-非营养餐', orderAmount: 1568, shippingAmount: 1520, returnAmount: 48, reconciliationAmount: 1472, expectedAt: '2026-07-30 08:00', status: 'CONFIRMED', receiptStatus: '未收货', productCount: 12, warehouse: '中心仓', supplement: '否', remark: '', route: '南城二线', driver: '李师傅', source: '平台添加', creator: '管理员', createdAt: '2026-07-29 14:36:10', items: [
       { goodsName: '鲫鱼', isNetVegetable: true, goodsCode: 'SP0300031', unit: '斤', brand: '--', spec: '--', unitPrice: 20, quantity: 20, subtotal: 400, shippedQty: 8, shippedAmount: 160, returnQty: 12, returnAmount: 240, reconciliationQty: 8, reconciliationAmount: 160, acceptedQty: 8, acceptedAmount: 160, remark: '库存不足', productionDate: '2026-07-29', inspectionImages: [{ name: '鲫鱼验货.jpg' }], inspectionVideos: [] },
       { goodsName: '西红柿', isNetVegetable: false, goodsCode: 'SP0300025', unit: 'KG', brand: '--', spec: '--', unitPrice: 4.5, quantity: 30, subtotal: 135, shippedQty: 30, shippedAmount: 135, returnQty: 0, returnAmount: 0, reconciliationQty: 30, reconciliationAmount: 135, acceptedQty: 30, acceptedAmount: 135, remark: '', productionDate: '2026-07-29', inspectionImages: [], inspectionVideos: [] },
       { goodsName: '猪肉', isNetVegetable: false, goodsCode: 'SP0300015', unit: '斤', brand: '双汇', spec: '500g/份', unitPrice: 18, quantity: 40, subtotal: 720, shippedQty: 40, shippedAmount: 720, returnQty: 0, returnAmount: 0, reconciliationQty: 40, reconciliationAmount: 720, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-29', inspectionImages: [{ name: '猪肉检疫.jpg' }, { name: '猪肉外观.jpg' }], inspectionVideos: [{ name: '验货视频.mp4' }] }
@@ -64,7 +64,7 @@
       { action: '审核通过', desc: '管理员 审核通过 2026-07-29 15:00:00' },
       { action: '确认供货', desc: '管理员 确认供货 2026-07-29 16:20:00' }
     ] },
-    { id: 'ORD-20260728-006', orderNo: 'DD202607280300006', customerName: '育才中学', canteen: '高中部食堂', customerType: '学校', orderTag: '营养餐', orderAmount: 4388.6, shippingAmount: 4388.6, returnAmount: 0, reconciliationAmount: 4388.6, expectedAt: '2026-07-29 07:00', status: 'COMPLETED', receiptStatus: '未收货', productCount: 25, warehouse: '北区仓', supplement: '否', remark: '', route: '北城一线', driver: '周师傅', source: '客户下单', creator: '赵老师', createdAt: '2026-07-28 16:05:41', items: [
+    { id: 'ORD-20260728-006', orderNo: 'DD202607280300006', customerName: '育才中学', canteen: '高中部食堂', customerType: '学校', orderTag: '学生-营养餐', orderAmount: 4388.6, shippingAmount: 4388.6, returnAmount: 0, reconciliationAmount: 4388.6, expectedAt: '2026-07-29 07:00', status: 'COMPLETED', receiptStatus: '未收货', productCount: 25, warehouse: '北区仓', supplement: '否', remark: '', route: '北城一线', driver: '周师傅', source: '客户下单', creator: '赵老师', createdAt: '2026-07-28 16:05:41', items: [
       { goodsName: '大米', isNetVegetable: false, goodsCode: 'SP0300034', unit: '斤', brand: '--', spec: '--', unitPrice: 10, quantity: 120, subtotal: 1200, shippedQty: 120, shippedAmount: 1200, returnQty: 0, returnAmount: 0, reconciliationQty: 120, reconciliationAmount: 1200, acceptedQty: 120, acceptedAmount: 1200, remark: '', productionDate: '2026-07-28', inspectionImages: [{ name: '大米验货.jpg' }], inspectionVideos: [] },
       { goodsName: '大玉米棒子', isNetVegetable: true, goodsCode: 'SP0300036', unit: 'KG', brand: '--', spec: '--', unitPrice: 5, quantity: 80, subtotal: 400, shippedQty: 80, shippedAmount: 400, returnQty: 0, returnAmount: 0, reconciliationQty: 80, reconciliationAmount: 400, acceptedQty: 80, acceptedAmount: 400, remark: '', productionDate: '2026-07-28', inspectionImages: [], inspectionVideos: [] },
       { goodsName: '黑大米', isNetVegetable: false, goodsCode: 'SP0300035', unit: '斤', brand: '--', spec: '--', unitPrice: 10, quantity: 60, subtotal: 600, shippedQty: 60, shippedAmount: 600, returnQty: 0, returnAmount: 0, reconciliationQty: 60, reconciliationAmount: 600, acceptedQty: 60, acceptedAmount: 600, remark: '', productionDate: '2026-07-28', inspectionImages: [{ name: '黑米验货1.jpg' }, { name: '黑米验货2.jpg' }], inspectionVideos: [{ name: '验货过程.mp4' }] }
@@ -75,7 +75,7 @@
       { action: '确认供货', desc: '管理员 确认供货 2026-07-28 17:30:00' },
       { action: '完成发货', desc: '周师傅 完成发货 2026-07-29 07:00:00' }
     ] },
-    { id: 'ORD-20260727-003', orderNo: 'DD202607270400003', customerName: '机关第二食堂', canteen: '二号食堂', customerType: '机关单位', orderTag: '普通餐', orderAmount: 973.2, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0, expectedAt: '2026-07-28 09:00', status: 'CLOSED', receiptStatus: '未收货', productCount: 8, warehouse: '中心仓', supplement: '否', remark: '客户取消', route: '西城一线', driver: '', source: '平台添加', creator: '管理员', createdAt: '2026-07-27 11:20:08', items: [
+    { id: 'ORD-20260727-003', orderNo: 'DD202607270400003', customerName: '机关第二食堂', canteen: '二号食堂', customerType: '机关单位', orderTag: '其他-非营养餐', orderAmount: 973.2, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0, expectedAt: '2026-07-28 09:00', status: 'CLOSED', receiptStatus: '未收货', productCount: 8, warehouse: '中心仓', supplement: '否', remark: '客户取消', route: '西城一线', driver: '', source: '平台添加', creator: '管理员', createdAt: '2026-07-27 11:20:08', items: [
       { goodsName: '牛奶', isNetVegetable: true, goodsCode: 'SP0300037', unit: '瓶', brand: '--', spec: '--', unitPrice: 5, quantity: 100, subtotal: 500, shippedQty: 0, shippedAmount: 0, returnQty: 0, returnAmount: 0, reconciliationQty: 0, reconciliationAmount: 0, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-27', inspectionImages: [], inspectionVideos: [] },
       { goodsName: '面包', isNetVegetable: false, goodsCode: 'SP0300042', unit: '个', brand: '桃李', spec: '100g/个', unitPrice: 3.5, quantity: 80, subtotal: 280, shippedQty: 0, shippedAmount: 0, returnQty: 0, returnAmount: 0, reconciliationQty: 0, reconciliationAmount: 0, acceptedQty: 0, acceptedAmount: 0, remark: '', productionDate: '2026-07-27', inspectionImages: [], inspectionVideos: [] }
     ], operationLogs: [
@@ -83,6 +83,101 @@
       { action: '关闭', desc: '管理员 关闭订单 2026-07-27 14:00:00' }
     ] }
   ];
+
+  // 批量合单流程演示数据：前四笔可组成两组合单，第五笔用于演示筛选不符合条件的订单。
+  orders.push(
+    {
+      id: 'ORD-MERGE-DEMO-001', orderNo: 'DD202609230300001', demoType: 'BATCH_MERGE',
+      customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-09-24 07:30:00', status: 'MERGED', isMerged: '是', mergeOrderId: 'MERGE-DEMO-20260923-01',
+      orderAmount: 248, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0,
+      receiptStatus: '待收货', productCount: 2, warehouse: '中心仓', supplement: '否',
+      remark: '', route: '演示线路', driver: '演示司机', creator: '演示账号', createdAt: '2026-09-23 09:10:00',
+      items: [
+        { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 20, subtotal: 200 },
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 15, subtotal: 48 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-002', orderNo: 'DD202609230300002', demoType: 'BATCH_MERGE',
+      customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-09-24 07:30:00', status: 'MERGED', isMerged: '是', mergeOrderId: 'MERGE-DEMO-20260923-01',
+      orderAmount: 170, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0,
+      receiptStatus: '待收货', productCount: 2, warehouse: '中心仓', supplement: '否',
+      remark: '', route: '演示线路', driver: '演示司机', creator: '演示账号', createdAt: '2026-09-23 09:09:00',
+      items: [
+        { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 12, subtotal: 120 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 10, subtotal: 50 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-003', orderNo: 'DD202609230300003', demoType: 'BATCH_MERGE',
+      customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-09-24 07:30:00', status: 'READY_FOR_SHIPPING', isMerged: '否', mergeOrderId: '',
+      orderAmount: 112, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0,
+      receiptStatus: '待收货', productCount: 2, warehouse: '中心仓', supplement: '否',
+      remark: '', route: '演示线路', driver: '演示司机', creator: '演示账号', createdAt: '2026-09-23 09:08:00',
+      items: [
+        { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 8, subtotal: 80 },
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 10, subtotal: 32 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-004', orderNo: 'DD202609230300004', demoType: 'BATCH_MERGE',
+      customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-09-24 07:30:00', status: 'READY_FOR_SHIPPING', isMerged: '否', mergeOrderId: '',
+      orderAmount: 100, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0,
+      receiptStatus: '待收货', productCount: 2, warehouse: '中心仓', supplement: '否',
+      remark: '', route: '演示线路', driver: '演示司机', creator: '演示账号', createdAt: '2026-09-23 09:07:00',
+      items: [
+        { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 6, subtotal: 60 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 8, subtotal: 40 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-005', orderNo: 'DD202609230300005', demoType: 'BATCH_MERGE',
+      customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-09-24 07:30:00', status: 'READY_FOR_SORTING', isMerged: '否', mergeOrderId: '',
+      orderAmount: 50, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0,
+      receiptStatus: '待收货', productCount: 1, warehouse: '中心仓', supplement: '否',
+      remark: '', route: '演示线路', driver: '演示司机', creator: '演示账号', createdAt: '2026-09-23 09:06:00',
+      items: [{ goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 5, subtotal: 50 }]
+    },
+    {
+      id: 'ORD-MERGE-PARENT-DEMO-001', orderNo: 'DD202609230300006', demoType: 'BATCH_MERGE_PARENT',
+      customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-营养餐', source: '订单合并', expectedAt: '2026-09-24 07:30:00', status: 'READY_FOR_SHIPPING', isMerged: '是', isMergeParent: true, mergeOrderId: 'MERGE-DEMO-20260923-01',
+      orderAmount: 418, shippingAmount: 0, returnAmount: 0, reconciliationAmount: 0,
+      receiptStatus: '待收货', productCount: 3, warehouse: '中心仓', supplement: '否',
+      remark: '', route: '演示线路', driver: '演示司机', creator: '演示账号', createdAt: '2026-09-23 09:11:00',
+      mergeSourceOrderIds: ['ORD-MERGE-DEMO-001', 'ORD-MERGE-DEMO-002'],
+      mergeSourceOrderNos: ['DD202609230300001', 'DD202609230300002'],
+      operationLogs: [{ action: '创建订单', operator: '演示账号', createdAt: '2026-09-23 09:11:00', desc: '演示账号 创建订单 2026-09-23 09:11:00' }],
+      mergeSourceOrderSnapshots: [
+        {
+          orderNo: 'DD202609230300001', customerName: '合单演示学校', canteen: '第一食堂', orderTag: '学生-营养餐',
+          expectedAt: '2026-09-24 07:30:00', source: '客户下单', status: 'READY_FOR_SHIPPING', orderAmount: 248, productCount: 2,
+          items: [
+            { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 20, subtotal: 200 },
+            { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 15, subtotal: 48 }
+          ]
+        },
+        {
+          orderNo: 'DD202609230300002', customerName: '合单演示学校', canteen: '第一食堂', orderTag: '学生-营养餐',
+          expectedAt: '2026-09-24 07:30:00', source: '客户下单', status: 'READY_FOR_SHIPPING', orderAmount: 170, productCount: 2,
+          items: [
+            { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 12, subtotal: 120 },
+            { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 10, subtotal: 50 }
+          ]
+        }
+      ],
+      items: [
+        { goodsName: '黑大米', goodsCode: 'SP0300034', unit: '斤', unitPrice: 10, quantity: 32, subtotal: 320 },
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 15, subtotal: 48 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 10, subtotal: 50 }
+      ]
+    }
+  );
 
   const returns = [
     { id: 'RET-001', returnNo: 'THD202607300001', customerName: '阳光幼儿园', canteen: '园区食堂', goodsName: '鲫鱼(斤/--/--)', reason: '商品破损', orderNo: 'DD202607290200012', inboundNo: 'RKD202607300009', warehouse: '中心仓', status: 'PENDING', creator: '刘财务', createdAt: '2026-07-30 10:12:00', refundAmount: 120.00, remark: '鲫鱼到货后部分死亡，需退货处理', items: [{ id: 'RL-1', goodsName: '鲫鱼(斤/--/--)', unit: '斤', orderPrice: 12.00, shippedQty: 20, returnedQty: 0, applyQty: 10, applyPrice: 12.00, applyAmount: 120.00, damageQty: 5, purchaseOrder: 'CG202607280001', remark: '部分死亡' }] },

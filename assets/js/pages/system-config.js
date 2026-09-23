@@ -4,6 +4,10 @@
     marketInquiryPriceMode: 'min',
     orderCutoffDays: '0',
     orderCutoffTime: '',
+    autoMergeEnabled: false,
+    autoMergeTime: '08:00',
+    autoMergeLastRunAt: '',
+    autoMergeLastSummary: null,
     orderPricePriority1: '手动定价',
     orderPricePriority2: '',
     orderPricePriority3: '',
@@ -54,11 +58,12 @@
     purchasePricePriority1: '中标价'
   };
   const optionMarkup = (key, includeBlank = false) => `${includeBlank ? '<option value=""></option>' : ''}${selectOptions[key].map((option) => `<option value="${option}">${option}</option>`).join('')}`;
-  const help = (text) => `<span class="config-help" title="${text}" aria-label="${text}">?</span>`;
+  const help = (text) => `<span class="config-help ui-tooltip-trigger" data-ui-tooltip="${window.DomUtils.escapeHtml(text)}" tabindex="0" role="img" aria-label="${window.DomUtils.escapeHtml(text)}">?</span>`;
   const clearButton = (key) => `<button class="config-clear" type="button" data-clear="${key}">清空</button>`;
   const configSelect = (key, className = '', options = {}) => `<select class="config-select ${className}" data-config="${key}" aria-label="${key}" ${options.disabled ? 'disabled' : ''}>${optionMarkup(key, options.includeBlank)}</select>`;
   const configInput = (key, placeholder = '请输入', className = '') => `<input class="config-input ${className}" data-config="${key}" placeholder="${placeholder}" autocomplete="off">`;
-  const configCheckbox = (key, label, helpText = '') => `<label class="config-checkbox"><input type="checkbox" data-config="${key}"><span class="config-checkmark"></span><span>${label}</span>${helpText ? help(helpText) : ''}</label>`;
+  const configCheckbox = (key, label, helpText = '') => `${helpText ? '<span class="config-checkbox-with-help">' : ''}<label class="config-checkbox"><input type="checkbox" data-config="${key}"><span class="config-checkmark"></span><span>${label}</span></label>${helpText ? `${help(helpText)}</span>` : ''}`;
+  const configSwitch = (key, label, helpText = '') => `${helpText ? '<span class="config-checkbox-with-help">' : ''}<label class="config-switch"><input type="checkbox" data-config="${key}"><span class="config-switch-track" aria-hidden="true"></span><span>${label}</span></label>${helpText ? `${help(helpText)}</span>` : ''}`;
   const configRadio = (key, value, label) => `<label class="config-radio"><input type="radio" name="${key}" value="${value}" data-radio-config="${key}"><span class="config-radiomark"></span><span>${label}</span></label>`;
 
   const content = `
@@ -100,6 +105,16 @@
         <div class="config-row permission-row">
           <div class="config-label">客户端下单修改单价权限</div>
           ${configCheckbox('allowClientEditPrice', '修改单价')}
+        </div>
+        <div class="config-row auto-merge-row">
+          <div class="config-label">自动合单配置</div>
+          <div class="auto-merge-fields">
+            ${configSwitch('autoMergeEnabled', '开启自动合单', '开启后将每天对期望时间为明天的订单进行合并')}
+            <div class="auto-merge-time-line" id="autoMergeTimeLine">
+              <span class="auto-merge-time-label">自动合单时间</span>
+              <input class="config-input auto-merge-time-input" data-config="autoMergeTime" type="time" aria-label="自动合单时间">
+            </div>
+          </div>
         </div>
 
         <h2 class="system-config-title">采购配置</h2>
@@ -190,6 +205,264 @@
   }
   let savedSettings = { ...defaults, ...persistedSettings, ...normalizedSettings };
   let pendingScrollPosition = null;
+  let autoMergeScheduleTimer = null;
+  let lastAutoMergeScheduleKey = '';
+
+  function autoMergeDateKey(value) {
+    const source = String(value ?? '').trim().replace(/\//g, '-');
+    const match = source.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    return match
+      ? `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`
+      : source;
+  }
+
+  function autoMergeStatus(order) {
+    return window.BusinessRules?.normalizeStatus?.('orders', order?.status)
+      || String(order?.status || '').trim();
+  }
+
+  function autoMergeIsParent(order) {
+    return order?.isMergeParent === true || order?.isMergeParent === 'true' || order?.isMergeParent === '是';
+  }
+
+  function autoMergeIsMerged(order) {
+    return order?.isMerged === true || order?.isMerged === 'true' || order?.isMerged === '是'
+      || Boolean(order?.mergeOrderId);
+  }
+
+  function autoMergeItems(order) {
+    return Array.isArray(order?.items) ? order.items : (Array.isArray(order?.orderLines) ? order.orderLines : []);
+  }
+
+  function autoMergeProductId(line) {
+    return String(line?.productId || line?.goodsCode || line?.productCode || line?.goodsId || '').trim();
+  }
+
+  function autoMergeUnit(line) {
+    return String(line?.unit || line?.measurementUnit || line?.unitName || '').trim();
+  }
+
+  function autoMergePrice(line) {
+    const value = Number(line?.unitPrice ?? line?.orderPrice ?? line?.price);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function autoMergeQuantity(line) {
+    const value = Number(line?.quantity ?? line?.orderQty ?? line?.qty ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function autoMergePriceMap(order) {
+    const prices = new Map();
+    let conflict = false;
+    autoMergeItems(order).forEach((line) => {
+      const productId = autoMergeProductId(line);
+      const unit = autoMergeUnit(line);
+      if (!productId || !unit) return;
+      const productKey = `${productId}\u0000${unit}`;
+      const price = autoMergePrice(line);
+      const priceKey = price == null ? String(line?.unitPrice ?? line?.orderPrice ?? line?.price ?? '') : price.toFixed(4);
+      if (prices.has(productKey) && prices.get(productKey) !== priceKey) conflict = true;
+      else prices.set(productKey, priceKey);
+    });
+    return { prices, conflict };
+  }
+
+  function autoMergePriceConflict(left, right) {
+    return [...left.entries()].some(([productKey, priceKey]) => right.has(productKey) && right.get(productKey) !== priceKey);
+  }
+
+  function autoMergeBaseKey(order) {
+    return JSON.stringify([
+      order.customerName || order.customerId || '',
+      order.canteen || '',
+      autoMergeDateKey(order.expectedAt),
+      String(order.source || '').trim(),
+      String(order.orderTag || '').trim()
+    ]);
+  }
+
+  function autoMergeHasPurchaseOrder(order) {
+    if (order.purchaseOrderNo || order.purchaseOrderId || order.purchaseOrderGenerated === true) return true;
+    return autoMergeItems(order).some((line) => line.purchaseOrderNo || line.purchaseOrderId || line.purchaseStatus === '已生成采购单');
+  }
+
+  function autoMergeSnapshot(order) {
+    return {
+      orderNo: order.orderNo || order.id || '--',
+      customerName: order.customerName || '--',
+      canteen: order.canteen || '--',
+      orderTag: order.orderTag || '--',
+      expectedAt: order.expectedAt || '--',
+      source: order.source || '--',
+      status: order.status || '--',
+      orderAmount: order.orderAmount,
+      productCount: order.productCount ?? autoMergeItems(order).length,
+      items: autoMergeItems(order).map((line) => {
+        const quantity = autoMergeQuantity(line);
+        const unitPrice = autoMergePrice(line) ?? 0;
+        return {
+          goodsName: line.goodsName || line.productName || '--',
+          goodsCode: autoMergeProductId(line) || '--',
+          unit: autoMergeUnit(line) || '--',
+          unitPrice,
+          quantity,
+          subtotal: line.subtotal ?? quantity * unitPrice
+        };
+      })
+    };
+  }
+
+  function buildAutoMergeGroups(orders) {
+    const buckets = new Map();
+    orders.forEach((order) => {
+      const priceResult = autoMergePriceMap(order);
+      if (priceResult.conflict) return;
+      const key = autoMergeBaseKey(order);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push({ order, prices: priceResult.prices });
+    });
+
+    const groups = [];
+    buckets.forEach((entries) => {
+      const compatibleGroups = [];
+      entries.forEach((entry) => {
+        const target = compatibleGroups.find((group) => !autoMergePriceConflict(group.prices, entry.prices));
+        if (!target) {
+          compatibleGroups.push({ orders: [entry.order], prices: new Map(entry.prices) });
+          return;
+        }
+        target.orders.push(entry.order);
+        entry.prices.forEach((price, productKey) => target.prices.set(productKey, price));
+      });
+      compatibleGroups.filter((group) => group.orders.length >= 2).forEach((group) => groups.push(group.orders));
+    });
+    return groups;
+  }
+
+  function buildAutoMergeParentPayload(orders, mergeId) {
+    const first = orders[0];
+    const itemMap = new Map();
+    orders.forEach((order) => autoMergeItems(order).forEach((line, index) => {
+      const productId = autoMergeProductId(line) || `line-${order.id}-${index}`;
+      const unit = autoMergeUnit(line) || '--';
+      const price = autoMergePrice(line) ?? 0;
+      const key = `${productId}\u0000${unit}\u0000${price.toFixed(4)}`;
+      const current = itemMap.get(key) || {
+        goodsName: line.goodsName || line.productName || '--',
+        goodsCode: productId,
+        productId,
+        unit,
+        unitPrice: price,
+        quantity: 0
+      };
+      current.quantity += autoMergeQuantity(line);
+      itemMap.set(key, current);
+    }));
+    const items = [...itemMap.values()].map((item) => ({
+      ...item,
+      orderQty: item.quantity,
+      subtotal: Number((item.quantity * item.unitPrice).toFixed(2))
+    }));
+    const orderNos = orders.map((order) => order.orderNo || order.id || '--');
+    return {
+      customerId: first.customerId || '',
+      customerName: first.customerName || '--',
+      canteen: first.canteen || '--',
+      customerType: first.customerType || '',
+      orderTag: first.orderTag || '--',
+      expectedAt: autoMergeDateKey(first.expectedAt) || '--',
+      source: '订单合并',
+      sourceType: 'ENTERPRISE',
+      status: 'READY_FOR_SHIPPING',
+      orderAmount: orders.reduce((total, order) => total + Number(order.orderAmount || 0), 0),
+      shippingAmount: 0,
+      returnAmount: 0,
+      reconciliationAmount: 0,
+      warehouse: first.warehouse || '',
+      route: first.route || '',
+      driver: first.driver || '',
+      creator: '系统',
+      remark: '',
+      isMerged: '是',
+      isMergeParent: true,
+      mergeOrderId: mergeId,
+      mergeSourceOrderIds: orders.map((order) => order.id),
+      mergeSourceOrderNos: orderNos,
+      mergeSourceOrderSnapshots: orders.map(autoMergeSnapshot),
+      productCount: items.length,
+      items,
+      operationLogs: [{
+        action: '创建订单',
+        operator: '系统',
+        createdAt: window.BusinessRules?.now?.() || new Date().toISOString().slice(0, 19).replace('T', ' '),
+        desc: '系统 自动合单创建订单'
+      }]
+    };
+  }
+
+  async function executeAutoMerge(trigger = 'manual') {
+    const settings = window.DemoStore.getSettings() || {};
+    if (!settings.autoMergeEnabled && trigger === 'scheduled') return null;
+    if (!settings.autoMergeEnabled) throw new Error('请先开启自动合单');
+    if (!settings.autoMergeTime) throw new Error('请先设置自动合单时间');
+    if (!window.OperationsService) throw new Error('订单服务尚未加载');
+
+    const allOrders = window.DemoStore.get('orders') || [];
+    const eligible = allOrders.filter((order) => {
+      if (autoMergeIsParent(order) || autoMergeIsMerged(order)) return false;
+      if (!['READY_FOR_SHIPPING', '待发货'].includes(autoMergeStatus(order))) return false;
+      return !autoMergeHasPurchaseOrder(order);
+    });
+    const groups = buildAutoMergeGroups(eligible);
+    const runAt = window.BusinessRules?.now?.() || new Date().toISOString().slice(0, 19).replace('T', ' ');
+    let createdCount = 0;
+    for (const [index, orders] of groups.entries()) {
+      const mergeId = `MERGE-AUTO-${Date.now()}-${String(index + 1).padStart(2, '0')}`;
+      const parent = await window.OperationsService.create('orders', buildAutoMergeParentPayload(orders, mergeId));
+      await Promise.all(orders.map((order) => window.OperationsService.update('orders', order.id, {
+        status: 'MERGED',
+        isMerged: '是',
+        mergeOrderId: mergeId
+      })));
+      if (parent) createdCount += 1;
+    }
+    const summary = {
+      trigger,
+      queriedOrders: allOrders.length,
+      eligibleOrders: eligible.length,
+      mergeGroups: groups.length,
+      createdParents: createdCount,
+      message: groups.length ? `生成 ${createdCount} 组订单合单` : '无可合单订单'
+    };
+    window.DemoStore.updateSettings({ autoMergeLastRunAt: runAt, autoMergeLastSummary: summary });
+    savedSettings = { ...savedSettings, autoMergeLastRunAt: runAt, autoMergeLastSummary: summary };
+    updateAutoMergeControls();
+    showConfigStatus(`自动合单执行完成：${summary.message}`);
+    return summary;
+  }
+
+  function updateAutoMergeControls() {
+    const checkbox = root.querySelector('[data-config="autoMergeEnabled"]');
+    const timeInput = root.querySelector('[data-config="autoMergeTime"]');
+    const timeLine = root.querySelector('#autoMergeTimeLine');
+    if (!checkbox || !timeInput) return;
+    const enabled = checkbox.checked;
+    timeInput.disabled = !enabled;
+    timeLine?.classList.toggle('is-disabled', !enabled);
+  }
+
+  function checkAutoMergeSchedule() {
+    const settings = window.DemoStore.getSettings() || {};
+    if (!settings.autoMergeEnabled || !/^\d{2}:\d{2}$/.test(String(settings.autoMergeTime || ''))) return;
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    if (currentTime !== settings.autoMergeTime) return;
+    const scheduleKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()} ${currentTime}`;
+    if (lastAutoMergeScheduleKey === scheduleKey) return;
+    lastAutoMergeScheduleKey = scheduleKey;
+    executeAutoMerge('scheduled').catch((error) => showConfigStatus(error.message || '自动合单执行失败', 'error'));
+  }
 
   function readScrollPosition() {
     const scroll = root.querySelector('.system-config-scroll');
@@ -235,20 +508,36 @@
     return next;
   }
 
+  function showConfigStatus(message, type = '') {
+    const status = root.querySelector('#configStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('is-error', type === 'error');
+    status.hidden = false;
+    window.clearTimeout(status._hideTimer);
+    status._hideTimer = window.setTimeout(() => { status.hidden = true; }, 2200);
+  }
+
   function persistSettings() {
     const scrollPosition = pendingScrollPosition || readScrollPosition();
     const next = readFormSettings();
+    if (next.autoMergeEnabled && !next.autoMergeTime) {
+      showConfigStatus('请设置自动合单时间', 'error');
+      updateAutoMergeControls();
+      return false;
+    }
     window.DemoStore.updateSettings(next);
     savedSettings = Object.assign(savedSettings, next);
     restoreScrollPosition(scrollPosition);
     pendingScrollPosition = null;
-    const status = root.querySelector('#configStatus');
-    status.hidden = false;
-    window.clearTimeout(status._hideTimer);
-    status._hideTimer = window.setTimeout(() => { status.hidden = true; }, 1600);
+    updateAutoMergeControls();
+    showConfigStatus('配置已保存');
+    return true;
   }
 
   applySettingsToForm();
+  updateAutoMergeControls();
+  autoMergeScheduleTimer = window.setInterval(checkAutoMergeSchedule, 1000);
 
   root.addEventListener('pointerdown', (event) => {
     if (event.target.closest('[data-config], [data-radio-config], .config-radio, .config-checkbox, [data-clear]')) {

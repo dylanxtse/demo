@@ -31,7 +31,7 @@
   const storageKey = 'procurement-demo-v3';
   const previousStorageKey = 'procurement-demo-v2';
   const backupStorageKey = 'procurement-demo-v3-migration-backup';
-  const schemaVersion = '20260805-flow-v3.0';
+  const schemaVersion = '20260805-flow-v3.2';
   const warehouseMonitorPointSeed = [
     {
       id: 'WMP-001',
@@ -534,6 +534,34 @@
       || tags.every((tag) => legacyOrderTagNames.has(String(tag?.tagName || '').trim()));
     if (isLegacySeed) state.tags = clone(window.MockOperations?.tags || []);
     state.orderTagSeedRevision = orderTagSeedRevision;
+    return true;
+  }
+
+  const orderTagDisplayRevision = 'order-tag-display-v1';
+  const combinedOrderTagPattern = /^.+-(营养餐|非营养餐|不区分)$/;
+  function combinedOrderTag(order) {
+    const raw = String(order?.orderTag || '').trim();
+    if (!raw || combinedOrderTagPattern.test(raw)) return raw;
+    const tagName = order?.customerType === '机关单位' || String(order?.customerName || '').includes('食堂')
+      ? '其他'
+      : '学生';
+    const nutritious = raw === '营养餐'
+      ? '营养餐'
+      : raw === '普通餐' || raw === '非营养餐'
+        ? '非营养餐'
+        : '不区分';
+    return `${tagName}-${nutritious}`;
+  }
+
+  function normalizeOrderTagDisplays(state) {
+    if (state.orderTagDisplayRevision === orderTagDisplayRevision) return false;
+    (state.orders || []).forEach((order) => {
+      const next = combinedOrderTag(order);
+      if (next && next !== order.orderTag) {
+        order.orderTag = next;
+      }
+    });
+    state.orderTagDisplayRevision = orderTagDisplayRevision;
     return true;
   }
 
@@ -1493,7 +1521,7 @@
       orders.push({
         id: `ORD-DEMO-${String(index + 1).padStart(3, '0')}`, orderNo: `DD202608${String(5 + (generatedIndex % 20)).padStart(2, '0')}03${String(index + 1).padStart(5, '0')}`,
         customerName, customerType: customerName.includes('幼儿') ? '幼儿园' : customerName.includes('食堂') ? '机关单位' : '学校', canteen: canteenByCustomer[customerName],
-        source: generatedIndex % 3 ? '企业下单' : '客户下单', orderTag: index % 2 ? '普通餐' : '营养餐', expectedAt: `2026-08-${String(5 + (generatedIndex % 10)).padStart(2, '0')} ${generatedIndex % 2 ? '08:00' : '07:30'}`,
+        source: generatedIndex % 3 ? '企业下单' : '客户下单', orderTag: `${customerName.includes('食堂') ? '其他' : '学生'}-${index % 2 ? '非营养餐' : '营养餐'}`, expectedAt: `2026-08-${String(5 + (generatedIndex % 10)).padStart(2, '0')} ${generatedIndex % 2 ? '08:00' : '07:30'}`,
         warehouse: generatedIndex % 4 === 0 ? '北区仓' : '中心仓', route: `配送线路${(generatedIndex % 5) + 1}`, status,
         orderAmount: Number((10 + (index % 6)) * number(product.marketPrice)), shippingAmount: status === 'COMPLETED' ? Number((10 + (index % 6)) * number(product.marketPrice)) : 0,
         items: [{ goodsCode: product.code || product.id, goodsName: product.name, unit: product.unit, quantity: 10 + (index % 6), unitPrice: number(product.marketPrice), isNetVegetable: product.isNetVegetable === true }]
@@ -1512,7 +1540,7 @@
         customerType: '学校',
         canteen: '第一食堂',
         source: '客户下单',
-        orderTag: '营养餐',
+        orderTag: '学生-营养餐',
         expectedAt: '2026-08-05 07:30',
         warehouse: '中心仓',
         route: '东城一线',
@@ -1529,7 +1557,7 @@
         customerType: '幼儿园',
         canteen: '园区食堂',
         source: '平台添加',
-        orderTag: '普通餐',
+        orderTag: '学生-非营养餐',
         expectedAt: '2026-08-05 08:00',
         warehouse: '中心仓',
         route: '南城二线',
@@ -1645,6 +1673,95 @@
     return changed;
   }
 
+  function ensureBatchMergeDemoOrders(current) {
+    const demoOrders = (window.MockOperations?.orders || []).filter((order) => ['BATCH_MERGE', 'BATCH_MERGE_PARENT'].includes(order.demoType));
+    if (!demoOrders.length) return false;
+    if (!Array.isArray(current.orders)) current.orders = [];
+    if (!Array.isArray(current.orderLines)) current.orderLines = [];
+    const existingIds = new Set((current.orders || []).map((order) => order.id));
+    let changed = false;
+    const hasActiveDemoMergeParent = (source) => (current.orders || []).some((order) => (
+      order.isMergeParent === true
+      && order.mergeOrderId === source.mergeOrderId
+      && !['REVOKED', 'CLOSED'].includes(order.status)
+    ));
+
+    demoOrders.slice().reverse().forEach((source, index) => {
+      if (existingIds.has(source.id)) {
+        const existing = current.orders.find((order) => order.id === source.id);
+        if (existing && number(existing.orderAmount) === 0 && number(source.orderAmount) > 0) {
+          existing.orderAmount = source.orderAmount;
+          changed = true;
+        }
+        if (existing && ['BATCH_MERGE', 'BATCH_MERGE_PARENT'].includes(source.demoType) && existing.remark) {
+          existing.remark = '';
+          changed = true;
+        }
+        if (existing && source.demoType === 'BATCH_MERGE' && source.mergeOrderId && hasActiveDemoMergeParent(source)) {
+          if (existing.status !== 'MERGED') {
+            existing.status = 'MERGED';
+            changed = true;
+          }
+          if (existing.isMerged !== '是') {
+            existing.isMerged = '是';
+            changed = true;
+          }
+          if (existing.mergeOrderId !== source.mergeOrderId) {
+            existing.mergeOrderId = source.mergeOrderId;
+            changed = true;
+          }
+        }
+        if (existing && source.demoType === 'BATCH_MERGE_PARENT') {
+          if (existing.isMergeParent !== true) {
+            existing.isMergeParent = true;
+            changed = true;
+          }
+          if (existing.status === 'MERGED' && source.status && existing.status !== source.status) {
+            existing.status = source.status;
+            changed = true;
+          }
+          if (existing.source !== source.source) {
+            existing.source = source.source;
+            changed = true;
+          }
+          if ((!Array.isArray(existing.mergeSourceOrderIds) || !existing.mergeSourceOrderIds.length)
+            && Array.isArray(source.mergeSourceOrderIds) && source.mergeSourceOrderIds.length) {
+            existing.mergeSourceOrderIds = clone(source.mergeSourceOrderIds);
+            changed = true;
+          }
+          if ((!Array.isArray(existing.mergeSourceOrderNos) || !existing.mergeSourceOrderNos.length)
+            && Array.isArray(source.mergeSourceOrderNos) && source.mergeSourceOrderNos.length) {
+            existing.mergeSourceOrderNos = clone(source.mergeSourceOrderNos);
+            changed = true;
+          }
+          if ((!Array.isArray(existing.mergeSourceOrderSnapshots) || !existing.mergeSourceOrderSnapshots.length)
+            && Array.isArray(source.mergeSourceOrderSnapshots) && source.mergeSourceOrderSnapshots.length) {
+            existing.mergeSourceOrderSnapshots = clone(source.mergeSourceOrderSnapshots);
+            changed = true;
+          }
+          if ((!Array.isArray(existing.operationLogs) || !existing.operationLogs.length)
+            && Array.isArray(source.operationLogs) && source.operationLogs.length) {
+            existing.operationLogs = clone(source.operationLogs);
+            changed = true;
+          }
+        }
+        return;
+      }
+      const order = normalizeOrder(source, (current.orders || []).length + index);
+      order.isMerged = source.isMerged ?? '否';
+      order.mergeOrderId = source.mergeOrderId || '';
+      order.sortingCompleted = true;
+      current.orders.unshift(order);
+      current.orderLines = [
+        ...order.items.map((line) => clone(line)),
+        ...(current.orderLines || [])
+      ];
+      existingIds.add(source.id);
+      changed = true;
+    });
+    return changed;
+  }
+
   function ensure() {
     if (state) return state;
     const stored = window.AppStorage.read(storageKey, null);
@@ -1663,6 +1780,7 @@
       if (!stored && previous && !window.AppStorage.read(backupStorageKey, null)) {
         window.AppStorage.write(backupStorageKey, previous);
       }
+      const batchMergeDemoOrdersAdded = ensureBatchMergeDemoOrders(state);
       if (!Array.isArray(state.units) && Array.isArray(legacyUnits)) state.units = clone(legacyUnits);
       if (!Array.isArray(state.goodsReviews) && Array.isArray(legacyReviews)) state.goodsReviews = clone(legacyReviews);
       if (!Array.isArray(state.processingTemplates) && Array.isArray(legacyTemplates)) state.processingTemplates = clone(legacyTemplates);
@@ -1679,11 +1797,12 @@
       const processingOutputsNormalized = normalizeProcessingOutputs(state);
       const contractsNormalized = normalizeStateContracts(state);
       const orderTagsNormalized = normalizeOrderTags(state);
+      const orderTagDisplaysNormalized = normalizeOrderTagDisplays(state);
       const warehouseCodesNormalized = normalizeWarehouseCodes(state);
       const settingsNormalized = normalizeSettings(state);
       const decimalsNormalized = normalizeStateDecimals(state);
       const statisticsResourcesNormalized = ensureStatisticsResources(state);
-      if (source.version !== schemaVersion || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || orderTagsNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
+      if (source.version !== schemaVersion || batchMergeDemoOrdersAdded || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || orderTagsNormalized || orderTagDisplaysNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
     }
     else {
       state = buildSeed();
@@ -1699,6 +1818,7 @@
       normalizeProcessingOutputs(state);
       normalizeStateContracts(state);
       normalizeOrderTags(state);
+      normalizeOrderTagDisplays(state);
       normalizeWarehouseCodes(state);
       normalizeSettings(state);
       normalizeStateDecimals(state);
@@ -2079,7 +2199,7 @@
     });
     order.orderLines = order.items;
     syncProgress(state, order);
-    if (order.status !== 'SHIPPED' && order.status !== 'CLOSED' && order.status !== 'REJECTED') {
+    if (!['SHIPPED', 'CLOSED', 'REJECTED', 'MERGED', 'REVOKED'].includes(order.status)) {
       if (order.sortingCompleted) order.status = 'READY_FOR_SHIPPING';
     }
     const shipping = state.shippingOrders.find((item) => item.orderId === orderId);

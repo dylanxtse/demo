@@ -130,6 +130,16 @@
     return product?.isNetVegetable === true;
   }
 
+  function isMergeParent(item) {
+    return item?.isMergeParent === true || item?.isMergeParent === 'true' || item?.isMergeParent === '是';
+  }
+
+  function shouldHideOrder(item) {
+    if (isMergeParent(item)) return item.status === 'REVOKED';
+    const merged = item?.isMerged === true || item?.isMerged === 'true' || item?.isMerged === '是';
+    return merged && Boolean(item?.mergeOrderId);
+  }
+
   function matches(item, conditions, resource) {
     return Object.entries(conditions || {}).every(([key, value]) => {
       if (value === '' || value == null) return true;
@@ -170,6 +180,15 @@
       if (resource === 'orders' && key === 'netVegetable') {
         const containsNetVegetable = orderContainsNetVegetable(item);
         return value === 'net' ? containsNetVegetable : value === 'non-net' ? !containsNetVegetable : true;
+      }
+      if (resource === 'orders' && key === 'isMerged') {
+        const source = item.isMerged;
+        const actual = source === true || source === 'true' || source === '是'
+          ? '是'
+          : source === false || source === 'false' || source === '否'
+            ? '否'
+            : '否';
+        return actual === String(value);
       }
       if (key === 'isNetVegetable') {
         const expected = String(value).toLowerCase();
@@ -356,6 +375,7 @@
       const conditions = query.condition || {};
       const sort = query.sort?.key && query.sort?.direction ? query.sort : null;
       const filtered = load(resource)
+        .filter((item) => resource !== 'orders' || !shouldHideOrder(item))
         .filter((item) => matches(item, conditions, resource))
         .sort((a, b) => {
           if (sort) {

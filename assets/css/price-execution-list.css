@@ -347,13 +347,7 @@
   display: inline-flex;
   width: 15px;
   height: 15px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #aeb6c2;
-  border-radius: 50%;
-  color: #8c96a5;
-  font-size: 10px;
-  line-height: 1;
+  flex: 0 0 15px;
   vertical-align: 1px;
 }
 

@@ -272,7 +272,7 @@
   }
 
   function renderCoefficientHint(text) {
-    return `<span class="processing-header-help" tabindex="0" role="img" aria-label="查看字段说明" data-tooltip="${escapeHtml(text)}"><svg class="processing-header-help-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 5.7c.1-1.4 1.2-2.3 2.8-2.3 1.7 0 2.8 1 2.8 2.5 0 1.1-.6 1.8-1.7 2.5-.9.6-1.3 1.1-1.3 2.1" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><circle cx="7.9" cy="12.7" r=".75" fill="currentColor"/></svg></span>`;
+    return `<span class="processing-header-help ui-tooltip-trigger" tabindex="0" role="img" aria-label="查看字段说明" data-ui-tooltip="${escapeHtml(text)}"><svg class="processing-header-help-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 5.7c.1-1.4 1.2-2.3 2.8-2.3 1.7 0 2.8 1 2.8 2.5 0 1.1-.6 1.8-1.7 2.5-.9.6-1.3 1.1-1.3 2.1" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><circle cx="7.9" cy="12.7" r=".75" fill="currentColor"/></svg></span>`;
   }
 
   function renderCoefficientHeader(label, text) {

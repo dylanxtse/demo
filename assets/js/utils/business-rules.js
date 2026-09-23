@@ -105,6 +105,7 @@
     COMPLETED: '已完成',
     REJECTED: '已驳回',
     CLOSED: '已关闭',
+    REVOKED: '已撤销',
     ENABLE: '启用',
     DISABLE: '禁用',
     NOT_UPLOADED: '未上传',

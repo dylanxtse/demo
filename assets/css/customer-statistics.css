@@ -291,11 +291,7 @@
   margin-left: 4px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #9ca4b3;
-  border-radius: 50%;
-  color: #8891a2;
-  font-size: 10px;
-  line-height: 12px;
+  flex: 0 0 14px;
   vertical-align: 1px;
 }
 

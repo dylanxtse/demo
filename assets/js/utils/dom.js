@@ -54,4 +54,80 @@
       return `${name || '--'}（${unit || '--'}/${brand || '--'}/${spec || '--'}）`;
     }
   };
+
+  let activeTooltip = null;
+  let activeTrigger = null;
+  let tooltipSequence = 0;
+
+  function hideTooltip() {
+    if (activeTrigger && activeTooltip && activeTrigger.getAttribute('aria-describedby') === activeTooltip.id) {
+      activeTrigger.removeAttribute('aria-describedby');
+    }
+    activeTooltip?.remove();
+    activeTooltip = null;
+    activeTrigger = null;
+  }
+
+  function showTooltip(trigger) {
+    const text = trigger?.dataset?.uiTooltip;
+    if (!text) return;
+    if (activeTrigger === trigger && activeTooltip) return;
+    hideTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'ui-tooltip-bubble';
+    tooltip.id = `ui-tooltip-${++tooltipSequence}`;
+    tooltip.textContent = text;
+    tooltip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tooltip);
+
+    const targetRect = trigger.getBoundingClientRect();
+    const tooltipHeight = tooltip.offsetHeight;
+    const preferredTop = targetRect.top - tooltipHeight - 8;
+    const top = preferredTop >= 8
+      ? preferredTop
+      : Math.min(window.innerHeight - tooltipHeight - 8, targetRect.bottom + 8);
+    const tooltipWidth = tooltip.getBoundingClientRect().width;
+    const center = targetRect.left + targetRect.width / 2;
+    const left = Math.min(
+      window.innerWidth - tooltipWidth / 2 - 8,
+      Math.max(tooltipWidth / 2 + 8, center)
+    );
+    tooltip.style.top = `${Math.max(8, top)}px`;
+    tooltip.style.left = `${left}px`;
+    trigger.setAttribute('aria-describedby', tooltip.id);
+    activeTooltip = tooltip;
+    activeTrigger = trigger;
+    window.requestAnimationFrame(() => tooltip.classList.add('is-visible'));
+  }
+
+  document.addEventListener('mouseover', (event) => {
+    const trigger = event.target?.closest?.('[data-ui-tooltip]');
+    if (!trigger || (event.relatedTarget && trigger.contains(event.relatedTarget))) return;
+    showTooltip(trigger);
+  });
+
+  document.addEventListener('mouseout', (event) => {
+    const trigger = event.target?.closest?.('[data-ui-tooltip]');
+    if (!trigger || trigger !== activeTrigger) return;
+    if (!event.relatedTarget || !trigger.contains(event.relatedTarget)) hideTooltip();
+  });
+
+  document.addEventListener('focusin', (event) => {
+    const trigger = event.target?.closest?.('[data-ui-tooltip]');
+    if (trigger) showTooltip(trigger);
+  });
+
+  document.addEventListener('focusout', (event) => {
+    const trigger = event.target?.closest?.('[data-ui-tooltip]');
+    if (trigger && trigger === activeTrigger && (!event.relatedTarget || !trigger.contains(event.relatedTarget))) hideTooltip();
+  });
+
+  window.addEventListener('scroll', hideTooltip, true);
+  window.addEventListener('resize', hideTooltip);
+
+  window.TooltipService = {
+    show: showTooltip,
+    hide: hideTooltip
+  };
 })();

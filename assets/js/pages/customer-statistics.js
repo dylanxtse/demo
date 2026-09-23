@@ -130,7 +130,7 @@
     return '<tr>' + columns.map((column) => {
       if (column.key !== 'actualRank') {
         const info = column.key === 'actualAmount'
-          ? '<span class="customer-statistics-info" title="实际金额=发货金额-退货金额">?</span>'
+          ? '<span class="customer-statistics-info ui-tooltip-trigger" data-ui-tooltip="实际金额=发货金额-退货金额" tabindex="0" role="img" aria-label="实际金额=发货金额-退货金额">?</span>'
           : '';
         return '<th scope="col">' + column.label + info + '</th>';
       }

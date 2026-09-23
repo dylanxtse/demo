@@ -262,6 +262,98 @@
   justify-content: center;
 }
 
+.order-batch-merge-modal .operations-modal-body {
+  padding: 16px 20px;
+}
+
+.order-batch-merge-summary {
+  margin-bottom: 14px;
+  color: var(--text-secondary);
+  line-height: 22px;
+}
+
+.order-batch-merge-summary strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.order-batch-merge-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-batch-merge-group {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.order-batch-merge-group-title {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: #f7f9fc;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.order-batch-merge-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.order-batch-merge-meta div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.order-batch-merge-meta span {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.order-batch-merge-meta strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-batch-merge-meta-orders {
+  grid-column: 2 / -1;
+}
+
+.order-batch-merge-table-wrap {
+  max-height: 280px;
+  overflow: auto;
+  border-top: 1px solid var(--border-light);
+}
+
+.order-batch-merge-table {
+  min-width: 760px;
+}
+
+.order-batch-merge-table th,
+.order-batch-merge-table td {
+  height: 38px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .order-batch-merge-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .order-module-page .operations-table-container {
   display: flex;
   flex: 1;
@@ -1198,6 +1290,28 @@
   font: inherit;
   line-height: 20px;
   text-decoration: none;
+}
+
+.order-number-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.order-merge-parent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 1px solid #1768e5;
+  border-radius: 2px;
+  color: #1768e5;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  flex: 0 0 18px;
 }
 
 .order-goods-link small {

@@ -442,7 +442,7 @@
   function renderPurchaseHead() {
     const priceHeaders = isEducationPage
       ? '<th class="price-current-col">当前执行价格</th><th class="price-bid-col">中标价</th>'
-      : '<th class="price-current-col">当前执行价格</th><th>手动订价 <span class="price-help-icon" title="手动订价说明" aria-label="手动订价说明">?</span></th><th>中标价</th><th>协议价</th><th>近一次采购价</th><th>供应商报价</th><th>市场价</th>';
+      : '<th class="price-current-col">当前执行价格</th><th>手动订价 <span class="price-help-icon ui-tooltip-trigger" data-ui-tooltip="手动订价说明" tabindex="0" role="img" aria-label="手动订价说明">?</span></th><th>中标价</th><th>协议价</th><th>近一次采购价</th><th>供应商报价</th><th>市场价</th>';
     return `<tr>
       <th class="price-seq-col">序号</th><th class="price-image-col">图片</th><th class="price-code-col">商品编号</th>
       <th class="price-name-col">商品名称（计量单位/品牌/规格）</th><th class="price-category-col">分类</th><th class="price-unit-col">计量单位</th>
@@ -454,7 +454,7 @@
     return `<tr>
       <th class="price-seq-col">序号</th><th class="price-image-col">图片</th><th class="price-code-col">商品编号</th>
       <th class="price-partner-col">客户名称</th><th class="price-name-col">商品名称（计量单位/品牌/规格）</th><th class="price-category-col">商品分类</th>
-      <th class="price-unit-col">计量单位</th><th class="price-current-col">当前执行价格</th><th>手动订价 <span class="price-help-icon" title="手动订价说明" aria-label="手动订价说明">?</span></th><th>协议价</th>
+      <th class="price-unit-col">计量单位</th><th class="price-current-col">当前执行价格</th><th>手动订价 <span class="price-help-icon ui-tooltip-trigger" data-ui-tooltip="手动订价说明" tabindex="0" role="img" aria-label="手动订价说明">?</span></th><th>协议价</th>
       <th>近一次销售价</th><th>市场价</th>
     </tr>`;
   }

@@ -63,14 +63,62 @@
   white-space: nowrap;
 }
 
+.config-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  gap: 8px;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.config-checkbox-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .config-checkbox input,
-.config-radio input {
+.config-radio input,
+.config-switch input {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   opacity: 0;
   pointer-events: none;
+}
+
+.config-switch-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: #cfd5df;
+  transition: background-color .2s ease;
+}
+
+.config-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+  transition: transform .2s ease;
+}
+
+.config-switch input:checked + .config-switch-track { background: #2857c7; }
+.config-switch input:checked + .config-switch-track::after { transform: translateX(16px); }
+.config-switch input:focus-visible + .config-switch-track {
+  outline: 2px solid rgba(40, 87, 199, .2);
+  outline-offset: 2px;
 }
 
 .config-checkmark,
@@ -183,6 +231,29 @@
 .config-apply:hover { color: #17429e; }
 
 .permission-row { margin-bottom: 14px; }
+.auto-merge-row { margin-bottom: 22px; }
+.auto-merge-fields {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 32px;
+}
+.auto-merge-time-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: #333;
+}
+.auto-merge-time-line.is-disabled { color: #a3a8b1; }
+.auto-merge-time-label { margin-left: 24px; }
+.auto-merge-time-input { width: 150px; }
+.auto-merge-time-input:disabled {
+  background: #f5f6f8;
+  color: #a3a8b1;
+  cursor: not-allowed;
+}
 .purchase-mode-row .config-select { width: 196px; }
 .purchase-priority-row { margin-bottom: 14px; }
 
@@ -217,12 +288,7 @@
   height: 15px;
   margin-left: 4px;
   border-radius: 50%;
-  background: #2857c7;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 15px;
-  cursor: help;
+  flex: 0 0 15px;
 }
 
 .config-toast {
@@ -236,6 +302,7 @@
   font-size: 13px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
 }
+.config-toast.is-error { background: #d14343; }
 
 @media (max-width: 1200px) {
   .system-config-page { padding-left: 24px; padding-right: 24px; }

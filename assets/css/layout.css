@@ -378,6 +378,59 @@
   display: none !important;
 }
 
+/* 统一问号提示：参考企业端商品列表“允许修改采购量”的蓝色问号与白色气泡。 */
+.ui-tooltip-trigger {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 15px;
+  border: 0;
+  border-radius: 50%;
+  background: #2857c7;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  cursor: default;
+  outline: none;
+}
+
+.ui-tooltip-trigger:focus-visible {
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.ui-tooltip-bubble {
+  position: fixed;
+  z-index: 1300;
+  width: max-content;
+  max-width: 320px;
+  padding: 7px 9px;
+  box-sizing: border-box;
+  border: 1px solid #d9dde5;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(31, 35, 41, .14);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 19px;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 3px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.ui-tooltip-bubble.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
 @media (max-width: 1100px) {
   :root { --sidebar-width: 200px; }
   .app-header { padding: 0 16px; }

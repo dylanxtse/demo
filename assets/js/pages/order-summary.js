@@ -143,7 +143,7 @@
     const dateLabel = modeConfig[mode].dateLabel;
     return '<thead><tr>' + columns.map((column) => {
       const info = column.key === 'actualAmount'
-        ? '<span class="order-summary-info" title="实际金额=发货金额-退货金额">?</span>'
+        ? '<span class="order-summary-info ui-tooltip-trigger" data-ui-tooltip="实际金额=发货金额-退货金额" tabindex="0" role="img" aria-label="实际金额=发货金额-退货金额">?</span>'
         : '';
       const label = column.key === 'date' ? dateLabel : column.label;
       return '<th scope="col">' + label + info + '</th>';

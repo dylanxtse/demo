@@ -919,6 +919,125 @@
   color: var(--text-secondary);
   line-height: 20px;
 }
+
+.detail-timeline-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.detail-timeline-link:hover {
+  text-decoration: underline;
+}
+
+.order-merge-snapshot-modal .operations-modal-body {
+  padding: 16px 20px;
+}
+
+.order-merge-snapshot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-merge-snapshot-card {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.order-merge-snapshot-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: #f7f9fc;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.order-merge-snapshot-title span {
+  color: var(--text-primary);
+}
+
+.order-merge-snapshot-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 18px;
+  padding: 12px;
+}
+
+.order-merge-snapshot-meta div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.order-merge-snapshot-meta span {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.order-merge-snapshot-meta strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-merge-snapshot-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid var(--border-light);
+  font-size: 13px;
+}
+
+.order-merge-snapshot-table th,
+.order-merge-snapshot-table td {
+  height: 36px;
+  padding: 6px 10px;
+  border-right: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.order-merge-snapshot-table th:last-child,
+.order-merge-snapshot-table td:last-child {
+  border-right: 0;
+}
+
+.order-merge-snapshot-table th {
+  background: #f7f9fc;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.order-merge-snapshot-table tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .order-merge-snapshot-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .order-merge-snapshot-table {
+    min-width: 680px;
+  }
+}
 .processing-detail-table {
   width: 100%;
   border-collapse: collapse;
