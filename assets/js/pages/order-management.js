@@ -501,13 +501,14 @@
     if (!groups.length) return '<div class="order-batch-merge-empty">暂无待合单的订单组，请取消本次操作。</div>';
     return groups.map((group, index) => `
       <section class="order-batch-merge-group">
-        <div class="order-batch-merge-group-title"><span>合单组</span><button class="btn-text danger order-batch-merge-remove" type="button" data-batch-merge-remove="${index}">删除</button></div>
         <div class="order-batch-merge-meta">
+          <button class="btn-text danger order-batch-merge-remove" type="button" data-batch-merge-remove="${index}" ${groups.length <= 1 ? 'disabled' : ''} title="${groups.length <= 1 ? '至少保留一组合单订单' : '删除该订单组，不参与本次合单'}">删除</button>
           <div><span>客户名称：</span><strong>${escapeHtml(group.customerName)}</strong></div>
           <div><span>食堂：</span><strong>${escapeHtml(group.canteen)}</strong></div>
           <div><span>订单标签：</span><strong>${escapeHtml(group.orderTag)}</strong></div>
           <div><span>期望送达时间：</span><strong>${escapeHtml(group.expectedAt)}</strong></div>
           <div><span>单据来源：</span><strong>${escapeHtml(group.source)}</strong></div>
+          <div class="order-batch-merge-meta-amount"><span>合单金额：</span><strong>¥${money(group.orderAmount)}</strong></div>
           <div class="order-batch-merge-meta-orders"><span>订单笔数：</span><strong>${group.orders.length} 笔</strong></div>
         </div>
         <div class="order-batch-merge-table-wrap">
@@ -835,6 +836,7 @@
       }
       const removeButton = event.target.closest('[data-batch-merge-remove]');
       if (!removeButton) return;
+      if (activeGroups.length <= 1) return;
       const groupIndex = Number(removeButton.dataset.batchMergeRemove);
       const [removedGroup] = activeGroups.splice(groupIndex, 1);
       if (!removedGroup) return;

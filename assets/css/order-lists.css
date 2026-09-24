@@ -311,10 +311,23 @@
 }
 
 .order-batch-merge-meta {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2fr);
   gap: 12px;
-  padding: 12px;
+  padding: 12px 64px 12px 12px;
+}
+
+.order-batch-merge-meta > .order-batch-merge-remove {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+}
+
+.order-batch-merge-remove:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .order-batch-merge-meta div {
@@ -341,7 +354,7 @@
 }
 
 .order-batch-merge-meta-orders {
-  grid-column: 2 / -1;
+  grid-column: auto;
 }
 
 .order-batch-merge-table-wrap {
