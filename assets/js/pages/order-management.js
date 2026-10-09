@@ -792,7 +792,7 @@
       const visible = normalized.slice(0, 3).map((orderNo) => escapeHtml(orderNo)).join('、');
       if (!visible) return '--';
       const suffix = normalized.length > 3
-        ? `<span class="order-batch-merge-result-more">等${normalized.length - 3}笔</span>`
+        ? `<span class="order-batch-merge-result-more">等${normalized.length}笔</span>`
         : '';
       return `${visible}${suffix}`;
     };
