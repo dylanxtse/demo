@@ -179,6 +179,151 @@
     }
   );
 
+  // 扩展批量合单流程演示数据：覆盖默认日期范围，补充三组共12笔可合单订单。
+  const createBatchMergeDemoOrder = (config) => {
+    const items = config.items.map((item) => {
+      const quantity = Number(item.quantity || 0);
+      const unitPrice = Number(item.unitPrice || 0);
+      return {
+        ...item,
+        subtotal: item.subtotal ?? Number((quantity * unitPrice).toFixed(2))
+      };
+    });
+    const orderAmount = Number(items.reduce((total, item) => total + Number(item.subtotal || 0), 0).toFixed(2));
+    return {
+      id: config.id,
+      orderNo: config.orderNo,
+      demoType: 'BATCH_MERGE',
+      customerName: config.customerName,
+      customerType: config.customerType,
+      canteen: config.canteen,
+      orderTag: config.orderTag,
+      source: config.source,
+      expectedAt: config.expectedAt,
+      status: 'READY_FOR_SHIPPING',
+      isMerged: '否',
+      mergeOrderId: '',
+      orderAmount,
+      shippingAmount: 0,
+      returnAmount: 0,
+      reconciliationAmount: 0,
+      receiptStatus: '待收货',
+      productCount: items.length,
+      warehouse: config.warehouse,
+      supplement: '否',
+      remark: '',
+      route: config.route,
+      driver: '演示司机',
+      creator: '演示账号',
+      createdAt: config.createdAt,
+      items
+    };
+  };
+
+  orders.push(...[
+    // 合单演示学校 / 第一食堂：5笔订单，用于演示超过3笔后的折叠列表。
+    {
+      id: 'ORD-MERGE-DEMO-101', orderNo: 'DD202610100300101', customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-10 07:30:00', createdAt: '2026-10-09 09:01:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 40 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 15 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-102', orderNo: 'DD202610100300102', customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-10 07:30:00', createdAt: '2026-10-09 09:02:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 32 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 20 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-103', orderNo: 'DD202610100300103', customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-10 07:30:00', createdAt: '2026-10-09 09:03:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 48 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 18 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-104', orderNo: 'DD202610100300104', customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-10 07:30:00', createdAt: '2026-10-09 09:04:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 28 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 24 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-105', orderNo: 'DD202610100300105', customerName: '合单演示学校', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-10 07:30:00', createdAt: '2026-10-09 09:05:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 36 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 22 }
+      ]
+    },
+
+    // 启航中学 / 第二食堂：4笔订单，展示同一筛选条件下的第二组合单。
+    {
+      id: 'ORD-MERGE-DEMO-106', orderNo: 'DD202610110300106', customerName: '启航中学', customerType: '学校', canteen: '第二食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:06:00',
+      route: '演示北线', warehouse: '北区仓', items: [
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 30 },
+        { goodsName: '鸡蛋', goodsCode: 'SP0300018', unit: '斤', unitPrice: 22, quantity: 18 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-107', orderNo: 'DD202610110300107', customerName: '启航中学', customerType: '学校', canteen: '第二食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:07:00',
+      route: '演示北线', warehouse: '北区仓', items: [
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 24 },
+        { goodsName: '鸡蛋', goodsCode: 'SP0300018', unit: '斤', unitPrice: 22, quantity: 22 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-108', orderNo: 'DD202610110300108', customerName: '启航中学', customerType: '学校', canteen: '第二食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:08:00',
+      route: '演示北线', warehouse: '北区仓', items: [
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 40 },
+        { goodsName: '鸡蛋', goodsCode: 'SP0300018', unit: '斤', unitPrice: 22, quantity: 16 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-109', orderNo: 'DD202610110300109', customerName: '启航中学', customerType: '学校', canteen: '第二食堂',
+      orderTag: '学生-营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:09:00',
+      route: '演示北线', warehouse: '北区仓', items: [
+        { goodsName: '土豆', goodsCode: 'SP0300040', unit: '斤', unitPrice: 3.2, quantity: 20 },
+        { goodsName: '鸡蛋', goodsCode: 'SP0300018', unit: '斤', unitPrice: 22, quantity: 25 }
+      ]
+    },
+
+    // 阳光幼儿园 / 幼儿部食堂：3笔订单，展示第三组合单。
+    {
+      id: 'ORD-MERGE-DEMO-110', orderNo: 'DD202610130300110', customerName: '阳光幼儿园', customerType: '幼儿园', canteen: '幼儿部食堂',
+      orderTag: '其他-非营养餐', source: '平台添加', expectedAt: '2026-10-13 07:00:00', createdAt: '2026-10-09 09:10:00',
+      route: '演示南线', warehouse: '中心仓', items: [
+        { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 12 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 8 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-111', orderNo: 'DD202610130300111', customerName: '阳光幼儿园', customerType: '幼儿园', canteen: '幼儿部食堂',
+      orderTag: '其他-非营养餐', source: '平台添加', expectedAt: '2026-10-13 07:00:00', createdAt: '2026-10-09 09:11:00',
+      route: '演示南线', warehouse: '中心仓', items: [
+        { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 18 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 6 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-112', orderNo: 'DD202610130300112', customerName: '阳光幼儿园', customerType: '幼儿园', canteen: '幼儿部食堂',
+      orderTag: '其他-非营养餐', source: '平台添加', expectedAt: '2026-10-13 07:00:00', createdAt: '2026-10-09 09:12:00',
+      route: '演示南线', warehouse: '中心仓', items: [
+        { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 15 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 10 }
+      ]
+    }
+  ].map(createBatchMergeDemoOrder));
+
   const returns = [
     { id: 'RET-001', returnNo: 'THD202607300001', customerName: '阳光幼儿园', canteen: '园区食堂', goodsName: '鲫鱼(斤/--/--)', reason: '商品破损', orderNo: 'DD202607290200012', inboundNo: 'RKD202607300009', warehouse: '中心仓', status: 'PENDING', creator: '刘财务', createdAt: '2026-07-30 10:12:00', refundAmount: 120.00, remark: '鲫鱼到货后部分死亡，需退货处理', items: [{ id: 'RL-1', goodsName: '鲫鱼(斤/--/--)', unit: '斤', orderPrice: 12.00, shippedQty: 20, returnedQty: 0, applyQty: 10, applyPrice: 12.00, applyAmount: 120.00, damageQty: 5, purchaseOrder: 'CG202607280001', remark: '部分死亡' }] },
     { id: 'RET-002', returnNo: 'THD202607280003', customerName: '育才中学', canteen: '高中部食堂', goodsName: '大米(KG/--/--)', reason: '数量多发', orderNo: 'DD202607280300006', inboundNo: 'RKD202607290016', warehouse: '北区仓', status: 'APPROVED', creator: '赵老师', createdAt: '2026-07-28 15:42:36', auditor: '管理员', auditAt: '2026-07-29 09:30:00', refundAmount: 240.00, remark: '发货数量超出下单数量', items: [{ id: 'RL-2', goodsName: '大米(KG/--/--)', unit: 'KG', orderPrice: 6.00, shippedQty: 100, returnedQty: 0, applyQty: 40, applyPrice: 6.00, applyAmount: 240.00, damageQty: 0, purchaseOrder: 'CG202607260003', remark: '多发40KG' }] },

@@ -48,6 +48,15 @@
     selected: new Set(),
     condition: {}
   };
+  const formatFilterDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const defaultExpectedAtRange = (() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() + 1);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return [formatFilterDate(start), formatFilterDate(end)];
+  })();
 
   const content = `
     <section class="page-card operations-page order-module-page" aria-label="订单管理">
@@ -55,7 +64,7 @@
       <div class="operations-filter filter-section">
         <div class="operations-filter-main">
           <div class="operations-filter-grid">
-          <div class="operations-field expected-at-field"><label class="filter-label" for="expectedAt">期望送达时间</label><div class="date-input-control"><input class="filter-input" id="expectedAt" type="text" placeholder="请选择日期" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div></div>
+          <div class="operations-field expected-at-field"><label class="filter-label" for="expectedAt">期望送达时间</label><div class="date-range-picker order-expected-at-range" id="expectedAtRange"><input class="filter-input date-range-display" id="expectedAt" type="text" placeholder="请选择日期范围" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><input type="hidden" id="expectedAtStart" data-date-start><input type="hidden" id="expectedAtEnd" data-date-end></div></div>
           <div class="operations-field"><label class="filter-label" for="customerName">客户名称</label><input class="filter-input" id="customerName" placeholder="请输入"></div>
           <div class="operations-field"><label class="filter-label" for="orderNo">订单号</label><input class="filter-input" id="orderNo" maxlength="40" placeholder="请输入订单号"></div>
           </div>
@@ -105,10 +114,15 @@
   const root = window.AppShell.mount({ title: '订单管理', content });
   const $ = (selector) => root.querySelector(selector);
   const overlay = $('#operationsOverlay');
-  const expectedAtPicker = window.DatePicker?.mount({
-    input: '#expectedAt',
+  const expectedAtPicker = window.DateRangePicker?.mount({
+    container: '#expectedAtRange',
+    displayInput: '#expectedAt',
+    startInput: '#expectedAtStart',
+    endInput: '#expectedAtEnd',
     panelId: 'orderExpectedAtPickerPanel'
   });
+  expectedAtPicker?.setValue(defaultExpectedAtRange[0], defaultExpectedAtRange[1], false);
+  let batchMergeExpectedAtPicker = null;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -139,11 +153,14 @@
 
   function collectCondition() {
     const condition = {};
-    ['orderNo', 'customerName', 'customerType', 'status', 'orderTag', 'warehouse', 'source', 'expectedAt', 'receiptStatus', 'orderType', 'netVegetable', 'isMerged']
+    ['orderNo', 'customerName', 'customerType', 'status', 'orderTag', 'warehouse', 'source', 'receiptStatus', 'orderType', 'netVegetable', 'isMerged']
       .forEach((key) => {
         const value = $(`#${key}`).value.trim();
         if (value) condition[key] = value;
       });
+    const expectedAtStart = $('#expectedAtStart')?.value.trim() || '';
+    const expectedAtEnd = $('#expectedAtEnd')?.value.trim() || '';
+    if (expectedAtStart || expectedAtEnd) condition.expectedAtRange = [expectedAtStart, expectedAtEnd];
     return condition;
   }
 
@@ -231,6 +248,8 @@
   }
 
   function closeModal() {
+    batchMergeExpectedAtPicker?.destroy();
+    batchMergeExpectedAtPicker = null;
     overlay.innerHTML = '';
   }
 
@@ -259,6 +278,13 @@
     const match = source.match(/[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if (!match) return date;
     return `${date} ${String(match[1]).padStart(2, '0')}:${match[2]}:${match[3] || '00'}`;
+  }
+
+  function earliestExpectedAt(orders) {
+    return orders
+      .map((order) => dateTimeKey(order?.expectedAt))
+      .filter(Boolean)
+      .sort()[0] || '--';
   }
 
   function customerCanteenKey(order) {
@@ -448,6 +474,7 @@
       orders: orders.map((order) => ({
         id: order.id,
         orderNo: order.orderNo || order.id || '--',
+        createdAt: order.createdAt || order.createTime || '--',
         expectedAt: dateTimeKey(order.expectedAt) || '--',
         productCount: order.productCount ?? orderItems(order).length,
         orderAmount: order.orderAmount
@@ -455,7 +482,7 @@
       customerName: first.customerName || '--',
       canteen: first.canteen || '--',
       orderTag: first.orderTag || '--',
-      expectedAt: dateKey(first.expectedAt) || '--',
+      expectedAt: earliestExpectedAt(orders),
       source: first.source || '--',
       warehouse: first.warehouse || '',
       route: first.route || '',
@@ -473,6 +500,7 @@
     return {
       orderId: order.id || '',
       orderNo: order.orderNo || order.id || '--',
+      createdAt: order.createdAt || order.createTime || '',
       customerName: order.customerName || '--',
       canteen: order.canteen || '--',
       orderTag: order.orderTag || '--',
@@ -497,36 +525,45 @@
     };
   }
 
-  function renderBatchMergeGroups(groups) {
-    if (!groups.length) return '<div class="order-batch-merge-empty">暂无待合单的订单组，请取消本次操作。</div>';
-    return groups.map((group, index) => `
-      <section class="order-batch-merge-group">
-        <div class="order-batch-merge-meta">
-          <button class="btn-text danger order-batch-merge-remove" type="button" data-batch-merge-remove="${index}" ${groups.length <= 1 ? 'disabled' : ''} title="${groups.length <= 1 ? '至少保留一组合单订单' : '删除该订单组，不参与本次合单'}">删除</button>
-          <div><span>客户名称：</span><strong>${escapeHtml(group.customerName)}</strong></div>
-          <div><span>食堂：</span><strong>${escapeHtml(group.canteen)}</strong></div>
-          <div><span>订单标签：</span><strong>${escapeHtml(group.orderTag)}</strong></div>
-          <div><span>期望送达时间：</span><strong>${escapeHtml(group.expectedAt)}</strong></div>
-          <div><span>单据来源：</span><strong>${escapeHtml(group.source)}</strong></div>
-          <div class="order-batch-merge-meta-amount"><span>合单金额：</span><strong>¥${money(group.orderAmount)}</strong></div>
-          <div class="order-batch-merge-meta-orders"><span>订单笔数：</span><strong>${group.orders.length} 笔</strong></div>
-        </div>
-        <div class="order-batch-merge-table-wrap">
-          <table class="operations-table order-batch-merge-table">
-            <thead><tr><th>订单号</th><th>期望送达时间</th><th>下单商品数</th><th>下单金额</th><th>操作</th></tr></thead>
-            <tbody>${group.orders.map((order, orderIndex) => `
-              <tr>
-                <td>${escapeHtml(order.orderNo)}</td>
-                <td>${escapeHtml(order.expectedAt)}</td>
-                <td>${escapeHtml(order.productCount)}</td>
-                <td>¥${money(order.orderAmount)}</td>
-                <td><button class="btn-text danger order-batch-merge-order-remove" type="button" data-batch-merge-remove-order="${index}:${orderIndex}" ${group.orders.length <= 2 ? 'disabled' : ''} title="${group.orders.length <= 2 ? '订单组内仅剩两笔订单，只能整组删除' : '删除该订单，不参与本次合单'}">删除</button></td>
-              </tr>
-            `).join('')}</tbody>
-          </table>
-        </div>
-      </section>
-    `).join('');
+  function renderBatchMergeGroups(groups, selectedIds = new Set(), expandedGroups = new Set()) {
+    if (!groups.length) return '<div class="order-batch-merge-empty">当前筛选条件下暂无满足合单条件的订单。</div>';
+    return groups.map((group, index) => {
+      const expanded = expandedGroups.has(index);
+      const visibleOrders = expanded ? group.orders : group.orders.slice(0, 3);
+      return `
+        <section class="order-batch-merge-group">
+          <div class="order-batch-merge-meta">
+            <div><span>客户名称：</span><strong>${escapeHtml(group.customerName)}</strong></div>
+            <div><span>食堂：</span><strong>${escapeHtml(group.canteen)}</strong></div>
+            <div><span>订单标签：</span><strong>${escapeHtml(group.orderTag)}</strong></div>
+            <div><span>期望送达时间：</span><strong>${escapeHtml(group.expectedAt)}</strong></div>
+            <div><span>单据来源：</span><strong>${escapeHtml(group.source)}</strong></div>
+            <div class="order-batch-merge-meta-amount"><span>合单金额：</span><strong>¥${money(group.orderAmount)}</strong></div>
+            <div class="order-batch-merge-meta-orders"><span>订单笔数：</span><strong>${group.orders.length} 笔</strong></div>
+          </div>
+          <div class="order-batch-merge-table-wrap">
+            <table class="operations-table order-batch-merge-table">
+              <thead><tr><th class="order-batch-merge-select-cell"><input class="order-batch-merge-select-all" type="checkbox" data-batch-merge-select-all="${index}" ${group.orderIds.every((id) => selectedIds.has(id)) ? 'checked' : ''} aria-label="全选本组合单订单"></th><th>订单号</th><th>下单时间</th><th>期望送达时间</th><th>下单商品数</th><th>下单金额</th></tr></thead>
+              <tbody>${visibleOrders.map((order) => {
+                const orderIndex = group.orders.indexOf(order);
+                return `
+                  <tr>
+                    <td class="order-batch-merge-select-cell"><input class="order-batch-merge-select-order" type="checkbox" data-batch-merge-select-order="${index}:${orderIndex}" data-order-id="${escapeHtml(order.id)}" ${selectedIds.has(order.id) ? 'checked' : ''} aria-label="选择订单 ${escapeHtml(order.orderNo)}"></td>
+                    <td class="order-batch-merge-order-cell">${escapeHtml(order.orderNo)}</td>
+                    <td>${escapeHtml(order.createdAt || order.createTime || '--')}</td>
+                    <td>${escapeHtml(order.expectedAt)}</td>
+                    <td>${escapeHtml(order.productCount)}</td>
+                    <td>¥${money(order.orderAmount)}</td>
+                  </tr>
+                `;
+              }).join('')}${group.orders.length > 3 ? `
+                <tr class="order-batch-merge-expand-row"><td colspan="6"><button class="btn-text order-batch-merge-expand" type="button" data-batch-merge-expand="${index}" aria-expanded="${expanded}"><span>${expanded ? '收起' : '展开'}</span><i class="order-batch-merge-expand-arrow" aria-hidden="true"></i></button></td></tr>
+              ` : ''}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }).join('');
   }
 
   function orderDisplayNo(order) {
@@ -756,7 +793,7 @@
           <tr><td>${escapeHtml(group.parentOrderNo)}</td><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(group.orderAmount)}</td><td>${escapeHtml(group.orderNos.join('、'))}</td></tr>`).join('')}</tbody></table></div></div>`
       : '<div class="order-batch-merge-result-empty">本次没有成功生成合单。</div>';
     const body = `
-      <div class="order-batch-merge-result-summary">已选择 <strong>${result.selectedCount}</strong> 笔订单，失败 <strong>${result.skippedOrders.length}</strong> 笔，成功 <strong>${mergedOrderCount}</strong> 笔，合成 <strong>${result.successfulGroups.length}</strong> 笔合并订单。</div>
+      <div class="order-batch-merge-result-summary">本次处理 <strong>${result.selectedCount}</strong> 笔订单，失败 <strong>${result.skippedOrders.length}</strong> 笔，成功 <strong>${mergedOrderCount}</strong> 笔，合成 <strong>${result.successfulGroups.length}</strong> 笔合并订单。</div>
       ${successHtml}
     `;
     modal(
@@ -768,30 +805,80 @@
     );
   }
 
-  function openBatchMergeModal(plan, selectedCount, selectedIds) {
+  function openBatchMergeModal(plan, filteredCount, mergeableIds, filterCondition = {}) {
     let activeGroups = [...plan.groups];
-    const activeOrderIds = new Set(selectedIds);
+    let activeOrderIds = new Set(mergeableIds);
+    let activeFilteredCount = filteredCount;
+    let activeCondition = { ...filterCondition };
+    const expandedGroups = new Set();
+    const activeExpectedAtRange = () => {
+      if (Array.isArray(activeCondition.expectedAtRange)) {
+        return [dateKey(activeCondition.expectedAtRange[0]), dateKey(activeCondition.expectedAtRange[1])];
+      }
+      const date = dateKey(activeCondition.expectedAt || '');
+      return [date, date];
+    };
+    const hasSelectedMergeGroup = () => activeGroups.some((group) => group.orderIds.filter((id) => activeOrderIds.has(id)).length >= 2);
     const renderModalBody = () => {
       const mergeableCount = activeGroups.reduce((total, group) => total + group.orderIds.length, 0);
+      const [startDate, endDate] = activeExpectedAtRange();
       return `
-        <div class="order-batch-merge-summary" id="batchMergeSummary">已选择 <strong>${activeOrderIds.size}</strong> 笔订单，<strong>${mergeableCount}</strong> 笔可合单订单，共生成 <strong>${activeGroups.length}</strong> 组合单。</div>
-        <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups)}</div>
+        <div class="order-batch-merge-filter-bar">
+          <div class="order-batch-merge-filter-field">
+            <label for="batchMergeExpectedAt">期望送达时间</label>
+            <div class="date-range-picker order-batch-merge-date-range" id="batchMergeExpectedAtRange">
+              <input class="filter-input date-range-display" id="batchMergeExpectedAt" type="text" readonly placeholder="请选择日期范围">
+              <span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+              <input type="hidden" id="batchMergeExpectedAtStart" data-date-start value="${escapeHtml(startDate)}">
+              <input type="hidden" id="batchMergeExpectedAtEnd" data-date-end value="${escapeHtml(endDate)}">
+            </div>
+          </div>
+          <button class="btn btn-sm" type="button" id="refreshBatchMerge">查询</button>
+          <div class="order-batch-merge-summary" id="batchMergeSummary">共<strong>${activeFilteredCount}</strong>笔订单，<strong>${mergeableCount}</strong>笔订单可合并为<strong>${activeGroups.length}</strong>笔订单。</div>
+        </div>
+        <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups, activeOrderIds, expandedGroups)}</div>
       `;
     };
-    modal(
-      '合单确认',
-      renderModalBody(),
-      '<button class="btn" type="button" data-modal-close>取消</button><button class="btn btn-primary" type="button" id="confirmBatchMerge">确认合单</button>',
-      true,
-      'order-batch-merge-modal'
-    );
+    const mountBatchMergeExpectedAtPicker = () => {
+      batchMergeExpectedAtPicker?.destroy();
+      batchMergeExpectedAtPicker = window.DateRangePicker?.mount({
+        container: '#batchMergeExpectedAtRange',
+        displayInput: '#batchMergeExpectedAt',
+        startInput: '#batchMergeExpectedAtStart',
+        endInput: '#batchMergeExpectedAtEnd',
+        panelId: 'batchMergeExpectedAtRangePanel'
+      });
+    };
+    const syncBatchMergeSelectAllStates = () => {
+      overlay.querySelectorAll('[data-batch-merge-select-all]').forEach((checkbox) => {
+        const group = activeGroups[Number(checkbox.dataset.batchMergeSelectAll)];
+        if (!group) return;
+        const selectedCount = group.orderIds.filter((id) => activeOrderIds.has(id)).length;
+        checkbox.checked = selectedCount === group.orderIds.length;
+        checkbox.indeterminate = selectedCount > 0 && selectedCount < group.orderIds.length;
+      });
+    };
     const refreshBatchMergeModal = () => {
       const body = overlay.querySelector('.operations-modal-body');
       if (!body) return;
+      batchMergeExpectedAtPicker?.destroy();
+      batchMergeExpectedAtPicker = null;
       body.innerHTML = renderModalBody();
+      mountBatchMergeExpectedAtPicker();
+      syncBatchMergeSelectAllStates();
       const confirmButton = $('#confirmBatchMerge');
-      if (confirmButton) confirmButton.disabled = activeGroups.length === 0;
+      if (confirmButton) confirmButton.disabled = !hasSelectedMergeGroup();
     };
+    const confirmDisabled = hasSelectedMergeGroup() ? '' : ' disabled';
+    modal(
+      '合并订单',
+      renderModalBody(),
+      `<button class="btn" type="button" data-modal-close>取消</button><button class="btn btn-primary" type="button" id="confirmBatchMerge"${confirmDisabled}>确认合单</button>`,
+      true,
+      'order-batch-merge-modal'
+    );
+    mountBatchMergeExpectedAtPicker();
+    syncBatchMergeSelectAllStates();
     $('#confirmBatchMerge').onclick = async () => {
       const confirmButton = $('#confirmBatchMerge');
       confirmButton.disabled = true;
@@ -807,40 +894,74 @@
         closeModal();
         await load();
         openBatchMergeResultModal({
-          selectedCount,
+          selectedCount: activeOrderIds.size,
           successfulGroups: [],
           skippedOrders: [{ id: 'batch-merge-error', orderNo: '本次合单', reasons: [error.message || '合单失败'] }]
         });
       }
     };
-    overlay.querySelector('.operations-modal-body')?.addEventListener('click', (event) => {
-      const removeOrderButton = event.target.closest('[data-batch-merge-remove-order]');
-      if (removeOrderButton) {
-        const [groupIndex, orderIndex] = removeOrderButton.dataset.batchMergeRemoveOrder.split(':').map(Number);
-        const group = activeGroups[groupIndex];
-        const removedId = group?.orderIds?.[orderIndex];
-        if (!group || group.orders.length <= 2 || !removedId) return;
-        group.orderIds.splice(orderIndex, 1);
-        group.orderNos.splice(orderIndex, 1);
-        group.orders.splice(orderIndex, 1);
-        group.mergeSourceOrderIds.splice(orderIndex, 1);
-        group.mergeSourceOrderNos.splice(orderIndex, 1);
-        group.mergeSourceOrderSnapshots.splice(orderIndex, 1);
-        activeOrderIds.delete(removedId);
-        if (group.orderIds.length < 2) {
-          group.orderIds.forEach((id) => activeOrderIds.delete(id));
-          activeGroups.splice(groupIndex, 1);
-        }
+    const modalBody = overlay.querySelector('.operations-modal-body');
+    modalBody?.addEventListener('click', (event) => {
+      const expandButton = event.target.closest('[data-batch-merge-expand]');
+      if (expandButton) {
+        const groupIndex = Number(expandButton.dataset.batchMergeExpand);
+        if (expandedGroups.has(groupIndex)) expandedGroups.delete(groupIndex);
+        else expandedGroups.add(groupIndex);
         refreshBatchMergeModal();
         return;
       }
-      const removeButton = event.target.closest('[data-batch-merge-remove]');
-      if (!removeButton) return;
-      if (activeGroups.length <= 1) return;
-      const groupIndex = Number(removeButton.dataset.batchMergeRemove);
-      const [removedGroup] = activeGroups.splice(groupIndex, 1);
-      if (!removedGroup) return;
-      removedGroup.orderIds.forEach((id) => activeOrderIds.delete(id));
+      const refreshButton = event.target.closest('#refreshBatchMerge');
+      if (refreshButton) {
+        const startDate = overlay.querySelector('#batchMergeExpectedAtStart')?.value.trim() || '';
+        const endDate = overlay.querySelector('#batchMergeExpectedAtEnd')?.value.trim() || '';
+        const nextCondition = { ...activeCondition };
+        delete nextCondition.expectedAt;
+        if (startDate || endDate) nextCondition.expectedAtRange = [startDate, endDate];
+        else delete nextCondition.expectedAtRange;
+        refreshButton.disabled = true;
+        refreshButton.textContent = '查询中...';
+        service.list('orders', {
+          page: 1,
+          pageSize: Number.MAX_SAFE_INTEGER,
+          condition: nextCondition
+        }).then(async (result) => {
+          const nextPlan = buildBatchMergeGroups(result.items || []);
+          activeCondition = nextCondition;
+          activeFilteredCount = result.total;
+          activeGroups = [...nextPlan.groups];
+          activeOrderIds = new Set(activeGroups.flatMap((group) => group.orderIds));
+          expandedGroups.clear();
+          refreshBatchMergeModal();
+        }).catch((error) => {
+          refreshButton.disabled = false;
+          refreshButton.textContent = '查询';
+          toast(error.message || '订单组刷新失败', 'error');
+        });
+        return;
+      }
+    });
+    modalBody?.addEventListener('change', (event) => {
+      const selectAll = event.target.closest('[data-batch-merge-select-all]');
+      if (selectAll) {
+        const group = activeGroups[Number(selectAll.dataset.batchMergeSelectAll)];
+        if (!group) return;
+        group.orderIds.forEach((id) => selectAll.checked ? activeOrderIds.add(id) : activeOrderIds.delete(id));
+        refreshBatchMergeModal();
+        return;
+      }
+      const selectOrder = event.target.closest('[data-batch-merge-select-order]');
+      if (!selectOrder) return;
+      const orderId = selectOrder.dataset.orderId;
+      const [groupIndex] = selectOrder.dataset.batchMergeSelectOrder.split(':').map(Number);
+      const group = activeGroups[groupIndex];
+      if (!group) return;
+      if (selectOrder.checked) {
+        activeOrderIds.add(orderId);
+      } else {
+        const selectedCount = group.orderIds.filter((id) => activeOrderIds.has(id)).length;
+        if (selectedCount <= 2) group.orderIds.forEach((id) => activeOrderIds.delete(id));
+        else activeOrderIds.delete(orderId);
+      }
       refreshBatchMergeModal();
     });
   }
@@ -896,15 +1017,18 @@
   }
 
   async function handleBatchMerge() {
-    const ids = [...state.selected];
-    if (ids.length < 2) return toast('请至少勾选两个订单后再合单', 'error');
     try {
-      const orders = (await Promise.all(ids.map((id) => service.get('orders', id)))).filter(Boolean);
-      if (orders.length !== ids.length) return toast('部分订单已不存在，请刷新后重试', 'error');
+      const condition = collectCondition();
+      state.condition = condition;
+      const result = await service.list('orders', {
+        page: 1,
+        pageSize: Number.MAX_SAFE_INTEGER,
+        condition
+      });
+      const orders = result.items || [];
       const plan = buildBatchMergeGroups(orders);
-      const mergeableCount = plan.groups.reduce((total, group) => total + group.orderIds.length, 0);
-      if (mergeableCount < 2) return toast('所选订单中没有至少两笔符合合单规则的订单', 'error');
-      openBatchMergeModal(plan, orders.length, ids);
+      const mergeableIds = plan.groups.flatMap((group) => group.orderIds);
+      openBatchMergeModal(plan, result.total, mergeableIds, condition);
     } catch (error) {
       toast(error.message || '合单校验失败', 'error');
     }
@@ -1044,8 +1168,8 @@
     }
     if (event.target.id === 'resetButton') {
       root.querySelectorAll('.operations-filter input, .operations-filter select').forEach((field) => { field.value = ''; });
-      expectedAtPicker?.clear(false);
-      state.condition = {};
+      expectedAtPicker?.setValue(defaultExpectedAtRange[0], defaultExpectedAtRange[1], false);
+      state.condition = collectCondition();
       state.page = 1;
       state.selected.clear();
       return load();
@@ -1111,5 +1235,6 @@
     }
   });
 
+  state.condition = collectCondition();
   load();
 })();

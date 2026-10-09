@@ -15,6 +15,14 @@
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
 
+  function navigateBack() {
+    const target = './order-return.html';
+    if (window.AppNavigation?.navigate) return window.AppNavigation.navigate(target);
+    if (window.AppNavigationGuard?.navigate) return window.AppNavigationGuard.navigate(target);
+    window.location.href = target;
+    return true;
+  }
+
   function infoItem(label, value) {
     return `<div class="info-item"><span class="info-label">${label}：</span><span class="info-value">${escapeHtml(value || '--')}</span></div>`;
   }
@@ -162,7 +170,7 @@
     window.AppShell.mount({ title: '订单退货', content: render(record) });
     document.getElementById('pageContent').addEventListener('click', (event) => {
       if (event.target.closest('[data-action="back"]')) {
-        window.location.href = './order-return.html';
+        navigateBack();
       }
     });
   }).catch((error) => {

@@ -291,6 +291,7 @@
     return {
       orderId: order.id || '',
       orderNo: order.orderNo || order.id || '--',
+      createdAt: order.createdAt || order.createTime || '',
       customerName: order.customerName || '--',
       canteen: order.canteen || '--',
       orderTag: order.orderTag || '--',

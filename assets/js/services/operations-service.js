@@ -177,6 +177,12 @@
           : item.createdAt || item.expectedAt || item.occurredAt || item.inboundAt || item.countAt || '';
         return (!value[0] || source >= value[0]) && (!value[1] || source <= `${value[1]} 23:59:59`);
       }
+      if (resource === 'orders' && key === 'expectedAtRange' && Array.isArray(value) && value.length === 2) {
+        const source = String(item.expectedAt || '').trim().replace(/\//g, '-');
+        const start = String(value[0] || '').trim().replace(/\//g, '-');
+        const end = String(value[1] || '').trim().replace(/\//g, '-');
+        return (!start || source >= start) && (!end || source <= `${end} 23:59:59`);
+      }
       if (resource === 'orders' && key === 'netVegetable') {
         const containsNetVegetable = orderContainsNetVegetable(item);
         return value === 'net' ? containsNetVegetable : value === 'non-net' ? !containsNetVegetable : true;

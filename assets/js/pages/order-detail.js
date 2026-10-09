@@ -75,6 +75,7 @@
     return {
       orderId: order.id || '',
       orderNo: order.orderNo || order.id || '--',
+      createdAt: order.createdAt || order.createTime || '',
       customerName: order.customerName || '--',
       canteen: order.canteen || '--',
       orderTag: order.orderTag || '--',
@@ -166,6 +167,7 @@
         ));
         return {
           ...snapshot,
+          createdAt: snapshot.createdAt || snapshot.createTime || source?.createdAt || source?.createTime || '',
           remark: snapshot.remark ?? source?.remark ?? ''
         };
       });
@@ -191,6 +193,7 @@
             ${snapshotInfoItem('客户名称', snapshot.customerName)}
             ${snapshotInfoItem('食堂', snapshot.canteen)}
             ${snapshotInfoItem('订单标签', snapshot.orderTag)}
+            ${snapshotInfoItem('下单时间', snapshot.createdAt || snapshot.createTime)}
             ${snapshotInfoItem('期望送达时间', snapshot.expectedAt)}
             ${snapshotInfoItem('单据来源', snapshot.source)}
             ${snapshotInfoItem('单据状态', status)}

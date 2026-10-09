@@ -148,6 +148,22 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+.order-module-page .operations-field > .date-range-picker {
+  position: relative;
+}
+
+.order-module-page .operations-field > .date-range-picker .date-range-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .order-module-page .date-input-control {
@@ -266,6 +282,91 @@
   padding: 16px 20px;
 }
 
+.order-batch-merge-modal {
+  height: auto;
+  max-height: min(1000px, calc(100vh - 48px));
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.order-batch-merge-modal .operations-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+}
+
+.order-batch-merge-modal .operations-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: #fff;
+}
+
+.order-batch-merge-modal .operations-modal-footer .btn {
+  width: 76px;
+  min-width: 76px;
+  padding: 0;
+  justify-content: center;
+}
+
+.order-batch-merge-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.order-batch-merge-filter-bar .order-batch-merge-summary {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.order-batch-merge-filter-field {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.order-batch-merge-filter-field label {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.order-batch-merge-filter-field .order-batch-merge-date-range {
+  position: relative;
+  width: 260px;
+}
+
+.order-batch-merge-filter-field .date-range-display {
+  box-sizing: border-box;
+  width: 100%;
+  height: 30px;
+  padding: 0 30px 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.order-batch-merge-filter-field .date-range-display::placeholder {
+  color: var(--text-tertiary);
+}
+
+.order-batch-merge-filter-field .date-range-icon {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
 .order-batch-merge-summary {
   margin-bottom: 14px;
   color: var(--text-secondary);
@@ -315,19 +416,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2fr);
   gap: 12px;
-  padding: 12px 64px 12px 12px;
-}
-
-.order-batch-merge-meta > .order-batch-merge-remove {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-}
-
-.order-batch-merge-remove:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-  opacity: 0.6;
+  padding: 12px;
 }
 
 .order-batch-merge-meta div {
@@ -374,14 +463,48 @@
   text-align: center;
 }
 
-.order-batch-merge-order-remove {
-  min-width: 40px;
+.order-batch-merge-order-cell {
+  text-align: center !important;
+  white-space: nowrap;
 }
 
-.order-batch-merge-order-remove:disabled {
-  color: var(--text-tertiary);
-  cursor: not-allowed;
-  opacity: 0.6;
+.order-batch-merge-expand-row td {
+  height: 32px !important;
+  padding: 4px 10px !important;
+  border-top: 1px solid var(--border-light);
+  text-align: center !important;
+}
+
+.order-batch-merge-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--primary);
+}
+
+.order-batch-merge-expand-arrow {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.16s ease;
+}
+
+.order-batch-merge-expand[aria-expanded="true"] .order-batch-merge-expand-arrow {
+  transform: rotate(225deg) translateY(-2px);
+}
+
+.order-batch-merge-select-cell {
+  width: 44px;
+  padding-right: 6px !important;
+  padding-left: 6px !important;
+  text-align: center !important;
+}
+
+.order-batch-merge-select-cell input {
+  margin: 0;
+  vertical-align: middle;
 }
 
 .order-batch-merge-result-modal {
@@ -449,6 +572,19 @@
 .order-batch-merge-result-empty { color: var(--text-tertiary); }
 
 @media (max-width: 760px) {
+  .order-batch-merge-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .order-batch-merge-filter-field .order-batch-merge-date-range {
+    flex: 1;
+  }
+
+  .order-batch-merge-filter-bar .order-batch-merge-summary {
+    white-space: normal;
+  }
+
   .order-batch-merge-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
