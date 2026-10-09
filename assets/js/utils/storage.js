@@ -2499,8 +2499,8 @@
       return window.DemoStore.transact((state) => {
         const order = getOrder(state, orderId);
         if (!order) throw new Error('订单不存在或已删除');
-        if (['SHIPPED', 'CLOSED'].includes(order.status)) {
-          const error = new Error('已发货或已关闭订单不能删除');
+        if (order.status === 'SHIPPED') {
+          const error = new Error('已发货订单不能删除');
           error.code = 'ORDER_NOT_DELETABLE';
           throw error;
         }
@@ -2548,12 +2548,34 @@
             appendOperationLog(order, '审核通过', order.auditor);
           } else if (action === 'confirm') {
             if (order.status !== 'PENDING_CONFIRM') throw new Error('当前订单不在待确认状态');
-            order.status = 'READY_FOR_SORTING';
+            order.status = 'READY_FOR_SHIPPING';
             order.confirmedAt = now();
             appendOperationLog(order, '确认供货', '当前用户');
+          } else if (action === 'cancelConfirm') {
+            const isMergeParent = order.isMergeParent === true || order.isMergeParent === 'true' || order.isMergeParent === '是';
+            if (!isMergeParent || order.status !== 'READY_FOR_SHIPPING') throw new Error('当前合并订单不可取消确认供货');
+            order.status = 'PENDING_CONFIRM';
+            order.confirmedAt = '';
+            appendOperationLog(order, '取消确认供货', '当前用户');
           } else if (action === 'close') {
             order.status = 'CLOSED';
             appendOperationLog(order, '关闭订单', '当前用户');
+            const isMergeParent = order.isMergeParent === true || order.isMergeParent === 'true' || order.isMergeParent === '是';
+            if (isMergeParent) {
+              const sourceIds = new Set(Array.isArray(order.mergeSourceOrderIds) ? order.mergeSourceOrderIds : []);
+              const sourceNos = new Set(Array.isArray(order.mergeSourceOrderNos) ? order.mergeSourceOrderNos : []);
+              state.orders
+                .filter((candidate) => candidate.id !== order.id && (
+                  sourceIds.has(candidate.id)
+                  || sourceNos.has(candidate.orderNo)
+                  || (order.mergeOrderId && candidate.mergeOrderId === order.mergeOrderId)
+                ))
+                .forEach((child) => {
+                  child.status = 'CLOSED';
+                  appendOperationLog(child, '关闭订单', '当前用户', `当前用户 关闭订单（父订单 ${order.orderNo || order.id} 已关闭）`);
+                  syncOrder(state, child.id);
+                });
+            }
           }
           else if (action === 'reject') {
             if (!['PENDING_CONFIRM', 'PENDING_AUDIT'].includes(order.status)) throw new Error('当前订单不能驳回');

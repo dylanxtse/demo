@@ -177,11 +177,10 @@
     const actions = [];
     if (item.status === 'PENDING_AUDIT') actions.push({ key: 'approve', label: '审核' });
     if (item.status === 'PENDING_CONFIRM') actions.push({ key: 'confirm', label: '确认供货' });
-    if (['DRAFT', 'PENDING', 'PENDING_AUDIT', 'PENDING_CONFIRM', 'REJECTED'].includes(item.status)) actions.push({ key: 'edit', label: '编辑' });
-    actions.push({ key: 'copy', label: '复制' });
+    if (isMergeParent(item) && isReadyForShipping(item)) actions.push({ key: 'cancelConfirm', label: '取消确认供货' });
     if (isMergeParent(item) && isReadyForShipping(item)) actions.push({ key: 'unmerge', label: '取消合并' });
     if (!['SHIPPED', 'CLOSED'].includes(item.status)) actions.push({ key: 'close', label: '关闭' });
-    if (['PENDING_AUDIT', 'PENDING_CONFIRM'].includes(item.status)) actions.push({ key: 'delete', label: '删除', danger: true });
+    if (item.status === 'CLOSED') actions.push({ key: 'delete', label: '删除', danger: true });
     return actions;
   }
 
@@ -788,9 +787,18 @@
 
   function openBatchMergeResultModal(result) {
     const mergedOrderCount = result.successfulGroups.reduce((total, group) => total + group.orderCount, 0);
+    const renderResultOrderNos = (orderNos) => {
+      const normalized = Array.isArray(orderNos) ? orderNos.filter(Boolean) : [];
+      const visible = normalized.slice(0, 3).map((orderNo) => escapeHtml(orderNo)).join('、');
+      if (!visible) return '--';
+      const suffix = normalized.length > 3
+        ? `<span class="order-batch-merge-result-more">等${normalized.length - 3}笔</span>`
+        : '';
+      return `${visible}${suffix}`;
+    };
     const successHtml = result.successfulGroups.length
-      ? `<div class="order-batch-merge-result-section"><h4>合单成功</h4><div class="order-batch-merge-result-table-wrap"><table class="operations-table order-batch-merge-result-table"><thead><tr><th>合并订单号</th><th>客户名称</th><th>食堂</th><th>合并订单金额</th><th>原订单号</th></tr></thead><tbody>${result.successfulGroups.map((group) => `
-          <tr><td>${escapeHtml(group.parentOrderNo)}</td><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(group.orderAmount)}</td><td>${escapeHtml(group.orderNos.join('、'))}</td></tr>`).join('')}</tbody></table></div></div>`
+      ? `<div class="order-batch-merge-result-section"><div class="order-batch-merge-result-table-wrap"><table class="operations-table order-batch-merge-result-table"><thead><tr><th>合并订单号</th><th>客户名称</th><th>食堂</th><th>合并订单金额</th><th>原订单号</th></tr></thead><tbody>${result.successfulGroups.map((group) => `
+          <tr><td>${escapeHtml(group.parentOrderNo)}</td><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(group.orderAmount)}</td><td>${renderResultOrderNos(group.orderNos)}</td></tr>`).join('')}</tbody></table></div></div>`
       : '<div class="order-batch-merge-result-empty">本次没有成功生成合单。</div>';
     const body = `
       <div class="order-batch-merge-result-summary">本次处理 <strong>${result.selectedCount}</strong> 笔订单，失败 <strong>${result.skippedOrders.length}</strong> 笔，成功 <strong>${mergedOrderCount}</strong> 笔，合成 <strong>${result.successfulGroups.length}</strong> 笔合并订单。</div>
@@ -1121,6 +1129,9 @@
     if (action === 'view') return showDetail(item);
     if (action === 'unmerge') {
       return confirmAction('取消合并', '取消合并后父订单将撤销，原订单恢复为待发货，是否确认？', () => cancelBatchMerge(item));
+    }
+    if (action === 'cancelConfirm') {
+      return confirmAction('取消确认供货', '取消确认供货后订单状态将变为待确认，是否确认？', () => service.transition('orders', id, 'cancelConfirm'));
     }
     if (action === 'edit') {
       window.location.href = `./order-add.html?mode=edit&id=${encodeURIComponent(item.id)}`;

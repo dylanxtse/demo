@@ -180,35 +180,59 @@
     return `<div><span>${label}：</span><strong>${escapeHtml(displayValue)}</strong></div>`;
   }
 
+  function formatMergeChildSource(source) {
+    if (source === '客户下单') return '客户下单';
+    if (source === '平台下单' || source === '平台添加' || source === '企业下单') return '平台下单';
+    return '--';
+  }
+
+  function getMergeChildSource(record, fallbackRecord) {
+    const sourceSnapshot = getMergeSnapshotOrders(record).find((snapshot) => snapshot.source);
+    return formatMergeChildSource(sourceSnapshot?.source || fallbackRecord?.source);
+  }
+
+  function renderMergeSnapshotSummary(record, sourceRecord = record) {
+    if (!record) return '';
+    return `
+      <div class="order-merge-snapshot-summary">
+        ${snapshotInfoItem('客户名称', record.customerName)}
+        ${snapshotInfoItem('食堂', record.canteen)}
+        ${snapshotInfoItem('订单标签', record.orderTag)}
+        ${snapshotInfoItem('单据来源', getMergeChildSource(sourceRecord, record))}
+      </div>`;
+  }
+
   function renderMergeSnapshotBody(order) {
     const snapshots = getMergeSnapshotOrders(order);
     if (!snapshots.length) return '<div class="detail-empty">暂无合并原订单快照</div>';
-    return snapshots.map((snapshot, index) => {
+    return snapshots.map((snapshot) => {
       const lines = Array.isArray(snapshot.items) ? snapshot.items : [];
-      const status = statusMap[snapshot.status] || snapshot.status || '--';
+      const productRows = lines.length ? lines.map((line, index) => {
+        const quantity = line.quantity ?? line.orderQty ?? 0;
+        const subtotal = line.subtotal ?? Number(quantity) * Number(line.unitPrice || 0);
+        const extraRowAttrs = index >= 3 ? ' hidden data-snapshot-product-extra' : '';
+        return `<tr${extraRowAttrs}><td>${escapeHtml(line.goodsName || line.productName || '--')}</td><td>${escapeHtml(line.goodsCode || line.productId || '--')}</td><td>${escapeHtml(line.unit || line.measurementUnit || '--')}</td><td>¥${money(line.unitPrice)}</td><td>${escapeHtml(quantity)}</td><td>¥${money(subtotal)}</td></tr>`;
+      }).join('') : '<tr><td colspan="6" class="detail-empty">暂无商品明细</td></tr>';
       return `
         <section class="order-merge-snapshot-card">
           <div class="order-merge-snapshot-title"><span>${escapeHtml(snapshot.orderNo || '--')}</span></div>
           <div class="order-merge-snapshot-meta">
-            ${snapshotInfoItem('客户名称', snapshot.customerName)}
-            ${snapshotInfoItem('食堂', snapshot.canteen)}
-            ${snapshotInfoItem('订单标签', snapshot.orderTag)}
             ${snapshotInfoItem('下单时间', snapshot.createdAt || snapshot.createTime)}
             ${snapshotInfoItem('期望送达时间', snapshot.expectedAt)}
-            ${snapshotInfoItem('单据来源', snapshot.source)}
-            ${snapshotInfoItem('单据状态', status)}
             ${snapshotInfoItem('商品种类数', snapshot.productCount ?? lines.length)}
             ${snapshotInfoItem('下单金额', `¥${money(snapshot.orderAmount)}`)}
             ${snapshotInfoItem('备注', snapshot.remark)}
           </div>
           <table class="order-merge-snapshot-table">
-            <thead><tr><th>商品</th><th>商品编号</th><th>计量单位</th><th>单价</th><th>下单数量</th><th>下单小计</th></tr></thead>
-            <tbody>${lines.length ? lines.map((line) => {
-              const quantity = line.quantity ?? line.orderQty ?? 0;
-              const subtotal = line.subtotal ?? Number(quantity) * Number(line.unitPrice || 0);
-              return `<tr><td>${escapeHtml(line.goodsName || line.productName || '--')}</td><td>${escapeHtml(line.goodsCode || line.productId || '--')}</td><td>${escapeHtml(line.unit || line.measurementUnit || '--')}</td><td>¥${money(line.unitPrice)}</td><td>${escapeHtml(quantity)}</td><td>¥${money(subtotal)}</td></tr>`;
-            }).join('') : '<tr><td colspan="6" class="detail-empty">暂无商品明细</td></tr>'}</tbody>
+            <thead><tr><th>商品名称（计量单位/品牌/规格）</th><th>商品编号</th><th>计量单位</th><th>单价</th><th>下单数量</th><th>下单小计</th></tr></thead>
+            <tbody>${productRows}</tbody>
           </table>
+          ${lines.length > 3 ? `
+            <div class="order-merge-snapshot-expand-row">
+              <button class="order-merge-snapshot-expand" type="button" data-action="toggle-merge-snapshot-products" aria-expanded="false">
+                <span data-expand-label>展开商品列表</span><span class="order-merge-snapshot-expand-icon" data-expand-icon aria-hidden="true">⌄</span>
+              </button>
+            </div>` : ''}
         </section>
       `;
     }).join('');
@@ -221,7 +245,7 @@
       <div class="operations-modal-backdrop" data-merge-snapshot-backdrop>
         <section class="operations-modal is-detail order-merge-snapshot-modal" role="dialog" aria-modal="true" aria-label="合并订单详情">
           <header class="operations-modal-header"><h3>合并订单详情</h3><button type="button" data-action="close-merge-snapshot" aria-label="关闭">×</button></header>
-          <div class="operations-modal-body"><div class="order-merge-snapshot-list">${renderMergeSnapshotBody(order)}</div></div>
+          <div class="operations-modal-body">${renderMergeSnapshotSummary(order)}<div class="order-merge-snapshot-list">${renderMergeSnapshotBody(order)}</div></div>
           <footer class="operations-modal-footer"><button class="btn" type="button" data-action="close-merge-snapshot">关闭</button></footer>
         </section>
       </div>`;
@@ -239,7 +263,7 @@
       <div class="operations-modal-backdrop" data-merge-snapshot-backdrop>
         <section class="operations-modal is-detail order-merge-snapshot-modal" role="dialog" aria-modal="true" aria-label="合并父订单详情">
           <header class="operations-modal-header"><h3>合并父订单详情</h3><button type="button" data-action="close-merge-snapshot" aria-label="关闭">×</button></header>
-          <div class="operations-modal-body"><div class="order-merge-snapshot-list">${body}</div></div>
+          <div class="operations-modal-body">${renderMergeSnapshotSummary(parent || snapshot, order)}<div class="order-merge-snapshot-list">${body}</div></div>
           <footer class="operations-modal-footer"><button class="btn" type="button" data-action="close-merge-snapshot">关闭</button></footer>
         </section>
       </div>`;
@@ -399,6 +423,19 @@
         const logs = getOrderOperationLogs(order, order.operationLogs);
         const log = logs[Number(viewParent.dataset.mergeLogIndex)];
         openMergeParentModal(order, log);
+        return;
+      }
+      const toggleProducts = event.target.closest('[data-action="toggle-merge-snapshot-products"]');
+      if (toggleProducts) {
+        const card = toggleProducts.closest('.order-merge-snapshot-card');
+        if (!card) return;
+        const expanded = toggleProducts.getAttribute('aria-expanded') === 'true';
+        card.querySelectorAll('[data-snapshot-product-extra]').forEach((row) => {
+          row.hidden = expanded;
+        });
+        toggleProducts.setAttribute('aria-expanded', String(!expanded));
+        toggleProducts.querySelector('[data-expand-label]').textContent = expanded ? '展开商品列表' : '收起商品列表';
+        toggleProducts.querySelector('[data-expand-icon]').textContent = expanded ? '⌄' : '⌃';
         return;
       }
       if (event.target.closest('[data-action="close-merge-snapshot"]') || event.target.matches('[data-merge-snapshot-backdrop]')) closeMergeSnapshotModal();

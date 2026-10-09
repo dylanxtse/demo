@@ -278,6 +278,11 @@
   justify-content: center;
 }
 
+/* 暂时隐藏合并父订单的取消合并入口，保留对应业务逻辑。 */
+.order-module-page .operation-actions button[data-action="unmerge"] {
+  display: none;
+}
+
 .order-batch-merge-modal .operations-modal-body {
   padding: 16px 20px;
 }
@@ -553,9 +558,23 @@
   text-align: center;
 }
 
+.order-batch-merge-result-table th:first-child,
+.order-batch-merge-result-table td:first-child {
+  text-align: center !important;
+}
+
 .order-batch-merge-result-table td:last-child {
   text-align: left;
+  white-space: normal;
   overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 20px;
+}
+
+.order-batch-merge-result-more {
+  margin-left: 2px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .order-batch-merge-result-table th:nth-child(1),

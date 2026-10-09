@@ -324,6 +324,7 @@
     document.getElementById('draftButton').hidden = readonlyMode;
     document.getElementById('rejectButton').hidden = mode !== 'audit';
     document.getElementById('batchAddGoods').hidden = readonlyMode;
+    document.querySelector('.order-form-actions [data-action="back"]').hidden = mode === 'confirm';
     const primary = document.getElementById('primaryButton');
     if (mode === 'audit') {
       primary.textContent = '通过';
