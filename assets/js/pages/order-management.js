@@ -851,7 +851,7 @@
               <input type="hidden" id="batchMergeExpectedAtEnd" data-date-end value="${escapeHtml(endDate)}">
             </div>
           </div>
-          <button class="btn btn-sm" type="button" id="refreshBatchMerge">查询</button>
+          <button class="btn btn-sm order-batch-merge-query" type="button" id="refreshBatchMerge">查询</button>
           <div class="order-batch-merge-summary" id="batchMergeSummary">共<strong>${activeFilteredCount}</strong>笔订单，其中<strong>${mergeableCount}</strong>笔订单可合并为<strong>${activeGroups.length}</strong>笔订单。</div>
         </div>
         <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups, activeOrderIds, expandedGroups)}</div>
@@ -897,7 +897,7 @@
     );
     mountBatchMergeExpectedAtPicker();
     syncBatchMergeSelectAllStates();
-    $('#confirmBatchMerge').onclick = async () => {
+    const executeBatchMerge = async () => {
       const confirmButton = $('#confirmBatchMerge');
       confirmButton.disabled = true;
       confirmButton.textContent = '合单中...';
@@ -918,6 +918,27 @@
         });
       }
     };
+    const openBatchMergeConfirm = () => {
+      if (overlay.querySelector('[data-batch-merge-confirm-layer]')) return;
+      const layer = document.createElement('div');
+      layer.className = 'order-batch-merge-confirm-layer';
+      layer.dataset.batchMergeConfirmLayer = 'true';
+      layer.innerHTML = `
+        <section class="operations-modal is-confirm order-batch-merge-confirm-modal" role="alertdialog" aria-modal="true" aria-label="确认合单">
+          <header class="operations-modal-header"><h3>确认合单</h3><button type="button" data-batch-merge-confirm-close aria-label="关闭">×</button></header>
+          <div class="operations-modal-body"><p class="order-batch-merge-confirm-message">合并订单后将不可撤销，请确认是否合单</p></div>
+          <footer class="operations-modal-footer"><button class="btn" type="button" data-batch-merge-confirm-cancel>取消</button><button class="btn btn-primary" type="button" data-batch-merge-confirm-submit>确认</button></footer>
+        </section>`;
+      overlay.appendChild(layer);
+      const closeConfirm = () => layer.remove();
+      layer.querySelector('[data-batch-merge-confirm-close]')?.addEventListener('click', closeConfirm);
+      layer.querySelector('[data-batch-merge-confirm-cancel]')?.addEventListener('click', closeConfirm);
+      layer.querySelector('[data-batch-merge-confirm-submit]')?.addEventListener('click', async () => {
+        closeConfirm();
+        await executeBatchMerge();
+      });
+    };
+    $('#confirmBatchMerge').onclick = openBatchMergeConfirm;
     const modalBody = overlay.querySelector('.operations-modal-body');
     modalBody?.addEventListener('click', (event) => {
       const expandButton = event.target.closest('[data-batch-merge-expand]');

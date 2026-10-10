@@ -328,6 +328,36 @@
   white-space: nowrap;
 }
 
+.order-batch-merge-filter-bar .order-batch-merge-query {
+  color: var(--primary);
+}
+
+.order-batch-merge-filter-bar .order-batch-merge-query:hover {
+  color: var(--primary);
+}
+
+.order-batch-merge-confirm-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.order-batch-merge-confirm-modal {
+  overflow: hidden;
+}
+
+.order-batch-merge-confirm-message {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 22px;
+  text-align: center;
+}
+
 .order-batch-merge-filter-field {
   display: flex;
   min-width: 0;
