@@ -2558,12 +2558,16 @@
             order.confirmedAt = '';
             appendOperationLog(order, '取消确认供货', '当前用户');
           } else if (action === 'close') {
-            if (['SHIPPED', 'CLOSED', 'REVOKED'].includes(window.BusinessRules.normalizeStatus('orders', order.status))) {
+            const normalizedOrderStatus = window.BusinessRules.normalizeStatus('orders', order.status);
+            const isMergeParent = order.isMergeParent === true || order.isMergeParent === 'true' || order.isMergeParent === '是';
+            if (['SHIPPED', 'CLOSED', 'REVOKED'].includes(normalizedOrderStatus)) {
               throw new Error('已发货、已关闭或已撤销订单不能关闭');
+            }
+            if (isMergeParent && normalizedOrderStatus === 'READY_FOR_SHIPPING') {
+              throw new Error('待发货父订单须先取消确认供货后才能关闭');
             }
             order.status = 'CLOSED';
             appendOperationLog(order, '关闭订单', '当前用户');
-            const isMergeParent = order.isMergeParent === true || order.isMergeParent === 'true' || order.isMergeParent === '是';
             if (isMergeParent) {
               const sourceIds = new Set(Array.isArray(order.mergeSourceOrderIds) ? order.mergeSourceOrderIds : []);
               const sourceNos = new Set(Array.isArray(order.mergeSourceOrderNos) ? order.mergeSourceOrderNos : []);

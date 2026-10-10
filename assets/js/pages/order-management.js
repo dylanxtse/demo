@@ -187,8 +187,10 @@
     if (!mergeParent && status !== 'CLOSED') actions.push({ key: 'copy', label: '复制' });
 
     if (mergeParent && isReadyForShipping(item)) actions.push({ key: 'cancelConfirm', label: '取消确认供货' });
-    // 取消合单保留业务处理逻辑，但暂不在列表操作栏展示。
-    if (!['SHIPPED', 'CLOSED', 'REVOKED'].includes(status)) actions.push({ key: 'close', label: '关闭' });
+    // 待发货父订单必须先取消确认供货，变为待确认后才允许关闭。
+    const canClose = !['SHIPPED', 'CLOSED', 'REVOKED'].includes(status)
+      && (!mergeParent || !isReadyForShipping(item));
+    if (canClose) actions.push({ key: 'close', label: '关闭' });
     if (status === 'CLOSED') actions.push({ key: 'delete', label: '删除', danger: true });
     return actions;
   }
