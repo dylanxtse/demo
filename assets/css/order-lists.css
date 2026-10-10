@@ -686,23 +686,51 @@
 .order-module-page .operations-table th:nth-child(1),
 .order-module-page .operations-table td:nth-child(1) { min-width: 44px; width: 44px; }
 .order-module-page .operations-table th:nth-child(2),
-.order-module-page .operations-table td:nth-child(2) { min-width: 56px; width: 56px; }
+.order-module-page .operations-table td:nth-child(2) { min-width: 190px; }
 .order-module-page .operations-table th:nth-child(3),
-.order-module-page .operations-table td:nth-child(3) { min-width: 190px; }
+.order-module-page .operations-table td:nth-child(3) { min-width: 132px; }
 .order-module-page .operations-table th:nth-child(4),
-.order-module-page .operations-table td:nth-child(4) { min-width: 132px; }
+.order-module-page .operations-table td:nth-child(4) { min-width: 112px; }
 .order-module-page .operations-table th:nth-child(5),
-.order-module-page .operations-table td:nth-child(5) { min-width: 112px; }
+.order-module-page .operations-table td:nth-child(5) { min-width: 104px; }
 .order-module-page .operations-table th:nth-child(6),
 .order-module-page .operations-table td:nth-child(6),
 .order-module-page .operations-table th:nth-child(7),
 .order-module-page .operations-table td:nth-child(7) { min-width: 104px; }
-.order-module-page .operations-table th:nth-child(18),
-.order-module-page .operations-table td:nth-child(18) { min-width: 180px; }
-.order-module-page .operations-table th:nth-child(20),
-.order-module-page .operations-table td:nth-child(20) { min-width: 112px; }
-.order-module-page .operations-table th:nth-child(25),
-.order-module-page .operations-table td:nth-child(25) { min-width: 190px; }
+.order-module-page .operations-table th:nth-child(17),
+.order-module-page .operations-table td:nth-child(17) { min-width: 180px; }
+.order-module-page .operations-table th:nth-child(19),
+.order-module-page .operations-table td:nth-child(19) { min-width: 112px; }
+.order-module-page .operations-table th:nth-child(24),
+.order-module-page .operations-table td:nth-child(24) { min-width: 190px; }
+
+.order-list-page .operations-table th:nth-child(-n+3),
+.order-list-page .operations-table td:nth-child(-n+3) {
+  position: sticky;
+  z-index: 4;
+  background: #fff;
+}
+
+.order-list-page .operations-table th:nth-child(1),
+.order-list-page .operations-table td:nth-child(1) { left: 0; }
+
+.order-list-page .operations-table th:nth-child(2),
+.order-list-page .operations-table td:nth-child(2) { left: 44px; }
+
+.order-list-page .operations-table th:nth-child(3),
+.order-list-page .operations-table td:nth-child(3) {
+  left: 234px;
+  box-shadow: 5px 0 8px -8px rgba(0, 0, 0, 0.3);
+}
+
+.order-list-page .operations-table thead th:nth-child(-n+3) {
+  z-index: 5;
+  background: #fafafa;
+}
+
+.order-list-page .operations-table tbody tr:hover td:nth-child(-n+3) {
+  background: #f5f7fa;
+}
 
 .order-module-page.order-tag-page .operations-table {
   min-width: 1140px;

@@ -59,7 +59,7 @@
   })();
 
   const content = `
-    <section class="page-card operations-page order-module-page" aria-label="订单管理">
+    <section class="page-card operations-page order-module-page order-list-page" aria-label="订单管理">
       <div class="operations-tabs order-view-tabs"><a class="operations-tab active" href="./order-management.html">订单列表</a><a class="operations-tab" href="./order-goods.html">订单商品</a></div>
       <div class="operations-filter filter-section">
         <div class="operations-filter-main">
@@ -167,7 +167,6 @@
   function renderHead() {
     $('#tableHead').innerHTML = `<tr>
       <th><input type="checkbox" id="selectAll" aria-label="选择全部"></th>
-      <th>序号</th>
       ${columns.map((column) => `<th>${column[1]}</th>`).join('')}
       <th>操作</th>
     </tr>`;
@@ -196,13 +195,12 @@
 
   function renderBody() {
     if (!state.items.length) {
-      $('#tableBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + 3}">暂无数据</td></tr>`;
+      $('#tableBody').innerHTML = `<tr><td class="empty-cell" colspan="${columns.length + 2}">暂无数据</td></tr>`;
       return;
     }
-    $('#tableBody').innerHTML = state.items.map((item, index) => `
+    $('#tableBody').innerHTML = state.items.map((item) => `
       <tr data-id="${escapeHtml(item.id)}">
         <td><input type="checkbox" class="row-select" aria-label="选择订单" ${state.selected.has(item.id) ? 'checked' : ''}></td>
-        <td>${(state.page - 1) * state.pageSize + index + 1}</td>
         ${columns.map(([key, , format]) => {
           let value = item[key];
           if (format === 'money') value = money(value);
