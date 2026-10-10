@@ -963,7 +963,7 @@
       const rows = groups.map(({ group, selectedOrders }) => {
         const orderAmount = selectedOrders.reduce((total, order) => total + Number(order.orderAmount || 0), 0);
         const orderNos = selectedOrders.map((order) => escapeHtml(order.orderNo)).join('、');
-        return `<tr><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(orderAmount)}</td><td>${selectedOrders.length}笔</td><td>${orderNos || '--'}</td></tr>`;
+        return `<tr><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(orderAmount)}</td><td>${selectedOrders.length}</td><td>${orderNos || '--'}</td></tr>`;
       }).join('');
       return `<div class="order-batch-merge-confirm-orders-title">已选订单${selectedCount}笔，可合并为${groups.length}笔</div><div class="order-batch-merge-confirm-orders"><div class="order-batch-merge-confirm-order-list"><table class="operations-table order-batch-merge-confirm-table"><thead><tr><th>客户名称</th><th>食堂</th><th>合并订单金额</th><th>订单笔数</th><th>原订单号</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="order-batch-merge-confirm-order-empty">暂无已选订单</td></tr>'}</tbody></table></div></div>`;
     };
