@@ -466,14 +466,105 @@
   background: rgba(15, 23, 42, 0.42);
 }
 
-.order-batch-merge-confirm-modal {
+.operations-modal.is-confirm.order-batch-merge-confirm-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
 }
 
+.order-batch-merge-confirm-modal .operations-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 10px;
+}
+
 .order-batch-merge-confirm-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   margin: 0;
-  color: var(--text-secondary);
+  box-sizing: border-box;
+  padding: 8px 24px;
+  color: #f04438;
   line-height: 22px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.order-batch-merge-confirm-modal .operations-modal-footer {
+  flex: 0 0 auto;
+}
+
+.order-batch-merge-confirm-orders {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.order-batch-merge-confirm-orders-title {
+  margin-top: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.order-batch-merge-confirm-order-list {
+  max-height: min(360px, calc(100vh - 260px));
+  margin-top: 8px;
+  overflow-y: auto;
+}
+
+.order-batch-merge-confirm-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
+}
+
+.order-batch-merge-confirm-table th,
+.order-batch-merge-confirm-table td {
+  height: 38px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.order-batch-merge-confirm-table th:nth-child(1),
+.order-batch-merge-confirm-table td:nth-child(1) {
+  width: 22%;
+}
+
+.order-batch-merge-confirm-table th:nth-child(2),
+.order-batch-merge-confirm-table td:nth-child(2) {
+  width: 18%;
+}
+
+.order-batch-merge-confirm-table th:nth-child(3),
+.order-batch-merge-confirm-table td:nth-child(3) {
+  width: 20%;
+}
+
+.order-batch-merge-confirm-table th:nth-child(4),
+.order-batch-merge-confirm-table td:nth-child(4) {
+  width: 40%;
+}
+
+.order-batch-merge-confirm-table td:last-child {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 20px;
+}
+
+.order-batch-merge-confirm-order-empty {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 28px;
   text-align: center;
 }
 

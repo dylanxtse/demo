@@ -947,27 +947,35 @@
     let activeOrderIds = new Set(mergeableIds);
     let activeFilteredCount = filteredCount;
     let activeCondition = { ...filterCondition };
+    const initialExpectedAtRange = Array.isArray(activeCondition.expectedAtRange) ? activeCondition.expectedAtRange : [];
+    let activeExpectedAt = initialExpectedAtRange.length === 2 && dateKey(initialExpectedAtRange[0]) === dateKey(initialExpectedAtRange[1])
+      ? dateKey(initialExpectedAtRange[0])
+      : defaultExpectedAtRange[0];
     const expandedGroups = new Set();
-    const activeExpectedAtRange = () => {
-      if (Array.isArray(activeCondition.expectedAtRange)) {
-        return [dateKey(activeCondition.expectedAtRange[0]), dateKey(activeCondition.expectedAtRange[1])];
-      }
-      const date = dateKey(activeCondition.expectedAt || '');
-      return [date, date];
-    };
     const hasSelectedMergeGroup = () => activeGroups.some((group) => group.orderIds.filter((id) => activeOrderIds.has(id)).length >= 2);
+    const selectedMergeGroups = () => activeGroups.map((group) => {
+      const selectedOrders = group.orders.filter((order) => activeOrderIds.has(order.id));
+      return selectedOrders.length >= 2 ? { group, selectedOrders } : null;
+    }).filter(Boolean);
+    const renderSelectedMergeGroups = () => {
+      const groups = selectedMergeGroups();
+      const selectedCount = groups.reduce((total, entry) => total + entry.selectedOrders.length, 0);
+      const rows = groups.map(({ group, selectedOrders }) => {
+        const orderAmount = selectedOrders.reduce((total, order) => total + Number(order.orderAmount || 0), 0);
+        const orderNos = selectedOrders.map((order) => escapeHtml(order.orderNo)).join('、');
+        return `<tr><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(orderAmount)}</td><td>${orderNos || '--'}</td></tr>`;
+      }).join('');
+      return `<div class="order-batch-merge-confirm-orders-title">已选订单${selectedCount}笔，可合并为${groups.length}笔</div><div class="order-batch-merge-confirm-orders"><div class="order-batch-merge-confirm-order-list"><table class="operations-table order-batch-merge-confirm-table"><thead><tr><th>客户名称</th><th>食堂</th><th>合并订单金额</th><th>原订单号</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="order-batch-merge-confirm-order-empty">暂无已选订单</td></tr>'}</tbody></table></div></div>`;
+    };
     const renderModalBody = () => {
       const mergeableCount = activeGroups.reduce((total, group) => total + group.orderIds.length, 0);
-      const [startDate, endDate] = activeExpectedAtRange();
       return `
         <div class="order-batch-merge-filter-bar">
           <div class="order-batch-merge-filter-field">
             <label for="batchMergeExpectedAt">期望送达时间</label>
-            <div class="date-range-picker order-batch-merge-date-range" id="batchMergeExpectedAtRange">
-              <input class="filter-input date-range-display" id="batchMergeExpectedAt" type="text" readonly placeholder="请选择日期范围">
+            <div class="date-picker order-batch-merge-date-range" id="batchMergeExpectedAtPicker">
+              <input class="filter-input date-range-display" id="batchMergeExpectedAt" type="text" value="${escapeHtml(activeExpectedAt)}" readonly placeholder="请选择日期">
               <span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-              <input type="hidden" id="batchMergeExpectedAtStart" data-date-start value="${escapeHtml(startDate)}">
-              <input type="hidden" id="batchMergeExpectedAtEnd" data-date-end value="${escapeHtml(endDate)}">
             </div>
           </div>
           <button class="btn btn-sm order-batch-merge-query" type="button" id="refreshBatchMerge">查询</button>
@@ -978,12 +986,9 @@
     };
     const mountBatchMergeExpectedAtPicker = () => {
       batchMergeExpectedAtPicker?.destroy();
-      batchMergeExpectedAtPicker = window.DateRangePicker?.mount({
-        container: '#batchMergeExpectedAtRange',
-        displayInput: '#batchMergeExpectedAt',
-        startInput: '#batchMergeExpectedAtStart',
-        endInput: '#batchMergeExpectedAtEnd',
-        panelId: 'batchMergeExpectedAtRangePanel'
+      batchMergeExpectedAtPicker = window.DatePicker?.mount({
+        input: '#batchMergeExpectedAt',
+        panelId: 'batchMergeExpectedAtPickerPanel'
       });
     };
     const syncBatchMergeSelectAllStates = () => {
@@ -1051,7 +1056,8 @@
       layer.innerHTML = `
         <section class="operations-modal is-confirm order-batch-merge-confirm-modal" role="alertdialog" aria-modal="true" aria-label="确认合单">
           <header class="operations-modal-header"><h3>确认合单</h3><button type="button" data-batch-merge-confirm-close aria-label="关闭">×</button></header>
-          <div class="operations-modal-body"><p class="order-batch-merge-confirm-message">合并订单后将不可撤销，请确认是否合单</p></div>
+          <div class="operations-modal-body">${renderSelectedMergeGroups()}</div>
+          <div class="order-batch-merge-confirm-message">合并订单后将不可撤销，请确认是否合单</div>
           <footer class="operations-modal-footer"><button class="btn" type="button" data-batch-merge-confirm-cancel>取消</button><button class="btn btn-primary" type="button" data-batch-merge-confirm-submit>确认</button></footer>
         </section>`;
       overlay.appendChild(layer);
@@ -1093,12 +1099,12 @@
       }
       const refreshButton = event.target.closest('#refreshBatchMerge');
       if (refreshButton) {
-        const startDate = overlay.querySelector('#batchMergeExpectedAtStart')?.value.trim() || '';
-        const endDate = overlay.querySelector('#batchMergeExpectedAtEnd')?.value.trim() || '';
+        const selectedDate = overlay.querySelector('#batchMergeExpectedAt')?.value.trim() || '';
         const nextCondition = { ...activeCondition };
         delete nextCondition.expectedAt;
-        if (startDate || endDate) nextCondition.expectedAtRange = [startDate, endDate];
+        if (selectedDate) nextCondition.expectedAtRange = [selectedDate, selectedDate];
         else delete nextCondition.expectedAtRange;
+        activeExpectedAt = selectedDate;
         refreshButton.disabled = true;
         refreshButton.textContent = '查询中...';
         service.list('orders', {
@@ -1200,16 +1206,20 @@
   async function handleBatchMerge() {
     try {
       const condition = collectCondition();
+      const batchMergeCondition = {
+        ...condition,
+        expectedAtRange: [defaultExpectedAtRange[0], defaultExpectedAtRange[0]]
+      };
       state.condition = condition;
       const result = await service.list('orders', {
         page: 1,
         pageSize: Number.MAX_SAFE_INTEGER,
-        condition
+        condition: batchMergeCondition
       });
       const orders = result.items || [];
       const plan = buildBatchMergeGroups(orders);
       const mergeableIds = plan.groups.flatMap((group) => group.orderIds);
-      openBatchMergeModal(plan, result.total, mergeableIds, condition);
+      openBatchMergeModal(plan, result.total, mergeableIds, batchMergeCondition);
     } catch (error) {
       toast(error.message || '合单校验失败', 'error');
     }

@@ -321,6 +321,58 @@
         { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 15 },
         { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 10 }
       ]
+    },
+
+    // 同一送达日的第二组合单：晨光小学 / 第一食堂，共3笔订单。
+    {
+      id: 'ORD-MERGE-DEMO-201', orderNo: 'DD202610110300201', customerName: '晨光小学', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:13:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 26 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 14 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-202', orderNo: 'DD202610110300202', customerName: '晨光小学', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:14:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 34 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 16 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-203', orderNo: 'DD202610110300203', customerName: '晨光小学', customerType: '学校', canteen: '第一食堂',
+      orderTag: '学生-非营养餐', source: '平台添加', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:15:00',
+      route: '演示东线', warehouse: '中心仓', items: [
+        { goodsName: '大白菜', goodsCode: 'SP0300019', unit: '斤', unitPrice: 2.2, quantity: 30 },
+        { goodsName: '胡萝卜', goodsCode: 'SP0300053', unit: '斤', unitPrice: 2.8, quantity: 18 }
+      ]
+    },
+
+    // 同一送达日的第三组合单：阳光幼儿园 / 园区食堂，共3笔订单。
+    {
+      id: 'ORD-MERGE-DEMO-204', orderNo: 'DD202610110300204', customerName: '阳光幼儿园', customerType: '幼儿园', canteen: '园区食堂',
+      orderTag: '其他-非营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:16:00',
+      route: '演示南线', warehouse: '中心仓', items: [
+        { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 10 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 12 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-205', orderNo: 'DD202610110300205', customerName: '阳光幼儿园', customerType: '幼儿园', canteen: '园区食堂',
+      orderTag: '其他-非营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:17:00',
+      route: '演示南线', warehouse: '中心仓', items: [
+        { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 14 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 9 }
+      ]
+    },
+    {
+      id: 'ORD-MERGE-DEMO-206', orderNo: 'DD202610110300206', customerName: '阳光幼儿园', customerType: '幼儿园', canteen: '园区食堂',
+      orderTag: '其他-非营养餐', source: '客户下单', expectedAt: '2026-10-11 08:00:00', createdAt: '2026-10-09 09:18:00',
+      route: '演示南线', warehouse: '中心仓', items: [
+        { goodsName: '青椒', goodsCode: 'SP0300056', unit: '斤', unitPrice: 4.5, quantity: 12 },
+        { goodsName: '牛奶', goodsCode: 'SP0300037', unit: '瓶', unitPrice: 5, quantity: 11 }
+      ]
     }
   ].map(createBatchMergeDemoOrder));
 

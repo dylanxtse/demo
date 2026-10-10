@@ -33,13 +33,14 @@
       </div></div>
     </div>
     <div class="operations-toolbar"><span></span><button class="btn btn-sm" id="goodsExport">导出</button></div>
-    <div class="operations-table-container"><div class="operations-table-wrap"><table class="operations-table order-goods-table"><thead><tr><th>序号</th><th>订单号</th><th>商品名称（计量单位/品牌/规格）</th><th>客户名称</th><th>食堂</th><th>客户类型</th><th>订单标签</th><th>计量单位</th><th>下单单价</th><th>下单数量</th><th>下单小计</th><th>发货数量</th><th>发货小计</th><th>期望送达时间</th><th class="status-column">单据状态</th><th>收货状态</th><th>仓库</th><th>备注</th><th>线路</th><th>添加人</th></tr></thead><tbody id="orderGoodsBody"></tbody></table></div>
+    <div class="operations-table-container"><div class="operations-table-wrap"><table class="operations-table order-goods-table"><thead><tr><th>序号</th><th>订单号</th><th>商品名称（计量单位/品牌/规格）</th><th>客户名称</th><th>食堂</th><th>客户类型</th><th>订单标签</th><th>计量单位</th><th>下单单价</th><th>下单数量</th><th>下单小计</th><th>发货数量</th><th>发货小计</th><th>期望送达时间</th><th class="status-column">单据状态</th><th>收货状态</th><th>采购状态</th><th>仓库</th><th>备注</th><th>线路</th><th>添加人</th></tr></thead><tbody id="orderGoodsBody"></tbody></table></div>
     <div class="pagination" id="orderGoodsPagination"><span class="page-total"></span></div></div>
   </section>`;
   const root = window.AppShell.mount({ title: '订单管理', content });
   let rows = [];
   const statusMap = { DRAFT: '暂存', PENDING: '待审核', PENDING_CONFIRM: '待确认', PENDING_AUDIT: '待审核', READY_FOR_SORTING: '待分拣', READY_FOR_SHIPPING: '待发货', REJECTED: '已驳回', APPROVED: '已审核', CONFIRMED: '已确认', SHIPPED: '已发货', COMPLETED: '已完成', CLOSED: '已关闭', REVOKED: '已撤销' };
   const statusClassMap = { DRAFT: 'info', PENDING: 'warning', PENDING_CONFIRM: 'warning', PENDING_AUDIT: 'warning', READY_FOR_SORTING: 'info', READY_FOR_SHIPPING: 'warning', REJECTED: 'danger', APPROVED: 'success', CONFIRMED: 'success', SHIPPED: 'success', COMPLETED: 'success', CLOSED: 'danger', REVOKED: 'danger' };
+  const receiptStatusClassMap = { '已收货': 'success', '部分收货': 'warning', '未收货': 'danger' };
   const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const money = (value) => Number(value || 0).toFixed(2);
   const productIsNetVegetable = (line) => {
@@ -105,6 +106,26 @@
     return generatedCount === items.length ? '全部生成' : '部分生成';
   }
 
+  function purchaseStatusForLine(line, order) {
+    const orderGenerated = Boolean(
+      order?.purchaseOrderNo
+      || order?.purchaseOrderId
+      || order?.purchaseOrderGenerated === true
+      || order?.purchaseOrderGenerated === 'true'
+      || order?.purchaseOrderGenerated === '是'
+    );
+    const lineGenerated = Boolean(
+      line?.purchaseOrderNo
+      || line?.purchaseOrderId
+      || line?.allocation?.purchaseOrderNo
+      || line?.allocation?.status === '已生成采购单'
+      || line?.allocation?.status === '全部生成'
+      || line?.purchaseStatus === '已生成采购单'
+      || line?.purchaseStatus === '全部生成'
+    );
+    return orderGenerated || lineGenerated ? '全部生成' : '未生成';
+  }
+
   function districtFor(order) {
     return String(order?.district || order?.region || '市直属').trim();
   }
@@ -158,10 +179,12 @@
     document.getElementById('orderGoodsBody').innerHTML = rows.length ? rows.map(({ order, ...line }, index) => {
       const productDisplay = window.DomUtils.formatProductDisplay(line);
       const productTag = productIsNetVegetable(line) ? '<span class="net-vegetable-tag">净菜</span>' : '';
+      const receiptStatus = order.receiptStatus || '--';
+      const purchaseStatus = purchaseStatusForLine(line, order);
       return `<tr>
-      <td>${index + 1}</td><td><a class="cell-link order-goods-link" href="./order-detail.html?id=${encodeURIComponent(order.id)}"><span>${esc(order.orderNo)}</span><small>${esc(order.createdAt || '--')}</small></a></td><td><span class="product-display-text" title="${esc(productDisplay)}">${productTag}${esc(productDisplay)}</span></td><td>${esc(order.customerName)}</td><td>${esc(order.canteen)}</td><td>${esc(order.customerType)}</td><td>${esc(order.orderTag)}</td><td>${esc(line.unit)}</td><td>${money(line.unitPrice)}</td><td>${line.quantity || 0}</td><td>${money((line.quantity || 0) * (line.unitPrice || 0))}</td><td>${line.shippedQty || 0}</td><td>${money(line.shippedAmount)}</td><td>${esc(order.expectedAt)}</td><td class="status-column"><span class="operation-status ${statusClassMap[order.status] || 'info'}">${esc(statusMap[order.status] || order.status)}</span></td><td>${esc(order.receiptStatus || '--')}</td><td>${esc(order.warehouse || '--')}</td><td>${esc(line.remark || order.remark || '--')}</td><td>${esc(order.route || '--')}</td><td>${esc(order.creator || '--')}</td>
+      <td>${index + 1}</td><td><a class="cell-link order-goods-link" href="./order-detail.html?id=${encodeURIComponent(order.id)}"><span>${esc(order.orderNo)}</span><small>${esc(order.createdAt || '--')}</small></a></td><td><span class="product-display-text" title="${esc(productDisplay)}">${productTag}${esc(productDisplay)}</span></td><td>${esc(order.customerName)}</td><td>${esc(order.canteen)}</td><td>${esc(order.customerType)}</td><td>${esc(order.orderTag)}</td><td>${esc(line.unit)}</td><td>${money(line.unitPrice)}</td><td>${line.quantity || 0}</td><td>${money((line.quantity || 0) * (line.unitPrice || 0))}</td><td>${line.shippedQty || 0}</td><td>${money(line.shippedAmount)}</td><td>${esc(order.expectedAt)}</td><td class="status-column"><span class="operation-status ${statusClassMap[order.status] || 'info'}">${esc(statusMap[order.status] || order.status)}</span></td><td><span class="operation-status ${receiptStatusClassMap[receiptStatus] || 'info'}">${esc(receiptStatus)}</span></td><td><span class="operation-status ${purchaseStatus === '全部生成' ? 'success' : 'warning'}">${esc(purchaseStatus)}</span></td><td>${esc(order.warehouse || '--')}</td><td>${esc(line.remark || order.remark || '--')}</td><td>${esc(order.route || '--')}</td><td>${esc(order.creator || '--')}</td>
     </tr>`;
-    }).join('') : '<tr><td class="empty-cell" colspan="20">暂无数据</td></tr>';
+    }).join('') : '<tr><td class="empty-cell" colspan="21">暂无数据</td></tr>';
     document.querySelector('#orderGoodsPagination .page-total').textContent = `共 ${rows.length} 条数据`;
   }
 
