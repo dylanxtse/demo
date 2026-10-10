@@ -2558,6 +2558,9 @@
             order.confirmedAt = '';
             appendOperationLog(order, '取消确认供货', '当前用户');
           } else if (action === 'close') {
+            if (['SHIPPED', 'CLOSED', 'REVOKED'].includes(window.BusinessRules.normalizeStatus('orders', order.status))) {
+              throw new Error('已发货、已关闭或已撤销订单不能关闭');
+            }
             order.status = 'CLOSED';
             appendOperationLog(order, '关闭订单', '当前用户');
             const isMergeParent = order.isMergeParent === true || order.isMergeParent === 'true' || order.isMergeParent === '是';

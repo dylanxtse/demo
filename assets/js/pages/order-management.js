@@ -175,12 +175,22 @@
 
   function visibleActions(item) {
     const actions = [];
-    if (item.status === 'PENDING_AUDIT') actions.push({ key: 'approve', label: '审核' });
-    if (item.status === 'PENDING_CONFIRM') actions.push({ key: 'confirm', label: '确认供货' });
-    if (isMergeParent(item) && isReadyForShipping(item)) actions.push({ key: 'cancelConfirm', label: '取消确认供货' });
-    if (isMergeParent(item) && isReadyForShipping(item)) actions.push({ key: 'unmerge', label: '取消合并' });
-    if (!['SHIPPED', 'CLOSED'].includes(item.status)) actions.push({ key: 'close', label: '关闭' });
-    if (item.status === 'CLOSED') actions.push({ key: 'delete', label: '删除', danger: true });
+    const status = orderStatus(item);
+    const mergeParent = isMergeParent(item);
+
+    if (status === 'PENDING_AUDIT') actions.push({ key: 'approve', label: '审核' });
+    if (status === 'PENDING_CONFIRM') actions.push({ key: 'confirm', label: '确认供货' });
+
+    // 编辑类操作只对普通订单和合并后的子订单开放，合并父订单不允许直接编辑/复制。
+    if (!mergeParent && ['DRAFT', 'PENDING', 'PENDING_AUDIT', 'PENDING_CONFIRM', 'READY_FOR_SHIPPING', 'REJECTED'].includes(status)) {
+      actions.push({ key: 'edit', label: '编辑' });
+    }
+    if (!mergeParent && status !== 'CLOSED') actions.push({ key: 'copy', label: '复制' });
+
+    if (mergeParent && isReadyForShipping(item)) actions.push({ key: 'cancelConfirm', label: '取消确认供货' });
+    // 取消合单保留业务处理逻辑，但暂不在列表操作栏展示。
+    if (!['SHIPPED', 'CLOSED', 'REVOKED'].includes(status)) actions.push({ key: 'close', label: '关闭' });
+    if (status === 'CLOSED') actions.push({ key: 'delete', label: '删除', danger: true });
     return actions;
   }
 
@@ -842,7 +852,7 @@
             </div>
           </div>
           <button class="btn btn-sm" type="button" id="refreshBatchMerge">查询</button>
-          <div class="order-batch-merge-summary" id="batchMergeSummary">共<strong>${activeFilteredCount}</strong>笔订单，<strong>${mergeableCount}</strong>笔订单可合并为<strong>${activeGroups.length}</strong>笔订单。</div>
+          <div class="order-batch-merge-summary" id="batchMergeSummary">共<strong>${activeFilteredCount}</strong>笔订单，其中<strong>${mergeableCount}</strong>笔订单可合并为<strong>${activeGroups.length}</strong>笔订单。</div>
         </div>
         <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups, activeOrderIds, expandedGroups)}</div>
       `;
