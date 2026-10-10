@@ -761,14 +761,39 @@
     if (reason && !skipped.reasons.includes(reason)) skipped.reasons.push(reason);
   }
 
-  async function executeBatchMerge(selectedIds) {
-    const result = { selectedCount: selectedIds.length, successfulGroups: [], skippedOrders: [] };
-    const latestOrders = await Promise.all(selectedIds.map((id) => service.get('orders', id)));
-    latestOrders.forEach((order, index) => {
-      if (!order) addBatchMergeSkipped(result, selectedIds[index], '订单在合单前已不存在或被删除');
-    });
+  async function readBatchMergeSelection(selectedIds) {
+    const normalizedIds = [...new Set(selectedIds.filter(Boolean))];
+    const latestOrders = await Promise.all(normalizedIds.map((id) => service.get('orders', id)));
+    const missingIds = normalizedIds.filter((id, index) => !latestOrders[index]);
     const existingOrders = latestOrders.filter(Boolean);
-    const plan = buildBatchMergeGroups(existingOrders);
+    return {
+      selectedIds: normalizedIds,
+      latestOrders,
+      existingOrders,
+      missingIds,
+      plan: buildBatchMergeGroups(existingOrders)
+    };
+  }
+
+  function batchMergeValidationMessage(selection) {
+    if (selection.plan.groups.length) return '';
+    const reasons = [];
+    if (selection.missingIds.length) reasons.push('订单在合单前已不存在或被删除');
+    selection.plan.excluded.forEach(({ reasons: orderReasons }) => {
+      orderReasons.forEach((reason) => {
+        if (!reasons.includes(reason)) reasons.push(reason);
+      });
+    });
+    return reasons.length
+      ? `当前所选订单均不可合单：${reasons.join('；')}`
+      : '当前所选订单均不可合单，请刷新后重试';
+  }
+
+  async function executeBatchMerge(selectedIds, validatedSelection = null) {
+    const selection = validatedSelection || await readBatchMergeSelection(selectedIds);
+    const result = { selectedCount: selection.selectedIds.length, successfulGroups: [], skippedOrders: [] };
+    selection.missingIds.forEach((id) => addBatchMergeSkipped(result, id, '订单在合单前已不存在或被删除'));
+    const plan = selection.plan;
     plan.excluded.forEach(({ order, reasons }) => {
       reasons.forEach((reason) => addBatchMergeSkipped(result, order, reason));
     });
@@ -895,25 +920,31 @@
     );
     mountBatchMergeExpectedAtPicker();
     syncBatchMergeSelectAllStates();
-    const executeBatchMerge = async () => {
+    const resetBatchMergeSubmitButton = () => {
+      const confirmButton = $('#confirmBatchMerge');
+      if (!confirmButton) return;
+      confirmButton.disabled = !hasSelectedMergeGroup();
+      confirmButton.textContent = '确认合单';
+    };
+    const handleBatchMergeSubmit = async (validatedSelection = null) => {
       const confirmButton = $('#confirmBatchMerge');
       confirmButton.disabled = true;
       confirmButton.textContent = '合单中...';
       try {
-        const result = await executeBatchMerge([...activeOrderIds]);
+        const result = await executeBatchMerge([...activeOrderIds], validatedSelection);
+        if (!result.successfulGroups.length) {
+          const reasons = [...new Set(result.skippedOrders.flatMap((item) => item.reasons || []))];
+          resetBatchMergeSubmitButton();
+          toast(reasons.length ? `当前所选订单均不可合单：${reasons.join('；')}` : '合单失败，请刷新后重试', 'error');
+          return;
+        }
         state.selected.clear();
         closeModal();
         await load();
         openBatchMergeResultModal(result);
       } catch (error) {
-        state.selected.clear();
-        closeModal();
-        await load();
-        openBatchMergeResultModal({
-          selectedCount: activeOrderIds.size,
-          successfulGroups: [],
-          skippedOrders: [{ id: 'batch-merge-error', orderNo: '本次合单', reasons: [error.message || '合单失败'] }]
-        });
+        resetBatchMergeSubmitButton();
+        toast(error.message || '合单校验失败，请刷新后重试', 'error');
       }
     };
     const openBatchMergeConfirm = () => {
@@ -931,9 +962,26 @@
       const closeConfirm = () => layer.remove();
       layer.querySelector('[data-batch-merge-confirm-close]')?.addEventListener('click', closeConfirm);
       layer.querySelector('[data-batch-merge-confirm-cancel]')?.addEventListener('click', closeConfirm);
-      layer.querySelector('[data-batch-merge-confirm-submit]')?.addEventListener('click', async () => {
-        closeConfirm();
-        await executeBatchMerge();
+      layer.querySelector('[data-batch-merge-confirm-submit]')?.addEventListener('click', async (event) => {
+        const submitButton = event.currentTarget;
+        submitButton.disabled = true;
+        submitButton.textContent = '校验中...';
+        try {
+          const validatedSelection = await readBatchMergeSelection([...activeOrderIds]);
+          const validationMessage = batchMergeValidationMessage(validatedSelection);
+          if (validationMessage) {
+            closeConfirm();
+            resetBatchMergeSubmitButton();
+            toast(validationMessage, 'error');
+            return;
+          }
+          closeConfirm();
+          await handleBatchMergeSubmit(validatedSelection);
+        } catch (error) {
+          closeConfirm();
+          resetBatchMergeSubmitButton();
+          toast(error.message || '合单校验失败，请刷新后重试', 'error');
+        }
       });
     };
     $('#confirmBatchMerge').onclick = openBatchMergeConfirm;
