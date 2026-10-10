@@ -144,6 +144,117 @@
   flex: 1 1 0;
 }
 
+.order-module-page .operations-field > .customer-canteen-picker {
+  position: relative;
+  width: 0;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.order-module-page .customer-canteen-trigger {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 0 28px 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  outline: none;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.order-module-page .customer-canteen-trigger:focus,
+.order-module-page .customer-canteen-picker.is-open .customer-canteen-trigger {
+  border-color: var(--primary);
+}
+
+.order-module-page .customer-canteen-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-module-page .customer-canteen-text.is-placeholder {
+  color: var(--text-tertiary);
+}
+
+.order-module-page .customer-canteen-arrow {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border-right: 2px solid var(--text-tertiary);
+  border-bottom: 2px solid var(--text-tertiary);
+  transform: translateY(-65%) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.order-module-page .customer-canteen-picker.is-open .customer-canteen-arrow {
+  transform: translateY(-20%) rotate(225deg);
+}
+
+.order-module-page .customer-canteen-dropdown {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 4px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(30, 45, 70, 0.14);
+}
+
+.order-module-page .customer-canteen-dropdown[hidden] {
+  display: none;
+}
+
+.order-module-page .customer-canteen-option,
+.order-module-page .customer-canteen-empty {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 7px 12px;
+  border: 0;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+
+.order-module-page .customer-canteen-option {
+  cursor: pointer;
+}
+
+.order-module-page .customer-canteen-option:hover,
+.order-module-page .customer-canteen-option:focus {
+  outline: none;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.order-module-page .customer-canteen-empty {
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
 .order-module-page .operations-field > .date-range-picker .date-range-display {
   box-sizing: border-box;
   width: 100%;
@@ -241,6 +352,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.order-list-page .filter-select.is-placeholder {
+  color: var(--text-tertiary);
+}
+
+.order-goods-page .filter-select.is-placeholder {
+  color: var(--text-tertiary);
 }
 
 .shipping-management-page .operations-toolbar [data-toolbar-action="print"],

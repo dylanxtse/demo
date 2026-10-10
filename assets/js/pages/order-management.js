@@ -57,6 +57,15 @@
     end.setDate(end.getDate() + 6);
     return [formatFilterDate(start), formatFilterDate(end)];
   })();
+  const customerNameOptions = (() => {
+    const sources = [
+      ...(window.DemoStore?.get('customers') || []),
+      ...(window.DemoStore?.get('orders') || [])
+    ];
+    const names = [...new Set(sources.map((item) => item.customerName || item.name).filter(Boolean))]
+      .sort((left, right) => String(left).localeCompare(String(right), 'zh-CN'));
+    return names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+  })();
 
   const content = `
     <section class="page-card operations-page order-module-page order-list-page" aria-label="订单管理">
@@ -64,27 +73,24 @@
       <div class="operations-filter filter-section">
         <div class="operations-filter-main">
           <div class="operations-filter-grid">
-          <div class="operations-field expected-at-field"><label class="filter-label" for="expectedAt">期望送达时间</label><div class="date-range-picker order-expected-at-range" id="expectedAtRange"><input class="filter-input date-range-display" id="expectedAt" type="text" placeholder="请选择日期范围" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><input type="hidden" id="expectedAtStart" data-date-start><input type="hidden" id="expectedAtEnd" data-date-end></div></div>
-          <div class="operations-field"><label class="filter-label" for="customerName">客户名称</label><input class="filter-input" id="customerName" placeholder="请输入"></div>
-          <div class="operations-field"><label class="filter-label" for="orderNo">订单号</label><input class="filter-input" id="orderNo" maxlength="40" placeholder="请输入订单号"></div>
+            <div class="operations-field expected-at-field"><label class="filter-label" for="expectedAt">期望送达时间</label><div class="date-range-picker order-expected-at-range" id="expectedAtRange"><input class="filter-input date-range-display" id="expectedAt" type="text" placeholder="请选择日期 - 请选择日期" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><input type="hidden" id="expectedAtStart" data-date-start><input type="hidden" id="expectedAtEnd" data-date-end></div></div>
+            <div class="operations-field created-at-field"><label class="filter-label" for="createdAt">创建时间</label><div class="date-range-picker order-created-at-range" id="createdAtRange"><input class="filter-input date-range-display" id="createdAt" type="text" placeholder="请选择日期 - 请选择日期" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><input type="hidden" id="createdAtStart" data-date-start><input type="hidden" id="createdAtEnd" data-date-end></div></div>
+            <div class="operations-field"><label class="filter-label" for="customerName">客户名称</label><select class="filter-select" id="customerName"><option value="" selected>全部</option>${customerNameOptions}</select></div>
+            <div class="operations-field customer-canteen-field"><label class="filter-label" for="customerCanteenTrigger">客户食堂</label><div class="customer-canteen-picker" id="customerCanteen" data-value=""><button class="customer-canteen-trigger" id="customerCanteenTrigger" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="customer-canteen-text is-placeholder">请选择</span><span class="customer-canteen-arrow" aria-hidden="true"></span></button><div class="customer-canteen-dropdown" role="listbox" hidden></div></div></div>
+            <div class="operations-field"><label class="filter-label" for="customerType">客户类型</label><select class="filter-select" id="customerType"><option value="" selected>全部</option><option value="学校">默认客户类型（学校）</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="orderTag">订单标签</label><select class="filter-select" id="orderTag"><option value="" selected>全部</option><option>学生-营养餐</option><option>学生-非营养餐</option><option>学生-不区分</option><option>教师-营养餐</option><option>教师-非营养餐</option><option>教师-不区分</option><option>其他-非营养餐</option><option>其他-不区分</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="status">单据状态</label><select class="filter-select" id="status"><option value="" selected>全部</option><option value="DRAFT">暂存</option><option value="PENDING_CONFIRM">待确认</option><option value="PENDING_AUDIT">待审核</option><option value="READY_FOR_SHIPPING">待发货</option><option value="REJECTED">已驳回</option><option value="CLOSED">已关闭</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="supplement">是否补单</label><select class="filter-select" id="supplement"><option value="" selected>全部</option><option>是</option><option>否</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="orderNo">订单号</label><input class="filter-input" id="orderNo" maxlength="40" placeholder="请输入订单号"></div>
+            <div class="operations-field"><label class="filter-label" for="warehouse">仓库</label><select class="filter-select" id="warehouse"><option value="" selected>全部</option><option>中心仓</option><option>北区仓</option><option>临时仓</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="source">单据来源</label><select class="filter-select" id="source"><option value="" selected>全部</option><option>客户下单</option><option>平台添加</option><option>订单合并</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="receiptStatus">收货状态</label><select class="filter-select" id="receiptStatus"><option value="" selected>全部</option><option>部分收货</option><option>已收货</option><option>未收货</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="orderType">订单类型</label><select class="filter-select" id="orderType"><option value="" selected>全部</option><option value="销售订单">普通订单</option><option value="临时订单">临采订单</option></select></div>
+            <div class="operations-field"><label class="filter-label" for="purchaseStatus">采购状态</label><select class="filter-select" id="purchaseStatus"><option value="" selected>全部</option><option value="全部生成">全部生成</option><option value="部分生成">部分生成</option><option value="未生成">未生成</option></select></div>
           </div>
           <div class="operations-filter-actions">
-            <button class="operations-filter-toggle" type="button" data-operations-filter-toggle>高级筛选<span class="toggle-arrow">▾</span></button>
             <button class="btn btn-primary btn-sm" id="queryButton">查询</button>
             <button class="btn btn-sm" id="resetButton">重置</button>
-          </div>
-        </div>
-        <div class="operations-filter-advanced">
-          <div class="operations-filter-grid">
-          <div class="operations-field"><label class="filter-label" for="customerType">客户类型</label><select class="filter-select" id="customerType"><option value="">全部</option><option>学校</option><option>幼儿园</option><option>机关单位</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="orderTag">订单标签</label><select class="filter-select" id="orderTag"><option value="">全部</option><option>学生-营养餐</option><option>学生-非营养餐</option><option>学生-不区分</option><option>教师-营养餐</option><option>教师-非营养餐</option><option>教师-不区分</option><option>其他-非营养餐</option><option>其他-不区分</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="status">单据状态</label><select class="filter-select" id="status"><option value="">全部</option><option value="DRAFT">暂存</option><option value="PENDING_CONFIRM">待确认</option><option value="PENDING_AUDIT">待审核</option><option value="READY_FOR_SORTING">待分拣</option><option value="READY_FOR_SHIPPING">待发货</option><option value="REJECTED">已驳回</option><option value="SHIPPED">已发货</option><option value="CLOSED">已关闭</option><option value="REVOKED">已撤销</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="warehouse">仓库</label><select class="filter-select" id="warehouse"><option value="">全部</option><option>中心仓</option><option>北区仓</option><option>临时仓</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="source">单据来源</label><select class="filter-select" id="source"><option value="">全部</option><option>客户下单</option><option>平台添加</option><option>订单合并</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="receiptStatus">收货状态</label><select class="filter-select" id="receiptStatus"><option value="">全部</option><option>待收货</option><option>部分收货</option><option>已收货</option><option>未收货</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="orderType">订单类型</label><select class="filter-select" id="orderType"><option value="">全部</option><option>销售订单</option><option>临时订单</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="netVegetable">是否净菜</label><select class="filter-select" id="netVegetable"><option value="">全部</option><option value="net">净菜</option><option value="non-net">非净菜</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="isMerged">是否合单</label><select class="filter-select" id="isMerged"><option value="" selected>全部</option><option value="是">是</option><option value="否">否</option></select></div>
           </div>
         </div>
       </div>
@@ -119,7 +125,16 @@
     displayInput: '#expectedAt',
     startInput: '#expectedAtStart',
     endInput: '#expectedAtEnd',
-    panelId: 'orderExpectedAtPickerPanel'
+    panelId: 'orderExpectedAtPickerPanel',
+    separator: ' - '
+  });
+  const createdAtPicker = window.DateRangePicker?.mount({
+    container: '#createdAtRange',
+    displayInput: '#createdAt',
+    startInput: '#createdAtStart',
+    endInput: '#createdAtEnd',
+    panelId: 'orderCreatedAtPickerPanel',
+    separator: ' - '
   });
   expectedAtPicker?.setValue(defaultExpectedAtRange[0], defaultExpectedAtRange[1], false);
   let batchMergeExpectedAtPicker = null;
@@ -142,6 +157,70 @@
     return Number(value || 0).toFixed(2);
   }
 
+  function customerCanteenOptions(customerName) {
+    if (!customerName) return [];
+    const sources = [
+      ...(window.DemoStore?.get('customerLocations') || []),
+      ...(window.DemoStore?.get('orders') || [])
+    ];
+    return [...new Set(sources
+      .filter((item) => (item.customerName || item.name) === customerName)
+      .map((item) => item.canteen || item.canteenName)
+      .filter(Boolean))]
+      .sort((left, right) => String(left).localeCompare(String(right), 'zh-CN'));
+  }
+
+  function closeCustomerCanteenPicker() {
+    const picker = $('#customerCanteen');
+    if (!picker) return;
+    const dropdown = picker.querySelector('.customer-canteen-dropdown');
+    const trigger = picker.querySelector('.customer-canteen-trigger');
+    if (dropdown) dropdown.hidden = true;
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    picker.classList.remove('is-open');
+  }
+
+  function setCustomerCanteenValue(value, label = value || '请选择') {
+    const picker = $('#customerCanteen');
+    if (!picker) return;
+    const text = picker.querySelector('.customer-canteen-text');
+    picker.dataset.value = value || '';
+    if (text) {
+      text.textContent = label;
+      text.classList.toggle('is-placeholder', !value && label === '请选择');
+    }
+  }
+
+  function toggleCustomerCanteenPicker() {
+    const picker = $('#customerCanteen');
+    if (!picker) return;
+    const dropdown = picker.querySelector('.customer-canteen-dropdown');
+    const trigger = picker.querySelector('.customer-canteen-trigger');
+    const opening = dropdown.hidden;
+    dropdown.hidden = !opening;
+    trigger.setAttribute('aria-expanded', String(opening));
+    picker.classList.toggle('is-open', opening);
+  }
+
+  function syncCustomerCanteenOptions() {
+    const picker = $('#customerCanteen');
+    if (!picker) return;
+    const dropdown = picker.querySelector('.customer-canteen-dropdown');
+    const customerName = $('#customerName')?.value || '';
+    const canteens = customerCanteenOptions(customerName);
+    if (!customerName || !canteens.length) {
+      dropdown.innerHTML = '<div class="customer-canteen-empty" role="status">暂无数据</div>';
+      setCustomerCanteenValue('');
+    } else {
+      dropdown.innerHTML = [
+        '<button class="customer-canteen-option" type="button" role="option" data-canteen-value="">全部</button>',
+        ...canteens.map((canteen) => `<button class="customer-canteen-option" type="button" role="option" data-canteen-value="${escapeHtml(canteen)}">${escapeHtml(canteen)}</button>`)
+      ].join('');
+      setCustomerCanteenValue('', '全部');
+    }
+    closeCustomerCanteenPicker();
+  }
+
   function toast(message, type = '') {
     root.querySelector('.operations-toast')?.remove();
     const element = document.createElement('div');
@@ -153,15 +232,30 @@
 
   function collectCondition() {
     const condition = {};
-    ['orderNo', 'customerName', 'customerType', 'status', 'orderTag', 'warehouse', 'source', 'receiptStatus', 'orderType', 'netVegetable', 'isMerged']
+    ['orderNo', 'customerName', 'canteen', 'customerType', 'status', 'orderTag', 'supplement', 'warehouse', 'source', 'receiptStatus', 'orderType', 'purchaseStatus']
       .forEach((key) => {
-        const value = $(`#${key}`).value.trim();
+        const field = $(`#${key === 'canteen' ? 'customerCanteen' : key}`);
+        const value = key === 'canteen'
+          ? (field?.dataset.value || '')
+          : (field?.value || '').trim();
         if (value) condition[key] = value;
       });
     const expectedAtStart = $('#expectedAtStart')?.value.trim() || '';
     const expectedAtEnd = $('#expectedAtEnd')?.value.trim() || '';
     if (expectedAtStart || expectedAtEnd) condition.expectedAtRange = [expectedAtStart, expectedAtEnd];
+    const createdAtStart = $('#createdAtStart')?.value.trim() || '';
+    const createdAtEnd = $('#createdAtEnd')?.value.trim() || '';
+    if (createdAtStart || createdAtEnd) condition.createdAtRange = [createdAtStart, createdAtEnd];
     return condition;
+  }
+
+  function syncSelectPlaceholder(select) {
+    if (!select?.matches('[data-placeholder-option]')) return;
+    select.classList.toggle('is-placeholder', !select.value);
+  }
+
+  function syncSelectPlaceholders() {
+    root.querySelectorAll('select[data-placeholder-option]').forEach(syncSelectPlaceholder);
   }
 
   function renderHead() {
@@ -1239,6 +1333,18 @@
   root.addEventListener('click', async (event) => {
     const close = event.target.closest('[data-modal-close]');
     if (close) return closeModal();
+    if (!event.target.closest('#customerCanteen')) closeCustomerCanteenPicker();
+    const customerCanteenTrigger = event.target.closest('#customerCanteenTrigger');
+    if (customerCanteenTrigger) {
+      toggleCustomerCanteenPicker();
+      return;
+    }
+    const customerCanteenOption = event.target.closest('[data-canteen-value]');
+    if (customerCanteenOption?.closest('#customerCanteen')) {
+      setCustomerCanteenValue(customerCanteenOption.dataset.canteenValue || '', customerCanteenOption.textContent.trim() || '请选择');
+      closeCustomerCanteenPicker();
+      return;
+    }
     const filterToggle = event.target.closest('[data-operations-filter-toggle]');
     if (filterToggle) {
       const expanded = filterToggle.classList.toggle('is-active');
@@ -1259,6 +1365,9 @@
     if (event.target.id === 'resetButton') {
       root.querySelectorAll('.operations-filter input, .operations-filter select').forEach((field) => { field.value = ''; });
       expectedAtPicker?.setValue(defaultExpectedAtRange[0], defaultExpectedAtRange[1], false);
+      createdAtPicker?.clear(false);
+      syncCustomerCanteenOptions();
+      syncSelectPlaceholders();
       state.condition = collectCondition();
       state.page = 1;
       state.selected.clear();
@@ -1291,6 +1400,11 @@
   });
 
   root.addEventListener('change', (event) => {
+    syncSelectPlaceholder(event.target);
+    if (event.target.id === 'customerName') {
+      syncCustomerCanteenOptions();
+      return;
+    }
     if (event.target.id === 'selectAll') {
       state.items.forEach((item) => event.target.checked ? state.selected.add(item.id) : state.selected.delete(item.id));
       renderBody();
@@ -1309,9 +1423,12 @@
       state.page = 1;
       load();
     }
+    if (event.key === 'Escape') closeCustomerCanteenPicker();
     if (event.key === 'Escape' && overlay.innerHTML) closeModal();
   });
 
+  syncSelectPlaceholders();
+  syncCustomerCanteenOptions();
   state.pagination = window.Pagination.create({
     container: '#pagination',
     page: state.page,

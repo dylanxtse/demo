@@ -117,6 +117,29 @@
     });
   }
 
+  function orderPurchaseStatus(order) {
+    const orderGenerated = Boolean(
+      order?.purchaseOrderNo
+      || order?.purchaseOrderId
+      || order?.purchaseOrderGenerated === true
+      || order?.purchaseOrderGenerated === 'true'
+      || order?.purchaseOrderGenerated === '是'
+    );
+    if (orderGenerated) return '全部生成';
+
+    const items = Array.isArray(order?.items) ? order.items : [];
+    const generatedItems = items.filter((line) => Boolean(
+      line?.purchaseOrderNo
+      || line?.purchaseOrderId
+      || line?.allocation?.status === '已生成采购单'
+      || line?.allocation?.status === '全部生成'
+      || line?.purchaseStatus === '已生成采购单'
+      || line?.purchaseStatus === '全部生成'
+    )).length;
+    if (!generatedItems) return '未生成';
+    return generatedItems === items.length ? '全部生成' : '部分生成';
+  }
+
   function isNetVegetable(item) {
     if (Array.isArray(item?.items) && item.items.some((entry) => isNetVegetable(entry))) return true;
     if (item && item.isNetVegetable !== undefined && item.isNetVegetable !== null) {
@@ -182,6 +205,20 @@
         const start = String(value[0] || '').trim().replace(/\//g, '-');
         const end = String(value[1] || '').trim().replace(/\//g, '-');
         return (!start || source >= start) && (!end || source <= `${end} 23:59:59`);
+      }
+      if (resource === 'orders' && key === 'createdAtRange' && Array.isArray(value) && value.length === 2) {
+        const source = String(item.createdAt || item.createTime || '').trim().replace(/\//g, '-');
+        const start = String(value[0] || '').trim().replace(/\//g, '-');
+        const end = String(value[1] || '').trim().replace(/\//g, '-');
+        return (!start || source >= start) && (!end || source <= `${end} 23:59:59`);
+      }
+      if (resource === 'orders' && key === 'orderType') {
+        const orderTypeMap = { 普通订单: '销售订单', 临采订单: '临时订单' };
+        const targetType = orderTypeMap[String(value)] || String(value);
+        return (item.orderType || '销售订单') === targetType;
+      }
+      if (resource === 'orders' && key === 'purchaseStatus') {
+        return orderPurchaseStatus(item) === String(value);
       }
       if (resource === 'orders' && key === 'netVegetable') {
         const containsNetVegetable = orderContainsNetVegetable(item);

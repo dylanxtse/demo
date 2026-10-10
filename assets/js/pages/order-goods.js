@@ -1,27 +1,35 @@
 (function () {
   const service = window.OperationsService;
+  const defaultExpectedAtRange = ['2026-09-11', '2026-11-10'];
+  const districtOptions = [
+    '孟村回族自治县', '石油分局', '海兴县', '东光县', '南大港', '南皮县', '沧县', '献县',
+    '中捷产业园', '黄骅市', '港城', '任丘', '盐山', '河间', '肃宁', '吴桥', '青县', '泊头市'
+  ];
+  const districtOptionMarkup = districtOptions.map((district) => `<option value="${district}">${district}</option>`).join('');
   const content = `<section class="page-card operations-page order-module-page order-goods-page">
     <div class="operations-tabs order-view-tabs"><a class="operations-tab" href="./order-management.html">订单列表</a><a class="operations-tab active" href="./order-goods.html">订单商品</a></div>
     <div class="operations-filter filter-section">
       <div class="operations-filter-main">
         <div class="operations-filter-grid">
-          <div class="operations-field"><label class="filter-label" for="goodsExpectedAt">期望送达时间</label><div class="date-input-control"><input class="filter-input" id="goodsExpectedAt" readonly placeholder="请选择日期"><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></div></div>
-          <div class="operations-field"><label class="filter-label" for="goodsCategory">商品分类</label><select class="filter-select" id="goodsCategory"><option value="">请选择商品分类</option><option>果蔬</option><option>蛋奶类</option><option>粮食类</option><option>水产品</option></select></div>
-          <div class="operations-field"><label class="filter-label" for="goodsKeyword">商品名称</label><input class="filter-input" id="goodsKeyword" placeholder="请输入"></div>
+          <div class="operations-field expected-at-field"><label class="filter-label" for="goodsExpectedAt">期望送达时间</label><div class="date-range-picker order-goods-expected-at-range" id="goodsExpectedAtRange"><input class="filter-input date-range-display" id="goodsExpectedAt" type="text" placeholder="请选择日期 - 请选择日期" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><input type="hidden" id="goodsExpectedAtStart" data-date-start value="2026-09-11"><input type="hidden" id="goodsExpectedAtEnd" data-date-end value="2026-11-10"></div></div>
+          <div class="operations-field created-at-field"><label class="filter-label" for="goodsCreatedAt">创建时间</label><div class="date-range-picker order-goods-created-at-range" id="goodsCreatedAtRange"><input class="filter-input date-range-display" id="goodsCreatedAt" type="text" placeholder="请选择日期 - 请选择日期" readonly><span class="date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><input type="hidden" id="goodsCreatedAtStart" data-date-start><input type="hidden" id="goodsCreatedAtEnd" data-date-end></div></div>
+          <div class="operations-field"><label class="filter-label" for="goodsDistrict">区县</label><select class="filter-select" id="goodsDistrict"><option value="市直属" selected>市直属</option>${districtOptionMarkup}</select></div>
         </div>
-        <div class="operations-filter-actions"><button class="operations-filter-toggle" type="button" id="goodsAdvancedToggle">高级筛选<span class="toggle-arrow">▾</span></button><button class="btn btn-primary btn-sm" id="goodsQuery">查询</button><button class="btn btn-sm" id="goodsReset">重置</button></div>
+        <div class="operations-filter-actions"><button class="operations-filter-toggle is-active" type="button" id="goodsAdvancedToggle" aria-expanded="true">高级筛选<span class="toggle-arrow">▾</span></button><button class="btn btn-primary btn-sm" id="goodsQuery">查询</button><button class="btn btn-sm" id="goodsReset">重置</button></div>
       </div>
-      <div class="operations-filter-advanced" id="goodsAdvancedFilters"><div class="operations-filter-grid">
-        <div class="operations-field"><label class="filter-label" for="goodsCustomerType">客户类型</label><select class="filter-select" id="goodsCustomerType"><option value="">全部</option><option>学校</option><option>幼儿园</option><option>机关单位</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsOrderTag">订单标签</label><select class="filter-select" id="goodsOrderTag"><option value="">全部</option><option>学生-营养餐</option><option>学生-非营养餐</option><option>学生-不区分</option><option>教师-营养餐</option><option>教师-非营养餐</option><option>教师-不区分</option><option>其他-非营养餐</option><option>其他-不区分</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsOrderStatus">单据状态</label><select class="filter-select" id="goodsOrderStatus"><option value="">全部</option><option value="DRAFT">暂存</option><option value="PENDING_CONFIRM">待确认</option><option value="PENDING_AUDIT">待审核</option><option value="READY_FOR_SORTING">待分拣</option><option value="READY_FOR_SHIPPING">待发货</option><option value="REJECTED">已驳回</option><option value="SHIPPED">已发货</option><option value="CLOSED">已关闭</option><option value="REVOKED">已撤销</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsSupplement">是否补单</label><select class="filter-select" id="goodsSupplement"><option value="">全部</option><option>是</option><option>否</option></select></div>
+      <div class="operations-filter-advanced is-visible" id="goodsAdvancedFilters"><div class="operations-filter-grid">
+        <div class="operations-field"><label class="filter-label" for="goodsCategory">商品分类</label><select class="filter-select is-placeholder" id="goodsCategory" data-placeholder-option><option value="" selected disabled hidden>请选择商品分类</option><option>果蔬</option><option>蛋奶类</option><option>粮食类</option><option>水产品</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsKeyword">商品名称</label><input class="filter-input" id="goodsKeyword" placeholder="请输入"></div>
+        <div class="operations-field"><label class="filter-label" for="goodsCustomerType">客户类型</label><select class="filter-select" id="goodsCustomerType"><option value="" selected>全部</option><option>学校</option><option>幼儿园</option><option>机关单位</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsOrderTag">订单标签</label><select class="filter-select" id="goodsOrderTag"><option value="" selected>全部</option><option>学生-营养餐</option><option>学生-非营养餐</option><option>学生-不区分</option><option>教师-营养餐</option><option>教师-非营养餐</option><option>教师-不区分</option><option>其他-非营养餐</option><option>其他-不区分</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsOrderStatus">单据状态</label><select class="filter-select" id="goodsOrderStatus"><option value="" selected>全部</option><option value="DRAFT">暂存</option><option value="PENDING_CONFIRM">待确认</option><option value="PENDING_AUDIT">待审核</option><option value="READY_FOR_SHIPPING">待发货</option><option value="REJECTED">已驳回</option><option value="CLOSED">已关闭</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsSupplement">是否补单</label><select class="filter-select" id="goodsSupplement"><option value="" selected>全部</option><option>是</option><option>否</option></select></div>
         <div class="operations-field"><label class="filter-label" for="goodsOrderNo">订单号</label><input class="filter-input" id="goodsOrderNo" maxlength="40" placeholder="请输入订单号"></div>
-        <div class="operations-field"><label class="filter-label" for="goodsWarehouse">仓库</label><select class="filter-select" id="goodsWarehouse"><option value="">全部</option><option>中心仓</option><option>北区仓</option><option>临时仓</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsSource">单据来源</label><select class="filter-select" id="goodsSource"><option value="">全部</option><option>客户下单</option><option>平台添加</option><option>订单合并</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsReceiptStatus">收货状态</label><select class="filter-select" id="goodsReceiptStatus"><option value="">全部</option><option>待收货</option><option>部分收货</option><option>已收货</option><option>未收货</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsOrderType">订单类型</label><select class="filter-select" id="goodsOrderType"><option value="">全部</option><option>销售订单</option><option>临时订单</option></select></div>
-        <div class="operations-field"><label class="filter-label" for="goodsNetVegetable">是否净菜</label><select class="filter-select" id="goodsNetVegetable"><option value="">全部</option><option value="net">净菜</option><option value="non-net">非净菜</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsWarehouse">仓库</label><select class="filter-select" id="goodsWarehouse"><option value="" selected>全部</option><option>中心仓</option><option>北区仓</option><option>临时仓</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsSource">单据来源</label><select class="filter-select" id="goodsSource"><option value="" selected>全部</option><option>客户下单</option><option>平台添加</option><option>订单合并</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsReceiptStatus">收货状态</label><select class="filter-select" id="goodsReceiptStatus"><option value="" selected>全部</option><option>部分收货</option><option>已收货</option><option>未收货</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsOrderType">订单类型</label><select class="filter-select is-placeholder" id="goodsOrderType" data-placeholder-option><option value="" selected disabled hidden>请选择</option><option value="销售订单">普通订单</option><option value="临时订单">临采订单</option></select></div>
+        <div class="operations-field"><label class="filter-label" for="goodsPurchaseStatus">采购状态</label><select class="filter-select" id="goodsPurchaseStatus"><option value="" selected>全部</option><option value="未生成">未生成</option><option value="全部生成">全部生成</option></select></div>
       </div></div>
     </div>
     <div class="operations-toolbar"><span></span><button class="btn btn-sm" id="goodsExport">导出</button></div>
@@ -40,7 +48,23 @@
     if (catalogProduct) return Boolean(catalogProduct.isNetVegetable);
     return Boolean(line.isNetVegetable);
   };
-  const datePicker = window.DatePicker?.mount({ input: '#goodsExpectedAt', panelId: 'orderGoodsExpectedPicker' });
+  const expectedAtPicker = window.DateRangePicker?.mount({
+    container: '#goodsExpectedAtRange',
+    displayInput: '#goodsExpectedAt',
+    startInput: '#goodsExpectedAtStart',
+    endInput: '#goodsExpectedAtEnd',
+    panelId: 'orderGoodsExpectedPicker',
+    separator: ' - '
+  });
+  const createdAtPicker = window.DateRangePicker?.mount({
+    container: '#goodsCreatedAtRange',
+    displayInput: '#goodsCreatedAt',
+    startInput: '#goodsCreatedAtStart',
+    endInput: '#goodsCreatedAtEnd',
+    panelId: 'orderGoodsCreatedPicker',
+    separator: ' - '
+  });
+  expectedAtPicker?.setValue(defaultExpectedAtRange[0], defaultExpectedAtRange[1], false);
 
   function categoryFor(line) {
     if (line.category) return line.category;
@@ -52,10 +76,57 @@
     return '其他';
   }
 
+  function dateInRange(value, range) {
+    const source = String(value || '').trim().replace(/\//g, '-');
+    const [start, end] = range;
+    return (!start || source >= start) && (!end || source <= `${end} 23:59:59`);
+  }
+
+  function purchaseStatusFor(order) {
+    const explicitlyGenerated = Boolean(
+      order?.purchaseOrderNo
+      || order?.purchaseOrderId
+      || order?.purchaseOrderGenerated === true
+      || order?.purchaseOrderGenerated === 'true'
+      || order?.purchaseOrderGenerated === '是'
+    );
+    if (explicitlyGenerated) return '全部生成';
+
+    const items = Array.isArray(order?.items) ? order.items : [];
+    const generatedCount = items.filter((line) => Boolean(
+      line?.purchaseOrderNo
+      || line?.purchaseOrderId
+      || line?.allocation?.status === '已生成采购单'
+      || line?.allocation?.status === '全部生成'
+      || line?.purchaseStatus === '已生成采购单'
+      || line?.purchaseStatus === '全部生成'
+    )).length;
+    if (!generatedCount) return '未生成';
+    return generatedCount === items.length ? '全部生成' : '部分生成';
+  }
+
+  function districtFor(order) {
+    return String(order?.district || order?.region || '市直属').trim();
+  }
+
+  function syncSelectPlaceholders() {
+    root.querySelectorAll('select[data-placeholder-option]').forEach((select) => {
+      select.classList.toggle('is-placeholder', !select.value);
+    });
+  }
+
   async function load() {
     const result = await service.list('orders', { page: 1, pageSize: 10000 });
     const keyword = document.getElementById('goodsKeyword').value.trim();
-    const expected = document.getElementById('goodsExpectedAt').value;
+    const expectedRange = [
+      document.getElementById('goodsExpectedAtStart').value,
+      document.getElementById('goodsExpectedAtEnd').value
+    ];
+    const createdRange = [
+      document.getElementById('goodsCreatedAtStart').value,
+      document.getElementById('goodsCreatedAtEnd').value
+    ];
+    const district = document.getElementById('goodsDistrict').value;
     const category = document.getElementById('goodsCategory').value;
     const customerType = document.getElementById('goodsCustomerType').value;
     const orderTag = document.getElementById('goodsOrderTag').value;
@@ -66,22 +137,24 @@
     const source = document.getElementById('goodsSource').value;
     const receiptStatus = document.getElementById('goodsReceiptStatus').value;
     const orderType = document.getElementById('goodsOrderType').value;
-    const netVegetable = document.getElementById('goodsNetVegetable').value;
+    const purchaseStatus = document.getElementById('goodsPurchaseStatus').value;
     rows = result.items.flatMap((order) => (order.items?.length ? order.items : [{ goodsName: '大白菜（斤/--/散装）', unit: '斤', quantity: order.productCount || 1, unitPrice: order.productCount ? order.orderAmount / order.productCount : order.orderAmount }]).map((line) => ({ ...line, order })))
       .filter(({ order, ...line }) =>
         (!keyword || String(line.goodsName || '').includes(keyword)) &&
-        (!expected || String(order.expectedAt || '').startsWith(expected)) &&
-        (!category || categoryFor(line) === category) &&
+        dateInRange(order.expectedAt, expectedRange) &&
+        dateInRange(order.createdAt, createdRange) &&
+        (!district || districtFor(order) === district) &&
+        (!category || categoryFor(line) === category || categoryFor(line).startsWith(`${category}-`)) &&
         (!customerType || order.customerType === customerType) &&
         (!orderTag || order.orderTag === orderTag) &&
-        (!orderStatus || order.status === orderStatus) &&
+        (!orderStatus || (window.BusinessRules?.normalizeStatus?.('orders', order.status) || order.status) === orderStatus) &&
         (!supplement || order.supplement === supplement) &&
         (!orderNo || String(order.orderNo || '').includes(orderNo)) &&
         (!warehouse || order.warehouse === warehouse) &&
         (!source || order.source === source) &&
         (!receiptStatus || order.receiptStatus === receiptStatus) &&
         (!orderType || (order.orderType || '销售订单') === orderType) &&
-        (!netVegetable || (netVegetable === 'net' ? productIsNetVegetable(line) : !productIsNetVegetable(line))));
+        (!purchaseStatus || purchaseStatusFor(order) === purchaseStatus));
     document.getElementById('orderGoodsBody').innerHTML = rows.length ? rows.map(({ order, ...line }, index) => {
       const productDisplay = window.DomUtils.formatProductDisplay(line);
       const productTag = productIsNetVegetable(line) ? '<span class="net-vegetable-tag">净菜</span>' : '';
@@ -94,13 +167,18 @@
 
   root.addEventListener('click', (event) => {
     if (event.target.closest('#goodsAdvancedToggle')) {
-      document.getElementById('goodsAdvancedToggle').classList.toggle('is-active');
-      document.getElementById('goodsAdvancedFilters').classList.toggle('is-visible');
+      const toggle = document.getElementById('goodsAdvancedToggle');
+      const expanded = toggle.classList.toggle('is-active');
+      document.getElementById('goodsAdvancedFilters').classList.toggle('is-visible', expanded);
+      toggle.setAttribute('aria-expanded', String(expanded));
     }
     if (event.target.closest('#goodsQuery')) load();
     if (event.target.closest('#goodsReset')) {
       root.querySelectorAll('.operations-filter input, .operations-filter select').forEach((control) => { control.value = ''; });
-      datePicker?.clear(false);
+      expectedAtPicker?.setValue(defaultExpectedAtRange[0], defaultExpectedAtRange[1], false);
+      createdAtPicker?.clear(false);
+      document.getElementById('goodsDistrict').value = '市直属';
+      syncSelectPlaceholders();
       load();
     }
     if (event.target.closest('#goodsExport')) window.alert('订单商品导出已按当前筛选条件准备。');
@@ -108,5 +186,9 @@
   root.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && event.target.closest('.operations-filter')) load();
   });
+  root.addEventListener('change', (event) => {
+    if (event.target.matches('select[data-placeholder-option]')) syncSelectPlaceholders();
+  });
+  syncSelectPlaceholders();
   load();
 })();

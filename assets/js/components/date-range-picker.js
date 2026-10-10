@@ -1,5 +1,19 @@
 (function () {
   let instanceCount = 0;
+  let activePanel = null;
+  let activeClose = null;
+
+  function activatePanel(panel, close) {
+    if (activePanel && activePanel !== panel) activeClose?.();
+    activePanel = panel;
+    activeClose = close;
+  }
+
+  function deactivatePanel(panel) {
+    if (activePanel !== panel) return;
+    activePanel = null;
+    activeClose = null;
+  }
 
   function formatDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -18,6 +32,7 @@
 
     const panel = document.createElement('div');
     const panelId = options.panelId || `dateRangePanel${++instanceCount}`;
+    const displaySeparator = options.separator || ' ~ ';
     panel.id = panelId;
     panel.className = 'calendar-panel cal-dual';
     document.body.appendChild(panel);
@@ -62,7 +77,7 @@
     }
 
     function updateDisplay() {
-      displayInput.value = state.startDate && state.endDate ? `${state.startDate} ~ ${state.endDate}` : state.startDate ? `${state.startDate} ~` : state.endDate ? `~ ${state.endDate}` : '';
+      displayInput.value = state.startDate && state.endDate ? `${state.startDate}${displaySeparator}${state.endDate}` : state.startDate ? `${state.startDate}${displaySeparator.trimEnd()}` : state.endDate ? `${displaySeparator.trimStart()}${state.endDate}` : '';
       if (startInput) startInput.value = state.startDate;
       if (endInput) endInput.value = state.endDate;
     }
@@ -98,6 +113,7 @@
       if (now.getMonth() === 11) state.rightYear += 1;
       state.startDate = startInput?.value || state.startDate;
       state.endDate = endInput?.value || state.endDate;
+      activatePanel(panel, close);
       panel.classList.add('is-visible');
       render();
       const rect = displayInput.getBoundingClientRect();
@@ -110,7 +126,10 @@
       panel.style.left = `${left}px`;
     }
 
-    function close() { panel.classList.remove('is-visible'); }
+    function close() {
+      panel.classList.remove('is-visible');
+      deactivatePanel(panel);
+    }
 
     function onPanelClick(event) {
       event.stopPropagation();
@@ -198,6 +217,7 @@
         state.month = now.getMonth();
       }
       if (!state.date) state.date = value;
+      activatePanel(panel, close);
       panel.classList.add('is-visible');
       render();
       const rect = input.getBoundingClientRect();
@@ -210,7 +230,10 @@
       panel.style.left = `${left}px`;
     }
 
-    function close() { panel.classList.remove('is-visible'); }
+    function close() {
+      panel.classList.remove('is-visible');
+      deactivatePanel(panel);
+    }
     function getValue() { return options.withTime && state.date ? `${state.date} ${state.time || '08:00:00'}` : state.date; }
     function updateInput() { input.value = getValue(); }
     function updateCurrentTime() {
