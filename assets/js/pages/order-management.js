@@ -643,7 +643,7 @@
             <div><span>期望送达时间：</span><strong>${escapeHtml(group.expectedAt)}</strong></div>
             <div><span>单据来源：</span><strong>${escapeHtml(group.source)}</strong></div>
             <div class="order-batch-merge-meta-amount"><span>合单金额：</span><strong>¥${money(group.orderAmount)}</strong></div>
-            <div class="order-batch-merge-meta-orders"><span>订单笔数：</span><strong>${group.orders.length} 笔</strong></div>
+            <div class="order-batch-merge-meta-orders"><span>订单笔数：</span><strong>${group.orders.length}</strong></div>
           </div>
           ${hasSelectionError ? '<div class="order-batch-merge-selection-error" role="alert">一笔订单无法合并，请勾选至少两笔订单或取消选择整组订单</div>' : ''}
           <div class="order-batch-merge-table-wrap">
