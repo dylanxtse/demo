@@ -973,10 +973,14 @@
       const selectedCount = groups.reduce((total, entry) => total + entry.selectedOrders.length, 0);
       const rows = groups.map(({ group, selectedOrders }) => {
         const orderAmount = selectedOrders.reduce((total, order) => total + Number(order.orderAmount || 0), 0);
-        const orderNos = selectedOrders.map((order) => escapeHtml(order.orderNo)).join('、');
-        return `<tr><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>¥${money(orderAmount)}</td><td>${selectedOrders.length}</td><td>${orderNos || '--'}</td></tr>`;
+        const orderNoLines = [];
+        for (let index = 0; index < selectedOrders.length; index += 2) {
+          orderNoLines.push(selectedOrders.slice(index, index + 2).map((order) => escapeHtml(order.orderNo)).join('、'));
+        }
+        const orderNos = orderNoLines.join('<br>');
+        return `<tr><td>${escapeHtml(group.customerName || '--')}</td><td>${escapeHtml(group.canteen || '--')}</td><td>${escapeHtml(group.source || '--')}</td><td>${escapeHtml(group.orderTag || '--')}</td><td>${escapeHtml(dateKey(group.expectedAt) || '--')}</td><td>¥${money(orderAmount)}</td><td>${selectedOrders.length}</td><td>${orderNos || '--'}</td></tr>`;
       }).join('');
-      return `<div class="order-batch-merge-confirm-orders-title">已选订单${selectedCount}笔，可合并为${groups.length}笔</div><div class="order-batch-merge-confirm-orders"><div class="order-batch-merge-confirm-order-list"><table class="operations-table order-batch-merge-confirm-table"><thead><tr><th>客户名称</th><th>食堂</th><th>合并订单金额</th><th>订单笔数</th><th>原订单号</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="order-batch-merge-confirm-order-empty">暂无已选订单</td></tr>'}</tbody></table></div></div>`;
+      return `<div class="order-batch-merge-confirm-orders-title">已选订单${selectedCount}笔，可合并为${groups.length}笔</div><div class="order-batch-merge-confirm-orders"><div class="order-batch-merge-confirm-order-list"><table class="operations-table order-batch-merge-confirm-table"><thead><tr><th>客户名称</th><th>食堂</th><th>单据来源</th><th>订单标签</th><th>期望送达日期</th><th>合并订单金额</th><th>订单笔数</th><th>订单号</th></tr></thead><tbody>${rows || '<tr><td colspan="8" class="order-batch-merge-confirm-order-empty">暂无已选订单</td></tr>'}</tbody></table></div></div>`;
     };
     const renderModalBody = () => {
       const mergeableCount = activeGroups.reduce((total, group) => total + group.orderIds.length, 0);

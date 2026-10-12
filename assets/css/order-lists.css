@@ -469,7 +469,7 @@
 .operations-modal.is-confirm.order-batch-merge-confirm-modal {
   display: flex;
   flex-direction: column;
-  width: min(980px, calc(100vw - 48px));
+  width: min(1200px, calc(100vw - 48px));
   max-height: min(760px, calc(100vh - 48px));
   overflow: hidden;
 }
@@ -517,12 +517,12 @@
 .order-batch-merge-confirm-order-list {
   max-height: min(360px, calc(100vh - 260px));
   margin-top: 8px;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .order-batch-merge-confirm-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 1160px;
   table-layout: fixed;
 }
 
@@ -535,17 +535,17 @@
 
 .order-batch-merge-confirm-table th:nth-child(1),
 .order-batch-merge-confirm-table td:nth-child(1) {
-  width: 19%;
+  width: 13%;
 }
 
 .order-batch-merge-confirm-table th:nth-child(2),
 .order-batch-merge-confirm-table td:nth-child(2) {
-  width: 18%;
+  width: 9%;
 }
 
 .order-batch-merge-confirm-table th:nth-child(3),
 .order-batch-merge-confirm-table td:nth-child(3) {
-  width: 17%;
+  width: 10%;
 }
 
 .order-batch-merge-confirm-table th:nth-child(4),
@@ -555,7 +555,22 @@
 
 .order-batch-merge-confirm-table th:nth-child(5),
 .order-batch-merge-confirm-table td:nth-child(5) {
-  width: 36%;
+  width: 12%;
+}
+
+.order-batch-merge-confirm-table th:nth-child(6),
+.order-batch-merge-confirm-table td:nth-child(6) {
+  width: 11%;
+}
+
+.order-batch-merge-confirm-table th:nth-child(7),
+.order-batch-merge-confirm-table td:nth-child(7) {
+  width: 6%;
+}
+
+.order-batch-merge-confirm-table th:nth-child(8),
+.order-batch-merge-confirm-table td:nth-child(8) {
+  width: 27%;
 }
 
 .order-batch-merge-confirm-table td:last-child {
