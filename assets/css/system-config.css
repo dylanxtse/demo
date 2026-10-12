@@ -231,7 +231,7 @@
 .config-apply:hover { color: #17429e; }
 
 .permission-row { margin-bottom: 14px; }
-.auto-merge-row { margin-bottom: 22px; }
+.auto-merge-row { display: none; margin-bottom: 22px; }
 .auto-merge-fields {
   display: flex;
   align-items: flex-start;
