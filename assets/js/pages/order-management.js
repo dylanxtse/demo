@@ -628,13 +628,14 @@
     };
   }
 
-  function renderBatchMergeGroups(groups, selectedIds = new Set(), expandedGroups = new Set()) {
+  function renderBatchMergeGroups(groups, selectedIds = new Set(), expandedGroups = new Set(), errorGroupIndexes = new Set()) {
     if (!groups.length) return '<div class="order-batch-merge-empty">当前筛选条件下暂无满足合单条件的订单。</div>';
     return groups.map((group, index) => {
       const expanded = expandedGroups.has(index);
+      const hasSelectionError = errorGroupIndexes.has(index);
       const visibleOrders = expanded ? group.orders : group.orders.slice(0, 3);
       return `
-        <section class="order-batch-merge-group">
+        <section class="order-batch-merge-group${hasSelectionError ? ' has-batch-merge-selection-error' : ''}" data-batch-merge-group="${index}">
           <div class="order-batch-merge-meta">
             <div><span>客户名称：</span><strong>${escapeHtml(group.customerName)}</strong></div>
             <div><span>食堂：</span><strong>${escapeHtml(group.canteen)}</strong></div>
@@ -644,6 +645,7 @@
             <div class="order-batch-merge-meta-amount"><span>合单金额：</span><strong>¥${money(group.orderAmount)}</strong></div>
             <div class="order-batch-merge-meta-orders"><span>订单笔数：</span><strong>${group.orders.length} 笔</strong></div>
           </div>
+          ${hasSelectionError ? '<div class="order-batch-merge-selection-error" role="alert">一笔订单无法合并，请勾选至少两笔订单或取消选择整组订单</div>' : ''}
           <div class="order-batch-merge-table-wrap">
             <table class="operations-table order-batch-merge-table">
               <thead><tr><th class="order-batch-merge-select-cell"><input class="order-batch-merge-select-all" type="checkbox" data-batch-merge-select-all="${index}" ${group.orderIds.every((id) => selectedIds.has(id)) ? 'checked' : ''} aria-label="全选本组合单订单"></th><th>订单号</th><th>下单时间</th><th>期望送达时间</th><th>下单商品数</th><th>下单金额</th></tr></thead>
@@ -872,6 +874,7 @@
   }
 
   function batchMergeValidationMessage(selection) {
+    if (selection.selectedIds.length < 2) return '一笔订单无法合并，请勾选至少两笔订单或取消选择整组订单';
     if (selection.plan.groups.length) return '';
     const reasons = [];
     if (selection.missingIds.length) reasons.push('订单在合单前已不存在或被删除');
@@ -952,7 +955,15 @@
       ? dateKey(initialExpectedAtRange[0])
       : defaultExpectedAtRange[0];
     const expandedGroups = new Set();
-    const hasSelectedMergeGroup = () => activeGroups.some((group) => group.orderIds.filter((id) => activeOrderIds.has(id)).length >= 2);
+    const selectionErrorGroupIndexes = new Set();
+    const hasSelectedMergeOrders = () => activeOrderIds.size > 0;
+    const invalidSelectionGroupIndexes = () => new Set(
+      activeGroups.reduce((indexes, group, index) => {
+        const selectedCount = group.orderIds.filter((id) => activeOrderIds.has(id)).length;
+        if (selectedCount === 1) indexes.push(index);
+        return indexes;
+      }, [])
+    );
     const selectedMergeGroups = () => activeGroups.map((group) => {
       const selectedOrders = group.orders.filter((order) => activeOrderIds.has(order.id));
       return selectedOrders.length >= 2 ? { group, selectedOrders } : null;
@@ -969,6 +980,8 @@
     };
     const renderModalBody = () => {
       const mergeableCount = activeGroups.reduce((total, group) => total + group.orderIds.length, 0);
+      const selectedOrderCount = activeOrderIds.size;
+      const selectedGroupCount = activeGroups.filter((group) => group.orderIds.filter((id) => activeOrderIds.has(id)).length >= 2).length;
       return `
         <div class="order-batch-merge-filter-bar">
           <div class="order-batch-merge-filter-field">
@@ -979,9 +992,9 @@
             </div>
           </div>
           <button class="btn btn-sm order-batch-merge-query" type="button" id="refreshBatchMerge">查询</button>
-          <div class="order-batch-merge-summary" id="batchMergeSummary">共<strong>${activeFilteredCount}</strong>笔订单，其中<strong>${mergeableCount}</strong>笔订单可合并为<strong>${activeGroups.length}</strong>笔订单。</div>
+          <div class="order-batch-merge-summary" id="batchMergeSummary">当前有<strong>${mergeableCount}</strong>笔订单可合并，已选择<strong>${selectedOrderCount}</strong>笔，可合并为<strong>${selectedGroupCount}</strong>笔订单。</div>
         </div>
-        <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups, activeOrderIds, expandedGroups)}</div>
+        <div class="order-batch-merge-groups" id="batchMergeGroups">${renderBatchMergeGroups(activeGroups, activeOrderIds, expandedGroups, selectionErrorGroupIndexes)}</div>
       `;
     };
     const mountBatchMergeExpectedAtPicker = () => {
@@ -1009,9 +1022,9 @@
       mountBatchMergeExpectedAtPicker();
       syncBatchMergeSelectAllStates();
       const confirmButton = $('#confirmBatchMerge');
-      if (confirmButton) confirmButton.disabled = !hasSelectedMergeGroup();
+      if (confirmButton) confirmButton.disabled = !hasSelectedMergeOrders();
     };
-    const confirmDisabled = hasSelectedMergeGroup() ? '' : ' disabled';
+    const confirmDisabled = hasSelectedMergeOrders() ? '' : ' disabled';
     modal(
       '合并订单',
       renderModalBody(),
@@ -1024,8 +1037,14 @@
     const resetBatchMergeSubmitButton = () => {
       const confirmButton = $('#confirmBatchMerge');
       if (!confirmButton) return;
-      confirmButton.disabled = !hasSelectedMergeGroup();
+      confirmButton.disabled = !hasSelectedMergeOrders();
       confirmButton.textContent = '确认合单';
+    };
+    const scrollToFirstSelectionError = () => {
+      const modalElement = overlay.querySelector('.order-batch-merge-modal');
+      const firstError = overlay.querySelector('.order-batch-merge-group.has-batch-merge-selection-error');
+      if (!modalElement || !firstError) return;
+      modalElement.scrollTo({ top: Math.max(firstError.offsetTop - 16, 0), behavior: 'smooth' });
     };
     const handleBatchMergeSubmit = async (validatedSelection = null) => {
       const confirmButton = $('#confirmBatchMerge');
@@ -1050,6 +1069,14 @@
     };
     const openBatchMergeConfirm = () => {
       if (overlay.querySelector('[data-batch-merge-confirm-layer]')) return;
+      const invalidGroups = invalidSelectionGroupIndexes();
+      if (invalidGroups.size) {
+        selectionErrorGroupIndexes.clear();
+        invalidGroups.forEach((index) => selectionErrorGroupIndexes.add(index));
+        refreshBatchMergeModal();
+        requestAnimationFrame(scrollToFirstSelectionError);
+        return;
+      }
       const layer = document.createElement('div');
       layer.className = 'order-batch-merge-confirm-layer';
       layer.dataset.batchMergeConfirmLayer = 'true';
@@ -1118,6 +1145,7 @@
           activeGroups = [...nextPlan.groups];
           activeOrderIds = new Set(activeGroups.flatMap((group) => group.orderIds));
           expandedGroups.clear();
+          selectionErrorGroupIndexes.clear();
           refreshBatchMergeModal();
         }).catch((error) => {
           refreshButton.disabled = false;
@@ -1133,6 +1161,7 @@
         const group = activeGroups[Number(selectAll.dataset.batchMergeSelectAll)];
         if (!group) return;
         group.orderIds.forEach((id) => selectAll.checked ? activeOrderIds.add(id) : activeOrderIds.delete(id));
+        selectionErrorGroupIndexes.clear();
         refreshBatchMergeModal();
         return;
       }
@@ -1145,10 +1174,9 @@
       if (selectOrder.checked) {
         activeOrderIds.add(orderId);
       } else {
-        const selectedCount = group.orderIds.filter((id) => activeOrderIds.has(id)).length;
-        if (selectedCount <= 2) group.orderIds.forEach((id) => activeOrderIds.delete(id));
-        else activeOrderIds.delete(orderId);
+        activeOrderIds.delete(orderId);
       }
+      selectionErrorGroupIndexes.clear();
       refreshBatchMergeModal();
     });
   }
