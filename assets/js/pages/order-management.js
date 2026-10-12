@@ -921,10 +921,10 @@
     const mergedOrderCount = result.successfulGroups.reduce((total, group) => total + group.orderCount, 0);
     const renderResultOrderNos = (orderNos) => {
       const normalized = Array.isArray(orderNos) ? orderNos.filter(Boolean) : [];
-      const visible = normalized.slice(0, 3).map((orderNo) => escapeHtml(orderNo)).join('、');
+      const visible = normalized.slice(0, 10).map((orderNo) => escapeHtml(orderNo)).join('、');
       if (!visible) return '--';
-      const suffix = normalized.length > 3
-        ? `<span class="order-batch-merge-result-more">等${normalized.length}笔</span>`
+      const suffix = normalized.length > 10
+        ? `<span class="order-batch-merge-result-more" data-ui-tooltip="${escapeHtml(normalized.join('、'))}" tabindex="0" role="img" aria-label="全部订单号：${escapeHtml(normalized.join('、'))}">等${normalized.length}笔</span>`
         : '';
       return `${visible}${suffix}`;
     };
@@ -939,7 +939,7 @@
     modal(
       '合单结果',
       body,
-      '<button class="btn btn-primary" type="button" data-modal-close>关闭</button>',
+      '<button class="btn btn-primary" type="button" data-modal-close>确定</button>',
       false,
       'order-batch-merge-result-modal'
     );

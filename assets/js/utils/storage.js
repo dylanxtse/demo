@@ -31,7 +31,7 @@
   const storageKey = 'procurement-demo-v3';
   const previousStorageKey = 'procurement-demo-v2';
   const backupStorageKey = 'procurement-demo-v3-migration-backup';
-  const schemaVersion = '20260805-flow-v3.2';
+  const schemaVersion = '20261012-order-purchase-type-v1';
   const warehouseMonitorPointSeed = [
     {
       id: 'WMP-001',
@@ -75,6 +75,16 @@
   ];
   let legacyBusinessStorageCleaned = false;
   const clone = (value) => JSON.parse(JSON.stringify(value));
+  function removeOrderPurchaseType(order) {
+    if (!order || typeof order !== 'object' || !Object.prototype.hasOwnProperty.call(order, 'purchaseType')) return false;
+    delete order.purchaseType;
+    return true;
+  }
+
+  function normalizeOrderPurchaseTypes(current) {
+    return (current.orders || []).reduce((changed, order) => removeOrderPurchaseType(order) || changed, false);
+  }
+
   const number = (value, fallback = 0) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
@@ -633,11 +643,13 @@
   }
 
   function normalizeOrder(source, index) {
-    const id = source.id || `ORD-DEMO-${String(index + 1).padStart(3, '0')}`;
-    const sourceType = source.source === '客户下单' ? 'CUSTOMER' : 'ENTERPRISE';
-    const createdAt = source.createdAt || source.createTime || `2026-08-${String((index % 9) + 1).padStart(2, '0')} ${String(8 + (index % 8)).padStart(2, '0')}:00:00`;
-    const creator = source.creator || '管理员';
-    const items = (source.items || []).map((item, itemIndex) => {
+    const sourceRecord = clone(source);
+    delete sourceRecord.purchaseType;
+    const id = sourceRecord.id || `ORD-DEMO-${String(index + 1).padStart(3, '0')}`;
+    const sourceType = sourceRecord.source === '客户下单' ? 'CUSTOMER' : 'ENTERPRISE';
+    const createdAt = sourceRecord.createdAt || sourceRecord.createTime || `2026-08-${String((index % 9) + 1).padStart(2, '0')} ${String(8 + (index % 8)).padStart(2, '0')}:00:00`;
+    const creator = sourceRecord.creator || '管理员';
+    const items = (sourceRecord.items || []).map((item, itemIndex) => {
       const orderLineId = item.orderLineId || `${id}-LINE-${String(itemIndex + 1).padStart(3, '0')}`;
       const productId = item.productId || item.goodsCode || item.productCode || '';
       const quantity = number(item.quantity || item.orderQty);
@@ -656,25 +668,25 @@
         subtotal: number(item.subtotal || quantity * number(item.unitPrice))
       };
     });
-    let status = source.status || 'PENDING';
+    let status = sourceRecord.status || 'PENDING';
     if (status === 'PENDING') status = sourceType === 'CUSTOMER' ? 'PENDING_CONFIRM' : 'PENDING_AUDIT';
     if (status === 'APPROVED') status = 'READY_FOR_SORTING';
     if (status === 'CONFIRMED') status = 'READY_FOR_SORTING';
     if (status === 'COMPLETED') status = 'SHIPPED';
-    const shippingAt = source.shippingAt || (status === 'SHIPPED' ? `${createdAt.slice(0, 10)} 06:30:00` : '');
+    const shippingAt = sourceRecord.shippingAt || (status === 'SHIPPED' ? `${createdAt.slice(0, 10)} 06:30:00` : '');
     return {
-      ...clone(source),
+      ...sourceRecord,
       id,
       orderId: id,
       createdAt,
       createTime: createdAt,
       creator,
-      operationLogs: normalizeOrderLogs(source, createdAt, creator),
+      operationLogs: normalizeOrderLogs(sourceRecord, createdAt, creator),
       sourceType,
       status,
-      customerId: source.customerId || '',
-      customerName: source.customerName || '',
-      canteen: source.canteen || '',
+      customerId: sourceRecord.customerId || '',
+      customerName: sourceRecord.customerName || '',
+      canteen: sourceRecord.canteen || '',
       receiptStatus: '未收货',
       receivedAt: '',
       supplement: '否',
@@ -682,9 +694,9 @@
       productCount: items.length,
       items,
       sortingCompleted: false,
-      expectedAt: normalizeDateTime(source.expectedAt || source.deliveryTime || ''),
+      expectedAt: normalizeDateTime(sourceRecord.expectedAt || sourceRecord.deliveryTime || ''),
       shippingAt: normalizeDateTime(shippingAt),
-      updatedAt: source.updatedAt || createdAt
+      updatedAt: sourceRecord.updatedAt || createdAt
     };
   }
 
@@ -1786,6 +1798,7 @@
       if (!Array.isArray(state.processingTemplates) && Array.isArray(legacyTemplates)) state.processingTemplates = clone(legacyTemplates);
       const organizationNormalized = ensureOrganizationState(state);
       const migrated = migrateOutboundNumbers(state);
+      const orderPurchaseTypesNormalized = normalizeOrderPurchaseTypes(state);
       const logsAdded = ensureDocumentOperationLogs(state);
       const receiptFieldsNormalized = normalizeReceiptAndSupplement(state);
       const dateTimesNormalized = normalizeStateDateTimes(state);
@@ -1802,11 +1815,12 @@
       const settingsNormalized = normalizeSettings(state);
       const decimalsNormalized = normalizeStateDecimals(state);
       const statisticsResourcesNormalized = ensureStatisticsResources(state);
-      if (source.version !== schemaVersion || batchMergeDemoOrdersAdded || organizationNormalized || migrated || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || orderTagsNormalized || orderTagDisplaysNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
+      if (source.version !== schemaVersion || batchMergeDemoOrdersAdded || organizationNormalized || migrated || orderPurchaseTypesNormalized || logsAdded || receiptFieldsNormalized || dateTimesNormalized || productMetadataNormalized || orderNumbersNormalized || processingModuleReset || processingIdsNormalized || processingRelationsNormalized || processingOutputsNormalized || contractsNormalized || orderTagsNormalized || orderTagDisplaysNormalized || warehouseCodesNormalized || settingsNormalized || decimalsNormalized || statisticsResourcesNormalized) persist();
     }
     else {
       state = buildSeed();
       ensureOrganizationState(state);
+      normalizeOrderPurchaseTypes(state);
       ensureDocumentOperationLogs(state);
       normalizeReceiptAndSupplement(state);
       normalizeStateDateTimes(state);
@@ -1828,6 +1842,7 @@
   }
 
   function persist() {
+    normalizeOrderPurchaseTypes(state);
     state.version = schemaVersion;
     if (!window.AppStorage.write(storageKey, state)) {
       const error = new Error('本地数据保存失败，请检查浏览器存储空间');
@@ -2416,23 +2431,25 @@
   window.OrderFlowService = {
     createOrder(data) {
       return window.DemoStore.transact((state) => {
-        const sourceType = data.sourceType || (data.source === '客户下单' ? 'CUSTOMER' : 'ENTERPRISE');
-        const orderId = data.orderId || `ORD-${Date.now()}`;
+        const orderData = clone(data);
+        delete orderData.purchaseType;
+        const sourceType = orderData.sourceType || (orderData.source === '客户下单' ? 'CUSTOMER' : 'ENTERPRISE');
+        const orderId = orderData.orderId || `ORD-${Date.now()}`;
         const settings = state.settings;
-        const requestedStatus = data.status === 'DRAFT' ? 'DRAFT' : null;
+        const requestedStatus = orderData.status === 'DRAFT' ? 'DRAFT' : null;
         const status = requestedStatus || (sourceType === 'CUSTOMER'
           ? 'PENDING_CONFIRM'
           : settings.enterpriseOrderAuditEnabled ? 'PENDING_AUDIT' : 'READY_FOR_SHIPPING');
-        const createdAt = data.createdAt || now();
+        const createdAt = orderData.createdAt || now();
         const customer = (state.customers || []).find((item) => (
-          (data.customerId && (item.id === data.customerId || item.customerId === data.customerId))
-          || (data.customerName && item.customerName === data.customerName)
+          (orderData.customerId && (item.id === orderData.customerId || item.customerId === orderData.customerId))
+          || (orderData.customerName && item.customerName === orderData.customerName)
         ));
         const customerCode = window.BusinessRules.businessCode(
-          data.customerCode || customer?.customerCode || '03',
+          orderData.customerCode || customer?.customerCode || '03',
           '03'
         );
-        const items = (data.items || []).map((item, index) => ({
+        const items = (orderData.items || []).map((item, index) => ({
           ...clone(item),
           id: `${orderId}-LINE-${String(index + 1).padStart(3, '0')}`,
           orderLineId: `${orderId}-LINE-${String(index + 1).padStart(3, '0')}`,
@@ -2444,10 +2461,10 @@
           subtotal: number(item.subtotal || number(item.quantity) * number(item.unitPrice))
         }));
         const order = {
-          ...clone(data),
+          ...orderData,
           id: orderId,
           orderId,
-          orderNo: data.orderNo || nextOrderNumber(state, data, createdAt),
+          orderNo: orderData.orderNo || nextOrderNumber(state, orderData, createdAt),
           customerCode,
           sourceType,
           status,
@@ -2459,8 +2476,8 @@
           supplement: '否',
           createdAt,
           createTime: createdAt,
-          creator: data.creator || '管理员',
-          operationLogs: createOrderLogs(data, data.createdAt || now(), data.creator || '管理员'),
+          creator: orderData.creator || '管理员',
+          operationLogs: createOrderLogs(orderData, orderData.createdAt || now(), orderData.creator || '管理员'),
           updatedAt: now()
         };
         state.orders.unshift(order);
@@ -2476,6 +2493,7 @@
         const order = getOrder(state, orderId);
         if (!order) return null;
         const updates = clone(data);
+        delete updates.purchaseType;
         if (updates.status === 'PENDING' && !['PENDING_CONFIRM', 'PENDING_AUDIT'].includes(order.status)) delete updates.status;
         Object.assign(order, updates, { id: order.id, orderId: order.id, updatedAt: now() });
         if (Array.isArray(data.items)) {

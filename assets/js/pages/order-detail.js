@@ -215,8 +215,8 @@
       }).join('') : '<tr><td colspan="6" class="detail-empty">暂无商品明细</td></tr>';
       return `
         <section class="order-merge-snapshot-card">
-          <div class="order-merge-snapshot-title"><span>${escapeHtml(snapshot.orderNo || '--')}</span></div>
           <div class="order-merge-snapshot-meta">
+            ${snapshotInfoItem('订单号', snapshot.orderNo)}
             ${snapshotInfoItem('下单时间', snapshot.createdAt || snapshot.createTime)}
             ${snapshotInfoItem('期望送达时间', snapshot.expectedAt)}
             ${snapshotInfoItem('商品种类数', snapshot.productCount ?? lines.length)}
@@ -338,7 +338,6 @@
             ${infoItem('订单号', order.orderNo)}
             ${infoItem('客户名称', order.customerName)}
             ${infoItem('食堂', order.canteen)}
-            ${infoItem('采购类型', order.purchaseType || '销售订单')}
             ${infoItem('订单标签', order.orderTag)}
             ${infoItem('期望送达时间', order.expectedAt)}
             ${infoItem('单据来源', order.source)}

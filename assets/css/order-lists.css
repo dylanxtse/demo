@@ -845,8 +845,10 @@
 }
 
 .order-batch-merge-result-more {
+  display: inline-block;
   margin-left: 2px;
-  color: var(--text-secondary);
+  color: var(--primary);
+  cursor: help;
   white-space: nowrap;
 }
 
